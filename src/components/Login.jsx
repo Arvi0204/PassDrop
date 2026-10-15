@@ -7,12 +7,13 @@ export default function Login() {
     const [credentials, setCredentials] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const host = import.meta.env.VITE_BACKEND
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const response = await fetch(`https://pass-haven-backend.vercel.app/api/auth/login`, {
+            const response = await fetch(`${host}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

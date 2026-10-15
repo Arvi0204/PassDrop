@@ -1,4 +1,19 @@
-let backendHost = 'https://pass-haven-backend.vercel.app';
+const DEFAULT_BACKEND = 'https://pass-haven-backend.vercel.app';
+let backendHost = DEFAULT_BACKEND;
+
+// Allow override for local development via chrome.storage.local (e.g. http://localhost:3000)
+chrome.storage.local.get(['customBackendHost'], (result) => {
+    if (result.customBackendHost) {
+        backendHost = result.customBackendHost;
+    }
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.customBackendHost) {
+        backendHost = changes.customBackendHost.newValue || DEFAULT_BACKEND;
+    }
+});
+
 const TOKEN_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 1 day login time
 
 // Function to set the auth token

@@ -13,6 +13,7 @@ export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
     const navigate = useNavigate();
+    const host = import.meta.env.VITE_BACKEND
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -22,7 +23,7 @@ export default function Signup() {
         } else setPasswordError('');
         
         try {
-            const response = await fetch(`https://pass-haven-backend.vercel.app/api/auth/createuser`, {
+            const response = await fetch(`${host}/api/auth/createuser`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
