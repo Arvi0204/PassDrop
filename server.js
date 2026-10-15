@@ -1,4 +1,6 @@
-const dotenv = require('dotenv')
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+const dotenv = require('dotenv');
 dotenv.config();
 const express = require('express');
 const cors = require('cors');
@@ -8,13 +10,11 @@ const app = express();
 const port =  process.env.PORT || 3000;
 
 // MongoDB Connection
-const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri);
-
+const uri = process.env.MONGODB_URI;
 if (!uri) {
-  console.error("MongoDB URI not found in environment variables");
-  process.exit(1);
+  throw new Error("MONGODB_URI is not configured in the environment");
 }
+const client = new MongoClient(uri);
 
 // MongoDB Client
 let db;
@@ -52,9 +52,11 @@ app.get('/', (req, res) => {
   res.send('Hello from PassHaven!');
 });
 
-// Server listening
-// app.listen(port, () => {
-//   console.log(`PassHaven backend listening on port ${port}`);
-// });
+// Start a local server while preserving the exported app for Vercel.
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`PassHaven backend listening on port http://localhost:${port}`);
+  });
+}
 
 module.exports = app
