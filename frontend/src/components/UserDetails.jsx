@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EyeIcon, EyeOffIcon } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Calendar, Clock, KeyRound, AlertTriangle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal';
@@ -15,15 +15,19 @@ export default function UserDetails() {
     const [updatedPassword, setUpdatedPassword] = useState({ newPassword: "", confirmNewPassword: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [modalState, setModalState] = useState({ isOpen: false, message: "", action: null });
     const token = sessionStorage.getItem("token");
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (token) {
+        if (!token) {
+            navigate('/login');
+        } else {
             fetchUserDetails();
         }
     }, [token]);
+
     const fetchUserDetails = async () => {
         try {
             const response = await fetch(`${host}/api/auth/me`, {
@@ -39,18 +43,21 @@ export default function UserDetails() {
             toast.error("Failed to fetch user details");
         }
     };
+
     const onChange = (e) => {
-        setUpdatedPassword({ ...updatedPassword, [e.target.name]: e.target.value })
-    }
+        setUpdatedPassword({ ...updatedPassword, [e.target.name]: e.target.value });
+    };
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
         if (updatedPassword.newPassword !== updatedPassword.confirmNewPassword) {
-            setPasswordError("Passwords don't match");
+            setPasswordError("Passwords do not match");
             return;
         } else {
             setPasswordError('');
         }
+
+        setIsLoading(true);
         try {
             const response = await fetch(`${host}/api/auth/change-password`, {
                 method: 'POST',
@@ -58,206 +65,264 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ newPassword: updatedPassword.newPassword })
+                body: JSON.stringify({
+                    newPassword: updatedPassword.newPassword
+                })
             });
-
             const json = await response.json();
             if (json.success) {
-                toast.success(json.message);
+                toast.success(json.message || "Master password updated successfully");
                 setUpdatedPassword({ newPassword: "", confirmNewPassword: "" });
-                sessionStorage.removeItem('token');
-                navigate("/login")
             } else {
-                const errors = json.errors || [{ msg: json.error || 'Failed to update password' }];
-                errors.forEach(error => {
-                    toast.error(error.msg);
-                });
+                toast.error(json.error || "Failed to update master password");
             }
         } catch (error) {
-            toast.error("An error occurred, please try again later.");
+            toast.error("An error occurred. Check backend connection.");
+        } finally {
+            setIsLoading(false);
         }
     };
-
 
     const openConfirmModal = (actionType) => {
         if (actionType === 'passwords') {
             setModalState({
                 isOpen: true,
-                message: (
-                    <>
-                        Are you sure you want to delete all your passwords? <br /> They can NOT be recovered
-                    </>
-                ),
-                action: deleteAllPasswords
+                message: "Are you sure you want to delete ALL stored passwords? This cannot be undone.",
+                action: () => handleDeleteAllPasswords()
             });
         } else if (actionType === 'account') {
             setModalState({
                 isOpen: true,
-                message: (
-                    <>
-                        Are you sure you want to delete your account? <br /> It can NOT be recovered
-                    </>
-                ),
-                action: deleteAccount
+                message: "Are you sure you want to delete your entire PassDrop account and all associated credentials? This cannot be undone.",
+                action: () => handleDeleteAccount()
             });
         }
     };
 
-    const deleteAllPasswords = async () => {
+    const handleDeleteAllPasswords = async () => {
         try {
             const response = await fetch(`${host}/api/passwords`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token
-                },
+                }
             });
-            const json = await response.json()
-
+            const json = await response.json();
             if (json.success) {
-                toast.success(json.message);
+                toast.success("All credentials deleted from vault");
                 setModalState({ ...modalState, isOpen: false });
-                navigate("/")
+            } else {
+                toast.error(json.error || "Failed to delete passwords");
             }
         } catch (error) {
+            toast.error("An error occurred");
             setModalState({ ...modalState, isOpen: false });
-            toast.error("An error occurred, please try again later.");
         }
     };
 
-    const deleteAccount = async () => {
+    const handleDeleteAccount = async () => {
         try {
             const response = await fetch(`${host}/api/auth/me`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token
-                },
+                }
             });
-            const json = await response.json()
-
+            const json = await response.json();
             if (json.success) {
-                toast.success(json.message);
+                toast.success(json.message || "Account deleted successfully");
                 sessionStorage.removeItem('token');
                 setModalState({ ...modalState, isOpen: false });
-                navigate("/home")
+                navigate("/home");
+            } else {
+                toast.error(json.error || "Failed to delete account");
             }
         } catch (error) {
+            toast.error("An error occurred deleting account");
             setModalState({ ...modalState, isOpen: false });
-            toast.error("An error occurred, please try again later.");
         }
     };
 
-
     return (
-        <>
-            {/* <h2 className='relative top-10 text-center text-3xl font-bold'>Welcome, {user.username}</h2> */}
-            <div className="flex flex-col lg:flex-row items-center justify-center min-h-[calc(100vh-124px)]">
-                <div className="bg-white rounded-lg shadow-md p-8 mx-10 lg:mx-5 my-10 lg:my-5"> {/* User Info Card */}
-                    <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">User Info</h2>
-                    <div className="space-y-4 mb-6">
-                        <div>
-                            <span className="mb-3 block text-sm font-medium text-gray-700">Username</span>
-                            <p className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
-                                {user.username}
-                            </p>
-                        </div>
-                        <div>
-                            <span className="mb-3 block text-sm font-medium text-gray-700">Email</span>
-                            <p className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
-                                {user.email}
-                            </p>
-                        </div>
-                        <div>
-                            <span className="mb-3 block text-sm font-medium text-gray-700">Account Created</span>
-                            <p className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
-                                {new Date(user.createdAt).toLocaleDateString()}
-                            </p>
-                        </div>
-                        <div>
-                            <span className="mb-3 block text-sm font-medium text-gray-700">Last Login</span>
-                            <p className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm">
-                                {new Date(user.lastLogin).toLocaleString()}
-                            </p>
-                        </div>
-                    </div>
-                    <form onSubmit={handleChangePassword} className="space-y-4">
-                        <div>
-                            <h4 className='m-10 text-center font-bold text-xl'>Do you want to update Master Password?</h4>
-                            <div className="mt-1 relative">
-                                <input
-                                    id="newPassword"
-                                    name="newPassword"
-                                    type={showPassword ? "text" : "password"}
-                                    autoComplete="new-password"
-                                    placeholder='Enter New Master Password'
-                                    required
-                                    className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    value={updatedPassword.newPassword}
-                                    onChange={onChange}
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                    onClick={() => setShowPassword(prev => !prev)}
-                                >
-                                    {showPassword ? <EyeOffIcon className="h-5 w-5 text-gray-400" /> : <EyeIcon className="h-5 w-5 text-gray-400" />}
-                                </button>
-                            </div>
-                            <div className="mt-5 relative">
-                                <input
-                                    id="confirmNewPassword"
-                                    name="confirmNewPassword"
-                                    type={showPassword ? "text" : "password"}
-                                    autoComplete="new-password"
-                                    placeholder='Confirm New Master Password'
-                                    required
-                                    className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    value={updatedPassword.confirmNewPassword}
-                                    onChange={onChange}
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                                    onClick={() => setShowPassword(prev => !prev)}
-                                >
-                                    {showPassword ? <EyeOffIcon className="h-5 w-5 text-gray-400" /> : <EyeIcon className="h-5 w-5 text-gray-400" />}
-                                </button>
-                            </div>
-                        </div>
-                        {passwordError && <p className="font-bold text-red-500 text-sm">{passwordError}</p>}
-                        <div>
-                            <button
-                                type="submit"
-                                className="w-full text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-md px-5 py-2.5 text-center me-2 mb-2"
-                            >
-                                Update Master Password
-                            </button>
-                        </div>
-                    </form>
+        <div className="flex-1 bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+            <div className="max-w-5xl mx-auto space-y-6">
+
+                {/* Profile Header */}
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                        Account & Security
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Manage your vault identity, update master credentials, and oversee security settings
+                    </p>
                 </div>
 
-                {/* Danger Zone Section */}
-                <div className="bg-white rounded-lg shadow-md p-8 mx-10 lg:mx-5 mb-10 lg:mb-0"> {/* Danger Zone Card */}
-                    <h2 className="text-center text-2xl font-bold text-red-600 mb-4">Danger Zone</h2>
-                    <p className="text-center text-gray-600 mb-6">Please proceed with caution. These actions are <strong>irreversible</strong>.</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Left Column: Profile & Master Password */}
+                    <div className="lg:col-span-7 space-y-6">
+                        
+                        {/* Profile Info Card */}
+                        <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm transition-colors">
+                            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
+                                Personal Information
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                        <User className="w-3.5 h-3.5 text-blue-500 dark:text-cyan-400" />
+                                        <span>Username</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                        {user.username || '—'}
+                                    </p>
+                                </div>
 
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => openConfirmModal('passwords')}
-                            className="font-bold w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700"
-                        >
-                            Delete All Passwords
-                        </button>
-                        <button
-                            onClick={() => openConfirmModal('account')}
-                            className="font-bold w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700"
-                        >
-                            Delete Account
-                        </button>
+                                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                        <Mail className="w-3.5 h-3.5 text-blue-500 dark:text-cyan-400" />
+                                        <span>Email Address</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                        {user.email || '—'}
+                                    </p>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                        <span>Member Since</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                        {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+                                    </p>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
+                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                        <span>Last Login</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Current Session'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Master Password Update Card */}
+                        <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm transition-colors">
+                            <div className="flex items-center gap-2 mb-1">
+                                <KeyRound className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
+                                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                                    Change Master Password
+                                </h2>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+                                Ensure your new password is long and complex. You use this to decrypt your entire vault.
+                            </p>
+
+                            <form onSubmit={handleChangePassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                        New Master Password
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            id="newPassword"
+                                            name="newPassword"
+                                            type={showPassword ? "text" : "password"}
+                                            autoComplete="new-password"
+                                            placeholder="Enter strong new master password"
+                                            required
+                                            value={updatedPassword.newPassword}
+                                            onChange={onChange}
+                                            className="w-full px-3.5 py-2.5 pr-10 text-sm font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                            onClick={() => setShowPassword(prev => !prev)}
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                                        Confirm New Master Password
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            id="confirmNewPassword"
+                                            name="confirmNewPassword"
+                                            type={showPassword ? "text" : "password"}
+                                            autoComplete="new-password"
+                                            placeholder="Repeat new master password"
+                                            required
+                                            value={updatedPassword.confirmNewPassword}
+                                            onChange={onChange}
+                                            className="w-full px-3.5 py-2.5 pr-10 text-sm font-mono rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {passwordError && (
+                                    <p className="text-xs font-semibold text-rose-500">{passwordError}</p>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full py-2.5 px-4 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                                >
+                                    <span>{isLoading ? "Updating Password..." : "Update Master Password"}</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
+
+                    {/* Right Column: Danger Zone */}
+                    <div className="lg:col-span-5">
+                        <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-rose-200/80 dark:border-rose-950/80 p-6 shadow-sm transition-colors">
+                            <div className="flex items-center gap-2 mb-2 text-rose-600 dark:text-rose-400">
+                                <AlertTriangle className="w-5 h-5 shrink-0" />
+                                <h2 className="text-base font-bold">
+                                    Danger Zone
+                                </h2>
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                                Irreversible actions. Deleting passwords or your entire account cannot be undone. Please proceed with caution.
+                            </p>
+
+                            <div className="space-y-3">
+                                <button
+                                    type="button"
+                                    onClick={() => openConfirmModal('passwords')}
+                                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/60 rounded-xl transition-all"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete All Passwords</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => openConfirmModal('account')}
+                                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-all"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete PassDrop Account</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
+
             {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={modalState.isOpen}
@@ -266,7 +331,6 @@ export default function UserDetails() {
                 message={modalState.message}
                 confirmText="Yes, I'm sure"
             />
-        </>
+        </div>
     );
-
 }

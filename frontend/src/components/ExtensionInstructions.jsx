@@ -1,53 +1,108 @@
-// ExtensionInstructions.js
 import React from "react";
+import { Download, Chrome, ShieldAlert, ArrowRight, CheckCircle2 } from "lucide-react";
+import PassDropLogo from "./common/PassDropLogo";
 
 const ExtensionInstructions = () => {
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-124px)] mx-10 md:mx-0 my-5 md:my-0">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-center text-2xl font-bold text-blue-700 mb-4">
-          Installing the Extension
-        </h2>
-        <p className="text-gray-700 mb-4">
-          Follow these steps to load the PassHaven extension in your browser:
-        </p>
-        <ol className="list-decimal list-inside space-y-2 text-gray-800">
-          <li>
-            Download <strong>PassHaven.zip</strong> and extract its contents
-          </li>
-          <li>
-            Open Chrome or your preferred browser and go to <strong>chrome://extensions</strong>.
-          </li>
-          <li>
-            Enable <strong>Developer Mode</strong> (top-right corner).
-          </li>
-          <li>
-            Click <strong>Load unpacked</strong> and select the extracted extension folder.
-          </li>
-          <li>
-            If prompted, allow any necessary permissions to enable the extension.
-          </li>
-        </ol>
-        <div className="mt-6 p-4 bg-red-100 border border-red-300 rounded-lg">
-          <p className="text-red-700 font-medium">
-            Note: You might encounter warnings about developer extensions.
-            Disabling these can vary by browser and may require caution.
+    <div className="flex-1 bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-200 flex items-center justify-center">
+      <div className="max-w-3xl w-full mx-auto space-y-6">
+
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 mb-1">
+            <PassDropLogo size={28} />
+            <span className="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">
+              PassDrop Browser Companion
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Install the Web Extension
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+            Autofill credentials across any web application instantly without leaving your workflow
           </p>
         </div>
-        <div className="flex justify-center items-center">
-          <button
-            type="button"
-            className="mt-5 text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-md px-5 py-2.5 text-center me-2"
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = "/PassHavenWeb.zip"; // Path to file in public folder
-              link.download = "PassHaven.zip"; // Name of the file for download
-              link.click();
-            }}
-          >
-            Download PassHaven.zip web extension
-          </button>
+
+        {/* Steps Card */}
+        <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm transition-colors space-y-6">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Installation Steps
+          </h2>
+
+          <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
+            <div className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                1
+              </span>
+              <div>
+                <strong className="text-slate-900 dark:text-white">Download the bundle:</strong> Download the pre-built{' '}
+                <code className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-cyan-300">
+                  PassDrop.zip
+                </code>{' '}
+                package and extract it into a local directory on your machine.
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                2
+              </span>
+              <div>
+                <strong className="text-slate-900 dark:text-white">Open Extensions Manager:</strong> In Chrome, Brave, Edge or Arc, navigate to{' '}
+                <code className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 text-blue-600 dark:text-cyan-300">
+                  chrome://extensions
+                </code>.
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                3
+              </span>
+              <div>
+                <strong className="text-slate-900 dark:text-white">Enable Developer Mode:</strong> Toggle the switch located at the top-right corner of the Extensions dashboard.
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 text-blue-600 dark:text-cyan-400 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                4
+              </span>
+              <div>
+                <strong className="text-slate-900 dark:text-white">Load Unpacked:</strong> Click the <span className="font-semibold text-slate-900 dark:text-white">"Load unpacked"</span> button and pick the extracted extension folder.
+              </div>
+            </div>
+          </div>
+
+          {/* Developer Mode Disclaimer */}
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-start gap-3 text-xs text-amber-800 dark:text-amber-300">
+            <ShieldAlert className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
+            <div>
+              <p className="font-semibold mb-0.5">Developer Mode Permissions</p>
+              <p className="text-amber-700 dark:text-amber-400 leading-relaxed">
+                Chromium browsers may show standard developer warning banners during startup. This is normal for local unpacked extensions and ensures safe local execution.
+              </p>
+            </div>
+          </div>
+
+          {/* Download Action */}
+          <div className="pt-2 flex justify-center">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.01]"
+              onClick={() => {
+                const link = document.createElement("a");
+                link.href = "/PassHavenWeb.zip";
+                link.download = "PassDrop.zip";
+                link.click();
+              }}
+            >
+              <Download className="w-4 h-4" />
+              <span>Download PassDrop Web Extension</span>
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
