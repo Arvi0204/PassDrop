@@ -1,4 +1,4 @@
-const dotenv = require('dotenv')
+const dotenv = require('dotenv');
 dotenv.config();
 const express = require('express');
 const router = express.Router();
@@ -8,136 +8,149 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fetchUser = require('../middleware/fetchUser');
-
+const connectToDb = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const connectToDb = require('../server'); // Import the connectToDb function
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-// ROUTE 1 = Create a User using: POST "/api/auth/createuser". No login required
-router.post('/createuser', [
-    body('username', 'Username must contain at least 5 characters').isLength({ min: 5 }),
-    body('email', 'Enter a valid email').isEmail(),
-    body('password', 'Password must be at least 8 characters').isLength({ min: 8 })
-], async (req, res) => {
+// ========================================================
+// ROUTE 1: Register User (POST /api/auth/createuser, POST /api/auth/register)
+// ========================================================
+const handleCreateUser = async (req, res) => {
     let success = false;
-
-    // If there are validation errors, return error and Bad request
-    let errors = validationResult(req).array();
+    const errors = validationResult(req).array();
     if (errors.length !== 0) {
-        return res.status(400).json({ errors });
+        return res.status(400).json({ success, errors });
     }
 
     try {
         const db = await connectToDb();
 
-        // Check if user with the same email already exists
-        let user = await db.collection('users').findOne({ email: req.body.email });
-        if (user) {
-            errors.push({ "msg": "Sorry, another account exists with this email!" })
-            return res.status(400).json({ success, errors });
+        // Check if user with same email already exists (case-insensitive)
+        const normalizedEmail = req.body.email.toLowerCase().trim();
+        const existingUser = await db.collection('users').findOne({ email: normalizedEmail });
+        if (existingUser) {
+            return res.status(400).json({
+                success,
+                errors: [{ msg: 'Sorry, another account exists with this email!' }]
+            });
         }
 
-        // Generate hash for the password
+        // Hash the master password
         const salt = await bcrypt.genSalt(10);
         const secPass = await bcrypt.hash(req.body.password, salt);
 
-        user = await db.collection('users').insertOne({
-            username: req.body.username,
-            email: req.body.email,
+        const newUser = await db.collection('users').insertOne({
+            username: req.body.username.trim(),
+            email: normalizedEmail,
             password: secPass,
-            createdAt: new Date()
+            createdAt: new Date(),
+            lastLogin: new Date()
         });
 
-        // Create JWT token
-        const data = {
+        // Sign JWT token with expiration
+        const payload = {
             user: {
-                id: user.insertedId
+                id: newUser.insertedId
             }
         };
-        const authToken = jwt.sign(data, JWT_SECRET);
+        const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-        res.status(201).json({ success: true, authToken });
+        return res.status(201).json({ success: true, authToken });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Internal Server Error");
+        console.error('Registration error:', err.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-});
+};
 
-// ROUTE 2 = Login for existing User using: POST "/api/auth/login". No login required
+router.post('/register', [
+    body('username', 'Username must contain at least 3 characters').isLength({ min: 3 }),
+    body('email', 'Enter a valid email').isEmail(),
+    body('password', 'Password must be at least 8 characters').isLength({ min: 8 })
+], handleCreateUser);
+
+// ========================================================
+// ROUTE 2: Login User (POST /api/auth/login)
+// ========================================================
 router.post('/login', [
     body('email', 'Enter a valid email').isEmail(),
     body('password', 'Password cannot be blank').exists()
 ], async (req, res) => {
     let success = false;
-
-    // If there are validation errors, return error and Bad request
     const errors = validationResult(req).array();
     if (errors.length !== 0) {
-        return res.status(400).json({ errors });
+        return res.status(400).json({ success, errors });
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
 
     try {
         const db = await connectToDb();
 
-        // Find the user by email
-        let user = await db.collection('users').findOne({ email });
+        const user = await db.collection('users').findOne({ email: normalizedEmail });
         if (!user) {
-            errors.push({ "msg": "User does not exist" })
-            return res.status(400).json({ success, errors });
+            return res.status(400).json({
+                success,
+                errors: [{ msg: 'Please login with valid credentials' }]
+            });
         }
 
-        // Compare the provided password with the hashed password stored in the database
         const passwordCompare = await bcrypt.compare(password, user.password);
         if (!passwordCompare) {
-            errors.push({ "msg": "Please login with valid credentials" })
-            return res.status(400).json({ success, errors });
+            return res.status(400).json({
+                success,
+                errors: [{ msg: 'Please login with valid credentials' }]
+            });
         }
 
-        //Logic to manitain last login timestamp
+        // Update last login timestamp
         await db.collection('users').updateOne(
             { _id: user._id },
             { $set: { lastLogin: new Date() } }
         );
 
-        // Create JWT token
         const payload = {
             user: {
                 id: user._id
             }
         };
-        const authToken = jwt.sign(payload, JWT_SECRET);
-        res.json({ success: true, authToken });
+        const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+        return res.json({ success: true, authToken });
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Internal Server Error");
+        console.error('Login error:', err.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
 });
 
-// ROUTE 3 = Get logged in user details using: POST "/api/auth/getuser"
-router.post('/getuser', fetchUser, async (req, res) => {
+// ========================================================
+// ROUTE 3: Get Logged In User (GET /api/auth/me, POST /api/auth/getuser)
+// ========================================================
+const handleGetUser = async (req, res) => {
     try {
         const db = await connectToDb();
-
-        // Find the user by ID and exclude the password field
-        const userID = req.user.id;
-        const user = await db.collection('users').findOne({ _id: new ObjectId(userID) }, { projection: { password: 0 } });
+        const user = await db.collection('users').findOne(
+            { _id: new ObjectId(req.user.id) },
+            { projection: { password: 0 } }
+        );
 
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ success: false, error: 'User not found' });
         }
-        res.json(user);
+        return res.json(user);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Internal Server Error");
+        console.error('Get user error:', err.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-});
+};
 
-// ROUTE 4 = Change password for user. POST /api/auth/changepassword
-router.post('/changepassword', fetchUser, [
-    body('newPassword', 'Password must be at least 8 characters').isLength({ min: 8 })
-], async (req, res) => {
+router.get('/me', fetchUser, handleGetUser);
+
+// ========================================================
+// ROUTE 4: Change Master Password (POST /api/auth/change-password)
+// ========================================================
+const handleChangePassword = async (req, res) => {
     let success = false;
     const errors = validationResult(req).array();
     if (errors.length !== 0) {
@@ -147,49 +160,68 @@ router.post('/changepassword', fetchUser, [
 
     try {
         const db = await connectToDb();
-        // Compare the provided password with the hashed password stored in the database
         const user = await db.collection('users').findOne({ _id: new ObjectId(req.user.id) });
-        const passwordCompare = await bcrypt.compare(newPassword, user.password);
-        if (passwordCompare) {
-            errors.push({ "msg": "New master password must be different from old master password" })
-            return res.status(400).json({ success, errors });
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
         }
 
-        // Generate hash for the new password
+        const passwordCompare = await bcrypt.compare(newPassword, user.password);
+        if (passwordCompare) {
+            return res.status(400).json({
+                success,
+                errors: [{ msg: 'New master password must be different from old master password' }]
+            });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        // Update user's password
-        await db.collection('users').findOneAndUpdate(
+        await db.collection('users').updateOne(
             { _id: new ObjectId(req.user.id) },
-            { $set: { password: hashedPassword } },
-            { returnDocument: 'after' }
+            { $set: { password: hashedPassword, updatedAt: new Date() } }
         );
 
-        res.status(200).json({ success: true, message: 'Password updated successfully! Please login with updated credentials' });
+        return res.status(200).json({
+            success: true,
+            message: 'Password updated successfully! Please login with updated credentials'
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Change password error:', error.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-});
+};
 
-// ROUTE 5 = Deleting user. POST /api/auth/deleteuser
-router.post('/deleteuser', fetchUser, async (req, res) => {
+const changePasswordValidation = [
+    body('newPassword', 'Password must be at least 8 characters').isLength({ min: 8 })
+];
+
+router.post('/change-password', fetchUser, changePasswordValidation, handleChangePassword);
+
+// ========================================================
+// ROUTE 5: Delete Account (DELETE /api/auth/me)
+// ========================================================
+const handleDeleteUser = async (req, res) => {
     try {
-        const userId = req.user.id; // Get the user ID from the request object set by the middleware
+        const userId = req.user.id;
         const db = await connectToDb();
 
-        // Delete associated passwords
+        // Delete user's passwords
         await db.collection('passwords').deleteMany({ user: new ObjectId(userId) });
 
-        // Delete user
+        // Delete user account
         await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
 
-        return res.status(200).json({ success: true, message: 'User and associated passwords deleted successfully.' });
+        return res.status(200).json({
+            success: true,
+            message: 'User and associated data deleted successfully.'
+        });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error' });
+        console.error('Delete user error:', error.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-});
+};
+
+router.delete('/me', fetchUser, handleDeleteUser);
 
 module.exports = router;

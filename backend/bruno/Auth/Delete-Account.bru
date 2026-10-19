@@ -1,0 +1,15 @@
+meta {
+  name: Delete Current Account
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: none
+}
+
+headers {
+  auth-token: {{authToken}}
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Register User
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "tester",
+    "email": "tester@example.com",
+    "password": "MasterPassword123!"
+  }
+}
+
+vars:post-response {
+  authToken: res.body.authToken
+}
