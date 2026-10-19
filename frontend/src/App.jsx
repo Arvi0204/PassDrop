@@ -1,11 +1,11 @@
 import './App.css'
-import Footer from './components/Footer'
 import Navbar from './components/Navbar'
 import {
   BrowserRouter as Router,
   Routes,
   Route
 } from "react-router-dom"
+import { ThemeProvider } from './context/ThemeContext'
 import PasswordState from './context/PasswordState'
 import FormState from './context/FormState'
 import Login from './components/Login'
@@ -20,7 +20,7 @@ import ExtensionInstructions from './components/ExtensionInstructions'
 function App() {
 
   return (
-    <>
+    <ThemeProvider>
       <PasswordState>
         <FormState>
           <Router>
@@ -48,9 +48,9 @@ function App() {
               }}
             />
             {/* Container with flexbox layout */}
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
               <Navbar />
-              <div className="flex-grow"> {/* This will take remaining space */}
+              <div className="flex-grow flex flex-col"> {/* This will take remaining space */}
                 <Routes>
                   <Route exact path="/home" element={<Home />} />
                   <Route exact path="/login" element={<Login />} />
@@ -60,12 +60,11 @@ function App() {
                   <Route exact path="/extension" element={<ExtensionInstructions />} />
                 </Routes>
               </div>
-              <Footer />
             </div>
           </Router>
         </FormState>
       </PasswordState>
-    </>
+    </ThemeProvider>
   )
 }
 
