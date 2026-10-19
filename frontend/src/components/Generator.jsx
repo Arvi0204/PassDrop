@@ -17,33 +17,47 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
 
   const [generatedPassword, setGeneratedPassword] = useState("");
 
+  const secureRandomChar = (str) => {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return str.charAt(array[0] % str.length);
+  };
+
+  const secureRandomInt = (max) => {
+    if (max <= 0) return 0;
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return array[0] % max;
+  };
+
   const generatePassword = () => {
     let charset = CHARACTER_SETS.letters;
     const requiredChars = [];
 
     if (settings.includeNumbers) {
       charset += CHARACTER_SETS.numbers;
-      requiredChars.push(randomChar(CHARACTER_SETS.numbers));
+      requiredChars.push(secureRandomChar(CHARACTER_SETS.numbers));
     }
 
     if (settings.includeSpecialChars) {
       charset += CHARACTER_SETS.specialChars;
-      requiredChars.push(randomChar(CHARACTER_SETS.specialChars));
+      requiredChars.push(secureRandomChar(CHARACTER_SETS.specialChars));
     }
 
-    let password = Array.from({ length: settings.length - requiredChars.length }, () =>
-      randomChar(charset)
+    const effectiveLength = Math.max(requiredChars.length, settings.length || 8);
+    const fillLength = Math.max(0, effectiveLength - requiredChars.length);
+
+    let password = Array.from({ length: fillLength }, () =>
+      secureRandomChar(charset)
     ).join("");
-  
+
     requiredChars.forEach((char) => {
-      const randomIndex = Math.floor(Math.random() * (password.length + 1));
+      const randomIndex = secureRandomInt(password.length + 1);
       password =
         password.slice(0, randomIndex) + char + password.slice(randomIndex);
     });
     setGeneratedPassword(password);
   };
-
-  const randomChar = (str) => str.charAt(Math.floor(Math.random() * str.length));
 
   const copyText = (text) => {
     navigator.clipboard.writeText(text);
@@ -90,7 +104,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
               <input
                 type="range"
                 id="password-length"
-                min="1"
+                min="6"
                 max="40"
                 value={settings.length}
                 onChange={(e) => setSettings({ ...settings, length: Number(e.target.value) })}

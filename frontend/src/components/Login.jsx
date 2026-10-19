@@ -28,12 +28,14 @@ export default function Login() {
                 navigate("/");
                 toast.success("Logged in successfully");
             } else {
-                json.errors.forEach(error => {
-                    toast.error(error.msg)
+                const errors = json.errors || [{ msg: json.error || "Login failed. Check your credentials." }];
+                errors.forEach(error => {
+                    toast.error(error.msg);
                 });
             }
         } catch (error) {
-            toast.error("An error occurred, please try again.");
+            console.error("Login fetch error:", error);
+            toast.error("Cannot connect to backend server. Make sure it is running on port 3000.");
         }
     };
 

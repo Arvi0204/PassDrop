@@ -26,8 +26,8 @@ export default function UserDetails() {
     }, [token]);
     const fetchUserDetails = async () => {
         try {
-            const response = await fetch(`${host}/api/auth/getuser`, {
-                method: 'POST',
+            const response = await fetch(`${host}/api/auth/me`, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token
@@ -52,7 +52,7 @@ export default function UserDetails() {
             setPasswordError('');
         }
         try {
-            const response = await fetch(`${host}/api/auth/changepassword`, {
+            const response = await fetch(`${host}/api/auth/change-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -68,7 +68,8 @@ export default function UserDetails() {
                 sessionStorage.removeItem('token');
                 navigate("/login")
             } else {
-                json.errors.forEach(error => {
+                const errors = json.errors || [{ msg: json.error || 'Failed to update password' }];
+                errors.forEach(error => {
                     toast.error(error.msg);
                 });
             }
@@ -104,7 +105,7 @@ export default function UserDetails() {
 
     const deleteAllPasswords = async () => {
         try {
-            const response = await fetch(`${host}/api/passwords/deleteallpass`, {
+            const response = await fetch(`${host}/api/passwords`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -126,8 +127,8 @@ export default function UserDetails() {
 
     const deleteAccount = async () => {
         try {
-            const response = await fetch(`${host}/api/auth/deleteuser`, {
-                method: 'POST',
+            const response = await fetch(`${host}/api/auth/me`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token

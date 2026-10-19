@@ -23,7 +23,7 @@ export default function Signup() {
         } else setPasswordError('');
         
         try {
-            const response = await fetch(`${host}/api/auth/createuser`, {
+            const response = await fetch(`${host}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,8 +41,9 @@ export default function Signup() {
                 navigate("/");
                 toast.success("Created account successfully");
             } else {
-                json.errors.forEach(error => {
-                    toast.error(error.msg)
+                const errors = json.errors || [{ msg: json.error || 'Failed to create account' }];
+                errors.forEach(error => {
+                    toast.error(error.msg);
                 });
             }
         } catch (error) {

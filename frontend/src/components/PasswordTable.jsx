@@ -36,8 +36,8 @@ const PasswordTable = () => {
     const passwordToEdit = passwordArray.find((item) => item._id === id);
     if (passwordToEdit) {
       setForm(passwordToEdit);
-      deletePass(id);
-      toast.loading("Editing password", { duration: 1500 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast("Editing password in form above", { icon: "✏️" });
     }
   };
 
