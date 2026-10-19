@@ -1,4 +1,3 @@
-import './App.css'
 import Navbar from './components/Navbar'
 import {
   BrowserRouter as Router,
@@ -7,7 +6,6 @@ import {
 } from "react-router-dom"
 import { ThemeProvider } from './context/ThemeContext'
 import PasswordState from './context/PasswordState'
-import FormState from './context/FormState'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import Manager from './components/Manager'
@@ -22,8 +20,7 @@ function App() {
   return (
     <ThemeProvider>
       <PasswordState>
-        <FormState>
-          <Router>
+        <Router>
             <Toaster
               position={window.innerWidth < 768 ? "top-center" : "top-right"}
               reverseOrder={true}
@@ -62,7 +59,6 @@ function App() {
               </div>
             </div>
           </Router>
-        </FormState>
       </PasswordState>
     </ThemeProvider>
   )
