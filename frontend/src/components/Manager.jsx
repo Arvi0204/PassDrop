@@ -283,7 +283,7 @@ export default function Manager() {
                             <button
                                 type="button"
                                 onClick={() => setMobileView('list')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-cyan-400 hover:text-blue-700 dark:hover:text-cyan-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all"
                             >
                                 <ArrowLeft className="w-3.5 h-3.5" /> Back to Accounts List
                             </button>
