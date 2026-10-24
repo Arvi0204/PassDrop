@@ -1,64 +1,109 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { KeyRound, Sparkles, Download, ArrowRight } from 'lucide-react';
 
 const Home = () => {
+    const token = sessionStorage.getItem('token');
+
+    const features = [
+        {
+            title: 'AES-256 GCM Vault',
+            description: 'Zero-knowledge client-side encryption. Passwords and credentials are fully shielded before reaching the database.',
+            icon: KeyRound,
+            accent: 'text-[#112838] bg-[#d0e4ee] border-[#b8d6e5]'
+        },
+        {
+            title: 'Autofill Web Extension',
+            description: 'Effortlessly log into your favorite sites with our smart browser companion. Autofill with a single click.',
+            icon: Download,
+            accent: 'text-[#112838] bg-[#d0e4ee] border-[#b8d6e5]'
+        },
+        {
+            title: 'Crypto-Grade Generator',
+            description: 'Generate high-entropy, mathematically random passwords locally using cryptographic APIs. Never predictable.',
+            icon: Sparkles,
+            accent: 'text-emerald-700 bg-emerald-100 border-emerald-200'
+        }
+    ];
+
     return (
-        <div className="flex flex-col items-center justify-center p-8">
-            <h1 className="text-4xl font-bold text-blue-700 mb-4 text-center max-w-2xl">
-                Welcome to <span className="text-black">&lt;</span>
-                <span className='text-blue-700'>Pass</span>
-                <span className="text-black">Haven/&gt;</span>
-            </h1>
-            <p className="text-lg text-gray-700 mb-8 text-center max-w-2xl">
-                PassHaven is a secure password manager that helps you store and manage your passwords safely.
-                Our app uses advanced encryption techniques to ensure your sensitive information is always protected.
-            </p>
+        <div className="min-h-[calc(100vh-64px)] bg-transparent text-[#0c1820]">
+            {/* Hero Section */}
+            <section className="relative overflow-hidden pt-16 pb-20 px-4 sm:px-6 lg:px-8">
+                {/* Subtle radial ambient glow */}
+                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-white/20 via-sky-100/30 to-transparent blur-3xl pointer-events-none rounded-full" />
 
-            <h2 className="text-3xl font-semibold text-blue-600 mb-4">Features</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">AES Encryption</h3>
-                    <p className="text-gray-600">
-                        We utilize AES (Advanced Encryption Standard) to encrypt your passwords before storing them in our database,
-                        ensuring that only you can access your sensitive data.
-                    </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">Responsive User Interface</h3>
-                    <p className="text-gray-600">
-                        Our intuitive design makes it easy for you to manage your passwords, with a seamless experience on both web and mobile.
-                    </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">Cross-Platform Support</h3>
-                    <p className="text-gray-600">
-                        Access your passwords securely from any device. PassHaven is available on web browsers, ensuring you can manage your passwords anywhere.
-                    </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">Secure Backup</h3>
-                    <p className="text-gray-600">
-                        Your data is securely backed up, so you never have to worry about losing your passwords. We take data integrity seriously.
-                    </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">Web Extension for Autofill</h3>
-                    <p className="text-gray-600">
-                        Autofill your login credentials across websites with our web extension for effortless, secure access.
-                    </p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-xl font-bold text-blue-500 mb-2">Easy Password Generation</h3>
-                    <p className="text-gray-600">
-                        Generate strong, random passwords with our built-in password generator, making it easier to keep your accounts secure.
-                    </p>
-                </div>
-            </div>
+                <div className="max-w-4xl mx-auto text-center relative z-10">
+                    {/* Trust Pill */}
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/90 bg-white/80 text-[#0e293a] text-xs font-semibold mb-8 shadow-xs">
+                        <span className="w-2 h-2 rounded-full bg-[#112838] animate-pulse" />
+                        <span>Zero-knowledge · AES-256 encrypted · Secure by design</span>
+                    </div>
 
-            <h2 className="text-3xl font-semibold text-blue-600 mt-12 mb-4 text-center">Why Choose PassHaven?</h2>
-            <p className="text-lg text-gray-700 mb-8 text-center max-w-2xl">
-                At PassHaven, we prioritize your security and privacy. Our application is built with the latest technology to ensure that
-                your passwords are protected. Experience peace of mind knowing that your sensitive information is safe with us.
-            </p>
+                    <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#0c1820] leading-[1.15] mb-6">
+                        Your passwords,{' '}
+                        <br className="hidden sm:inline" />
+                        <span className="bg-gradient-to-r from-[#112838] via-[#24546e] to-[#3a7594] bg-clip-text text-transparent">
+                            one secure drop.
+                        </span>
+                    </h1>
+
+                    <p className="text-base sm:text-lg text-[#1e3b4d] max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+                        PassDrop securely stores, generates, and autofills your digital identities.
+                        Experience clean Nordic frosted glass privacy engineered for zero-knowledge safety.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <Link
+                            to={token ? "/" : "/signup"}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all hover:scale-[1.02]"
+                        >
+                            <span>{token ? "Open My Vault" : "Get Started for Free"}</span>
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                        <a
+                            href="#features"
+                            className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all"
+                        >
+                            Explore Features
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {/* Core Features Grid */}
+            <section id="features" className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+                <div className="text-center mb-10">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-[#2d4d60]">
+                        Vault Architecture
+                    </h2>
+                    <p className="text-2xl font-bold text-[#0c1820] mt-1">
+                        Built for ultimate digital hygiene
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {features.map((feat) => {
+                        const Icon = feat.icon;
+                        return (
+                            <div
+                                key={feat.title}
+                                className="p-6 rounded-2xl bg-[#e1eef5]/70 border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl transition-all"
+                            >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border mb-4 shadow-xs ${feat.accent}`}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <h3 className="text-lg font-bold text-[#0c1820] mb-2">
+                                    {feat.title}
+                                </h3>
+                                <p className="text-sm text-[#3a5566] leading-relaxed">
+                                    {feat.description}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+            </section>
         </div>
     );
 };

@@ -1,18 +1,29 @@
-import React, { useContext, useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  KeyRound,
+  Sparkles,
+  User,
+  Download,
+  LogOut,
+  Menu,
+  X
+} from "lucide-react";
 import toast from "react-hot-toast";
 import passwordContext from "../context/passwordContext";
+import PassDropLogo from "./common/PassDropLogo";
 import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 
 const Navbar = () => {
-  let { setPasswordArray } = useContext(passwordContext);
-  let navigate = useNavigate();
+  const { setPasswordArray } = useContext(passwordContext);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const token = sessionStorage.getItem("token");
 
@@ -20,165 +31,177 @@ const Navbar = () => {
     await setPasswordArray([]);
     sessionStorage.removeItem("token");
     navigate("/login");
-    toast.success("Logged out successfully!!!");
+    toast.success("Logged out successfully");
     setIsLogoutModalOpen(false);
   };
 
-  const renderAuthLinks = (token) => {
-    return token ? (
-      <div className="flex gap-6 justify-center items-center">
-        <Link
-          to="/extension"
-          className="relative flex items-center gap-2 group"
-        >
-          <lord-icon
-            src="https://cdn.lordicon.com/xcrjfuzb.json"
-            trigger="hover"
-            state="hover-arrow-down-2"
-            colors="primary:#ffffff"
-            style={{ width: "25px", height: "25px" }}
-          />
-          <div className="absolute top-full right-0 mt-4 hidden group-hover:flex items-center justify-center w-max px-3 py-1 bg-gray-800 text-white text-md font-medium rounded-lg shadow-lg transition-transform transform-gpu scale-95 group-hover:scale-100">
-            Download&nbsp;<span className="text-blue-500">&lt;</span>
-            Pass
-            <span className="text-blue-500">Haven/&gt;</span>&nbsp;extension
-          </div>
-        </Link>
-        <button
-          onClick={() => setIsLogoutModalOpen(true)}
-          type="button"
-          className="text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2 text-center"
-        >
-          Logout
-        </button>
-      </div>
-    ) : (
-      <div className="flex gap-3">
-        <Link
-          to="/login"
-          className="text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2 text-center"
-        >
-          Login
-        </Link>
-        <Link
-          to="/signup"
-          className="text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-medium rounded-lg text-sm px-3 py-2 text-center"
-        >
-          Sign Up
-        </Link>
-      </div>
-    );
-  };
+  const navLinks = [
+    { label: "Vault", path: "/", icon: KeyRound },
+    { label: "Generator", onClick: () => setIsGeneratorModalOpen(true), icon: Sparkles },
+    { label: "Account", path: "/user", icon: User },
+    { label: "Extension", path: "/extension", icon: Download }
+  ];
 
-  const renderNavLinks = () => (
-    <motion.li className="flex flex-col items-center md:flex-row gap-6">
-      <Link className="flex gap-2 items-center hover:font-bold" to="/" onClick={() => setIsDropdownOpen(false)}>
-        <lord-icon
-          src="https://cdn.lordicon.com/fkaukecx.json"
-          trigger="hover"
-          style={{ width: "25px", height: "25px", filter: "invert(1)" }}
-        />
-        Passwords
-      </Link>
-      <div
-        className="flex gap-2 items-center hover:font-bold cursor-pointer"
-        onClick={() => {
-          setIsDropdownOpen(false);
-          setIsGeneratorModalOpen(true);
-        }}
-      >
-        <lord-icon
-          src="https://cdn.lordicon.com/qnpnzlkk.json"
-          trigger="hover"
-          style={{ width: "25px", height: "25px", filter: "invert(1)" }}
-        />
-        Generator
-      </div>
-      <Link to="/user" className="flex items-center gap-2" onClick={() => setIsDropdownOpen(false)}>
-        <lord-icon
-          src="https://cdn.lordicon.com/hrjifpbq.json"
-          trigger="hover"
-          style={{ width: "25px", height: "25px", filter: "invert(1)" }}
-        />
-        <span className="hover:font-bold">Account</span>
-      </Link>
-    </motion.li>
-  );
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
-      <nav className="bg-slate-800 text-white w-full sticky z-20 top-0 start-0 min-h-12 px-5">
-        <div className={`max-w-screen-xl flex max-[400px]:flex-col max-[400px]:gap-3 flex-wrap items-center justify-between mx-auto py-2`}>
-          <Link to="/home" className="logo font-bold text-2xl">
-            <span className="text-blue-500">&lt;</span>
-            Pass
-            <span className="text-blue-500">Haven/&gt;</span>
-          </Link>
+      <header className="sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* PassDrop Logo & Wordmark */}
+            <Link to={token ? "/" : "/home"} className="flex items-center gap-2.5 group">
+              <PassDropLogo size={32} className="group-hover:scale-105 transition-transform" />
+              <span className="font-extrabold text-lg tracking-tight flex items-center">
+                <span className="text-[#112838]">
+                  Pass
+                </span>
+                <span className="text-[#0284c7]">
+                  Drop
+                </span>
+              </span>
+            </Link>
 
-          <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
-            {renderAuthLinks(token)}
+            {/* Desktop Navigation Links */}
             {token && (
-              <button
-                data-collapse-toggle="navbar-sticky"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                type="button"
-                className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-                aria-controls="navbar-sticky"
-                aria-expanded={isDropdownOpen}
-              >
-                <span className="sr-only">Open main menu</span>
-                <svg
-                  className="w-5 h-5"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 17 14"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M1 1h15M1 7h15M1 13h15"
-                  />
-                </svg>
-              </button>
+              <nav className="hidden md:flex items-center gap-1.5">
+                {navLinks.map((item) => {
+                  const Icon = item.icon;
+                  if (item.onClick) {
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={item.onClick}
+                        className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
+                      >
+                        <Icon className="w-4 h-4 text-[#4a6b82]" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  }
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all ${
+                        isActive(item.path)
+                          ? "bg-[#d0e4ee] text-[#0e293a] border border-[#b8d6e5] shadow-xs"
+                          : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#112838]" : "text-[#4a6b82]"}`} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
             )}
-          </div>
 
-          <AnimatePresence>
-            {isDropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="items-center justify-center flex-col w-full md:flex md:w-auto md:order-1"
-                id="navbar-sticky"
-              >
-                <ul className="flex flex-col p-4 md:p-0 mt-4 font-medium rounded-lg md:flex-row md:space-x-8 md:mt-0 md:border-0">
-                  {token ? renderNavLinks() : ""}
-                </ul>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* Right Action: Auth / User Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {token ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsLogoutModalOpen(true)}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#3a5566] hover:text-rose-600 hover:bg-rose-50/80 border border-white/80 hover:border-rose-200/80 rounded-xl transition-all cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Logout</span>
+                  </button>
 
-          <div className="hidden md:flex md:w-auto md:order-1">
-            <ul className="flex flex-row p-4 md:p-0 mt-4 font-medium rounded-lg md:space-x-8 md:mt-0 md:border-0">
-              {token ? renderNavLinks() : ""}
-            </ul>
+                  {/* Mobile Menu Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="md:hidden p-2 text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60 rounded-xl"
+                  >
+                    {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="px-3.5 py-1.5 text-xs font-semibold text-[#112838] hover:text-[#0c1820] hover:bg-white/60 rounded-xl transition-colors"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </nav>
 
+        {/* Mobile Dropdown Menu */}
+        <AnimatePresence>
+          {token && isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-white/60 bg-[#e1eef5]/95 px-4 py-3 space-y-1 backdrop-blur-xl"
+            >
+              {navLinks.map((item) => {
+                const Icon = item.icon;
+                if (item.onClick) {
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        item.onClick();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-xl text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
+                    >
+                      <Icon className="w-4 h-4 text-[#4a6b82]" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    key={item.label}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-xl ${
+                      isActive(item.path)
+                        ? "bg-[#d0e4ee] text-[#0e293a] border border-[#b8d6e5]"
+                        : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#112838]" : "text-[#4a6b82]"}`} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      {/* Logout Confirmation Modal */}
       <ConfirmationModal
         isOpen={isLogoutModalOpen}
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={confirmLogout}
-        message="Are you sure you want to log out?"
-        confirmText="Yes, I'm sure"
+        message="Are you sure you want to log out of PassDrop?"
+        confirmText="Log Out"
       />
-      <Generator isOpen={isGeneratorModalOpen} setIsGeneratorModalOpen={setIsGeneratorModalOpen} />
+
+      {/* Password Generator Modal */}
+      <Generator
+        isOpen={isGeneratorModalOpen}
+        setIsGeneratorModalOpen={setIsGeneratorModalOpen}
+      />
     </>
   );
 };
