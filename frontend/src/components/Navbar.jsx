@@ -8,20 +8,16 @@ import {
   Download,
   LogOut,
   Menu,
-  X,
-  Sun,
-  Moon
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import passwordContext from "../context/passwordContext";
-import { useTheme } from "../context/ThemeContext";
 import PassDropLogo from "./common/PassDropLogo";
 import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
-  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,17 +46,17 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
+      <header className="sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* PassDrop Logo & Wordmark */}
             <Link to={token ? "/" : "/home"} className="flex items-center gap-2.5 group">
               <PassDropLogo size={32} className="group-hover:scale-105 transition-transform" />
               <span className="font-extrabold text-lg tracking-tight flex items-center">
-                <span className="bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-500 dark:from-blue-400 dark:via-sky-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                <span className="text-[#112838]">
                   Pass
                 </span>
-                <span className="text-slate-900 dark:text-slate-100">
+                <span className="text-[#0284c7]">
                   Drop
                 </span>
               </span>
@@ -68,7 +64,7 @@ const Navbar = () => {
 
             {/* Desktop Navigation Links */}
             {token && (
-              <nav className="hidden md:flex items-center gap-1">
+              <nav className="hidden md:flex items-center gap-1.5">
                 {navLinks.map((item) => {
                   const Icon = item.icon;
                   if (item.onClick) {
@@ -77,9 +73,9 @@ const Navbar = () => {
                         key={item.label}
                         type="button"
                         onClick={item.onClick}
-                        className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                       >
-                        <Icon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <Icon className="w-4 h-4 text-[#4a6b82]" />
                         <span>{item.label}</span>
                       </button>
                     );
@@ -90,11 +86,11 @@ const Navbar = () => {
                       to={item.path}
                       className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all ${
                         isActive(item.path)
-                          ? "bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-cyan-400 shadow-sm"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          ? "bg-[#d0e4ee] text-[#0e293a] border border-[#b8d6e5] shadow-xs"
+                          : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-blue-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"}`} />
+                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#112838]" : "text-[#4a6b82]"}`} />
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -102,25 +98,14 @@ const Navbar = () => {
               </nav>
             )}
 
-            {/* Right Action: Theme Switch + Auth Buttons */}
+            {/* Right Action: Auth / User Buttons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Theme Toggle Button */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                className="p-2 rounded-xl text-slate-600 dark:text-amber-400 hover:text-slate-900 dark:hover:text-amber-300 bg-slate-100/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 shadow-sm transition-all cursor-pointer"
-              >
-                {isDark ? <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20" /> : <Moon className="w-4 h-4 text-slate-700 fill-slate-700/10" />}
-              </button>
-
               {token ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsLogoutModalOpen(true)}
                     type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900/50 rounded-xl transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#3a5566] hover:text-rose-600 hover:bg-rose-50/80 border border-white/80 hover:border-rose-200/80 rounded-xl transition-all cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Logout</span>
@@ -130,7 +115,7 @@ const Navbar = () => {
                   <button
                     type="button"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="md:hidden p-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                    className="md:hidden p-2 text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60 rounded-xl"
                   >
                     {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                   </button>
@@ -139,13 +124,13 @@ const Navbar = () => {
                 <div className="flex items-center gap-2">
                   <Link
                     to="/login"
-                    className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    className="px-3.5 py-1.5 text-xs font-semibold text-[#112838] hover:text-[#0c1820] hover:bg-white/60 rounded-xl transition-colors"
                   >
                     Log In
                   </Link>
                   <Link
                     to="/signup"
-                    className="px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-sm shadow-blue-500/20 transition-all"
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all"
                   >
                     Sign Up
                   </Link>
@@ -162,7 +147,7 @@ const Navbar = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 space-y-1"
+              className="md:hidden border-t border-white/60 bg-[#e1eef5]/95 px-4 py-3 space-y-1 backdrop-blur-xl"
             >
               {navLinks.map((item) => {
                 const Icon = item.icon;
@@ -175,9 +160,9 @@ const Navbar = () => {
                         setIsMobileMenuOpen(false);
                         item.onClick();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-xl text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
                     >
-                      <Icon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <Icon className="w-4 h-4 text-[#4a6b82]" />
                       <span>{item.label}</span>
                     </button>
                   );
@@ -189,11 +174,11 @@ const Navbar = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-xl ${
                       isActive(item.path)
-                        ? "bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-cyan-400"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        ? "bg-[#d0e4ee] text-[#0e293a] border border-[#b8d6e5]"
+                        : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-blue-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"}`} />
+                    <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#112838]" : "text-[#4a6b82]"}`} />
                     <span>{item.label}</span>
                   </Link>
                 );

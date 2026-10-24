@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Copy, KeyRound, User } from 'lucide-react';
+import { Star, KeyRound, User } from 'lucide-react';
 import FaviconImage from './FaviconImage';
 
 export default function VaultItemCard({
@@ -7,8 +7,7 @@ export default function VaultItemCard({
     isSelected,
     onSelect,
     onCopyUsername,
-    onCopyPassword,
-    onToggleFavorite
+    onCopyPassword
 }) {
     const displayTitle = item.title?.trim() || item.url?.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0] || 'Untitled Account';
     const displaySubtitle = item.username || item.url || 'No username';
@@ -16,24 +15,31 @@ export default function VaultItemCard({
     return (
         <div
             onClick={() => onSelect(item)}
-            className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left ${
+            className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left overflow-hidden ${
                 isSelected
-                    ? 'bg-blue-50/80 dark:bg-slate-800/90 border-blue-500 dark:border-cyan-400 shadow-sm ring-1 ring-blue-500/20 dark:ring-cyan-400/20'
-                    : 'bg-white dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-[#d0e4ee]/95 to-[#f5fafc]/90 border-[#112838]/30 shadow-xs ring-1 ring-[#112838]/15'
+                    : 'bg-[#e1eef5]/65 hover:bg-[#e1eef5]/90 border-white/70 hover:border-white shadow-xs backdrop-blur-md'
             }`}
         >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-                <FaviconImage url={item.url} title={item.title} size="md" />
+            {/* Active Left Indicator Bar */}
+            {isSelected && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#112838] shadow-[0_0_8px_rgba(17,40,56,0.5)]" />
+            )}
+
+            <div className="flex items-center gap-3 min-w-0 flex-1 pl-1">
+                <div className="p-1 rounded-xl bg-white/80 border border-white/90 shadow-xs shrink-0">
+                    <FaviconImage url={item.url} title={item.title} size="md" />
+                </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
+                        <span className="font-semibold text-[#0c1820] text-sm truncate">
                             {displayTitle}
                         </span>
                         {item.isFavorite && (
                             <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                         )}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    <p className="text-xs text-[#3a5566] truncate mt-0.5">
                         {displaySubtitle}
                     </p>
                 </div>
@@ -49,7 +55,7 @@ export default function VaultItemCard({
                             e.stopPropagation();
                             onCopyUsername(item.username);
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-700 transition-colors"
+                        className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors"
                     >
                         <User className="w-3.5 h-3.5" />
                     </button>
@@ -61,7 +67,7 @@ export default function VaultItemCard({
                         e.stopPropagation();
                         onCopyPassword(item.password);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-blue-100/70 dark:hover:bg-slate-700 transition-colors"
+                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors"
                 >
                     <KeyRound className="w-3.5 h-3.5" />
                 </button>

@@ -4,7 +4,6 @@ import {
     Search,
     Plus,
     Star,
-    Shield,
     ArrowLeft,
     X,
     KeyRound
@@ -18,7 +17,7 @@ import ConfirmationModal from './ConfirmationModal';
 
 export default function Manager() {
     const navigate = useNavigate();
-    const { passwordArray, getPasswords, addPass, editPass, deletePass, isLoading } =
+    const { passwordArray, getPasswords, addPass, editPass, deletePass } =
         useContext(passwordContext);
 
     const [selectedId, setSelectedId] = useState(null);
@@ -150,25 +149,25 @@ export default function Manager() {
     }, [passwordArray]);
 
     return (
-        <div className="flex-1 bg-slate-50/60 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+        <div className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Top Action Bar */}
-                <div className="bg-white dark:bg-slate-800/80 px-5 py-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
+                <div className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
                     {/* Search Input */}
                     <div className="relative w-full md:w-96">
-                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <Search className="w-4 h-4 text-[#5c7788] absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
                             placeholder="Search accounts, URLs, or usernames..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-8 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            className="w-full pl-10 pr-8 py-2.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788] shadow-xs"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5c7788] hover:text-[#0c1820] p-0.5 cursor-pointer"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -177,14 +176,14 @@ export default function Manager() {
 
                     {/* Filter Pills & Add Button */}
                     <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-                        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/60 border border-transparent dark:border-slate-800 rounded-xl">
+                        <div className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/60 rounded-xl">
                             <button
                                 type="button"
                                 onClick={() => setActiveFilter('all')}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                                     activeFilter === 'all'
-                                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-cyan-400 shadow-sm'
-                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                        ? 'bg-[#112838] text-white shadow-xs'
+                                        : 'text-[#3a5566] hover:text-[#0c1820]'
                                 }`}
                             >
                                 All ({passwordArray.length})
@@ -192,13 +191,13 @@ export default function Manager() {
                             <button
                                 type="button"
                                 onClick={() => setActiveFilter('favorites')}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 ${
+                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                                     activeFilter === 'favorites'
-                                        ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm'
-                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                        ? 'bg-[#112838] text-amber-300 shadow-xs'
+                                        : 'text-[#3a5566] hover:text-[#0c1820]'
                                 }`}
                             >
-                                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                                 Favorites ({favoritesCount})
                             </button>
                         </div>
@@ -206,7 +205,7 @@ export default function Manager() {
                         <button
                             type="button"
                             onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-sm shadow-blue-500/20 transition-all shrink-0"
+                            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 active:scale-[0.98] transition-all shrink-0 cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>New Item</span>
@@ -222,22 +221,22 @@ export default function Manager() {
                             mobileView === 'detail' ? 'hidden md:block' : 'block'
                         }`}
                     >
-                        <div className="flex items-center justify-between px-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        <div className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
                             <span>
                                 {activeFilter === 'favorites' ? 'Favorite Accounts' : 'Vault Accounts'}
                             </span>
-                            <span>{filteredItems.length} items</span>
+                            <span className="text-[#3a5566]">{filteredItems.length} items</span>
                         </div>
 
                         {filteredItems.length === 0 ? (
-                            <div className="p-8 text-center bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-slate-400 space-y-3">
-                                <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 mx-auto flex items-center justify-center text-slate-300 dark:text-slate-600">
-                                    <KeyRound className="w-6 h-6 text-slate-400 dark:text-cyan-400" />
+                            <div className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3">
+                                <div className="w-12 h-12 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] mx-auto flex items-center justify-center text-[#112838] shadow-xs">
+                                    <KeyRound className="w-6 h-6" />
                                 </div>
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                <p className="text-sm font-bold text-[#0c1820]">
                                     {searchQuery ? 'No matching accounts found' : 'Your vault is empty'}
                                 </p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 max-w-xs mx-auto">
+                                <p className="text-xs text-[#3a5566] max-w-xs mx-auto">
                                     {searchQuery
                                         ? 'Try searching with a different term or clear the filter.'
                                         : 'Add your first login, website credential, or secure note.'}
@@ -246,7 +245,7 @@ export default function Manager() {
                                     <button
                                         type="button"
                                         onClick={handleOpenCreate}
-                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-cyan-400 bg-blue-50 dark:bg-slate-900 hover:bg-blue-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl transition-colors cursor-pointer shadow-md shadow-[#112838]/20"
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Add Account
                                     </button>
@@ -265,7 +264,6 @@ export default function Manager() {
                                         }}
                                         onCopyUsername={(username) => handleCopy(username, 'Username')}
                                         onCopyPassword={(password) => handleCopy(password, 'Password')}
-                                        onToggleFavorite={handleToggleFavorite}
                                     />
                                 ))}
                             </div>
@@ -283,7 +281,7 @@ export default function Manager() {
                             <button
                                 type="button"
                                 onClick={() => setMobileView('list')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-cyan-400 hover:text-blue-700 dark:hover:text-cyan-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#112838] bg-[#e1eef5]/90 px-3.5 py-2 rounded-xl border border-white/80 shadow-xs transition-all cursor-pointer"
                             >
                                 <ArrowLeft className="w-3.5 h-3.5" /> Back to Accounts List
                             </button>

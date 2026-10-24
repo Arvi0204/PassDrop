@@ -11,7 +11,10 @@ import {
     ShieldCheck,
     Calendar,
     Clock,
-    Lock
+    User,
+    KeyRound,
+    Globe,
+    FileText
 } from 'lucide-react';
 import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
@@ -28,13 +31,13 @@ export default function VaultDetail({
 
     if (!item) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm min-h-[400px] transition-colors">
-                <div className="w-16 h-16 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center mb-4 text-slate-300 dark:text-slate-600">
-                    <ShieldCheck className="w-8 h-8 text-blue-500 dark:text-cyan-400" />
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl min-h-[440px]">
+                <div className="w-16 h-16 rounded-2xl bg-[#d0e4ee] border border-[#b8d6e5] flex items-center justify-center mb-4 text-[#112838] shadow-xs">
+                    <ShieldCheck className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-1">No Account Selected</h3>
-                <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm">
-                    Select a credential from the list to view its details, or add a new account to your vault.
+                <h3 className="text-lg font-bold text-[#0c1820] mb-1">No Account Selected</h3>
+                <p className="text-sm text-[#3a5566] max-w-sm">
+                    Select a credential from the list to view its details, or click &ldquo;New Item&rdquo; to add a new account.
                 </p>
             </div>
         );
@@ -56,21 +59,23 @@ export default function VaultDetail({
     const displayTitle = item.title?.trim() || item.url?.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0] || 'Untitled Account';
 
     return (
-        <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden transition-colors">
+        <div className="bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/40">
+            <div className="p-6 border-b border-white/60 flex items-start justify-between gap-4 bg-white/20">
                 <div className="flex items-center gap-4 min-w-0">
-                    <FaviconImage url={item.url} title={item.title} size="lg" />
+                    <div className="p-2.5 rounded-2xl bg-white/80 border border-white/90 shadow-xs shrink-0">
+                        <FaviconImage url={item.url} title={item.title} size="lg" />
+                    </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white truncate">
+                            <h2 className="text-xl font-bold tracking-tight text-[#0c1820] truncate">
                                 {displayTitle}
                             </h2>
                             <button
                                 type="button"
                                 title={item.isFavorite ? 'Remove from favorites' : 'Mark as favorite'}
                                 onClick={() => onToggleFavorite(item)}
-                                className="p-1 rounded-lg text-slate-400 hover:text-amber-500 transition-colors"
+                                className="p-1.5 rounded-xl text-[#5c7788] hover:text-amber-500 hover:bg-amber-50 transition-all cursor-pointer"
                             >
                                 <Star
                                     className={`w-5 h-5 ${
@@ -86,7 +91,7 @@ export default function VaultDetail({
                                 href={formattedUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-cyan-400 hover:underline mt-0.5 truncate font-medium"
+                                className="inline-flex items-center gap-1 text-xs text-[#112838] hover:underline mt-1 truncate font-medium"
                             >
                                 {item.url} <ExternalLink className="w-3 h-3 shrink-0" />
                             </a>
@@ -99,15 +104,15 @@ export default function VaultDetail({
                     <button
                         type="button"
                         onClick={() => onEdit(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
                     >
-                        <Edit3 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                        <Edit3 className="w-3.5 h-3.5 text-[#3a5566]" />
                         Edit
                     </button>
                     <button
                         type="button"
                         onClick={() => onDelete(item._id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 rounded-xl shadow-xs transition-all cursor-pointer"
                     >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete
@@ -116,25 +121,26 @@ export default function VaultDetail({
             </div>
 
             {/* Content Body */}
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5">
                 {/* Username Field */}
                 <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                        Username / Email
-                    </label>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 group">
-                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate select-all">
-                            {item.username || <span className="text-slate-400 italic">No username set</span>}
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
+                        <User className="w-3.5 h-3.5 text-[#112838]" />
+                        <span>Username / Email</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all group">
+                        <span className="text-sm font-medium text-[#0c1820] truncate select-all">
+                            {item.username || <span className="text-[#5c7788] italic font-normal">No username set</span>}
                         </span>
                         {item.username && (
                             <button
                                 type="button"
                                 onClick={() => handleCopyField(item.username, 'Username')}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shrink-0"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors shrink-0 cursor-pointer"
                                 title="Copy username"
                             >
                                 {copiedField === 'Username' ? (
-                                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                    <Check className="w-4 h-4 text-emerald-600" />
                                 ) : (
                                     <Copy className="w-4 h-4" />
                                 )}
@@ -144,19 +150,20 @@ export default function VaultDetail({
                 </div>
 
                 {/* Password Field */}
-                <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                        Password
-                    </label>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-                        <span className="font-mono text-sm tracking-wide text-slate-900 dark:text-slate-100 select-all truncate">
+                <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
+                        <KeyRound className="w-3.5 h-3.5 text-[#112838]" />
+                        <span>Password</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                        <span className="font-mono text-sm tracking-wider text-[#0c1820] select-all truncate">
                             {showPassword ? item.password : '••••••••••••••••'}
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((prev) => !prev)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                 title={showPassword ? 'Hide password' : 'Show password'}
                             >
                                 {showPassword ? (
@@ -168,11 +175,11 @@ export default function VaultDetail({
                             <button
                                 type="button"
                                 onClick={() => handleCopyField(item.password, 'Password')}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-blue-100/70 dark:hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors cursor-pointer"
                                 title="Copy password"
                             >
                                 {copiedField === 'Password' ? (
-                                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                    <Check className="w-4 h-4 text-emerald-600" />
                                 ) : (
                                     <Copy className="w-4 h-4" />
                                 )}
@@ -181,7 +188,7 @@ export default function VaultDetail({
                     </div>
 
                     {/* Password Strength Meter */}
-                    <div className="pt-1">
+                    <div className="pt-1.5">
                         <PasswordStrength password={item.password} />
                     </div>
                 </div>
@@ -189,11 +196,12 @@ export default function VaultDetail({
                 {/* Website Field (if present) */}
                 {item.url && (
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                            Website Address
-                        </label>
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate select-all">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
+                            <Globe className="w-3.5 h-3.5 text-[#112838]" />
+                            <span>Website Address</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                            <span className="text-sm font-medium text-[#0c1820] truncate select-all">
                                 {item.url}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
@@ -201,7 +209,7 @@ export default function VaultDetail({
                                     href={formattedUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-blue-100/70 dark:hover:bg-slate-800 transition-colors"
+                                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors"
                                     title="Open website"
                                 >
                                     <ExternalLink className="w-4 h-4" />
@@ -209,11 +217,11 @@ export default function VaultDetail({
                                 <button
                                     type="button"
                                     onClick={() => handleCopyField(item.url, 'Website URL')}
-                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors"
+                                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                     title="Copy URL"
                                 >
                                     {copiedField === 'Website URL' ? (
-                                        <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                        <Check className="w-4 h-4 text-emerald-600" />
                                     ) : (
                                         <Copy className="w-4 h-4" />
                                     )}
@@ -226,10 +234,11 @@ export default function VaultDetail({
                 {/* Notes Block (if present) */}
                 {item.notes && (
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                            Secure Notes
-                        </label>
-                        <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
+                            <FileText className="w-3.5 h-3.5 text-[#112838]" />
+                            <span>Secure Notes</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-[#f5fafc]/85 border border-white/90 text-sm text-[#0c1820] whitespace-pre-wrap font-sans leading-relaxed shadow-xs">
                             {item.notes}
                         </div>
                     </div>
@@ -237,7 +246,7 @@ export default function VaultDetail({
             </div>
 
             {/* Footer Metadata */}
-            <div className="mt-auto px-6 py-3.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+            <div className="mt-auto px-6 py-3.5 bg-white/30 border-t border-white/50 flex items-center justify-between text-xs text-[#3a5566]">
                 <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>

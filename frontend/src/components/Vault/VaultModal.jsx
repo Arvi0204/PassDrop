@@ -179,7 +179,7 @@ export default function VaultModal({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+                        className="fixed inset-0 bg-[#0c1820]/50 backdrop-blur-sm"
                     />
 
                     {/* Modal Window */}
@@ -188,16 +188,16 @@ export default function VaultModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh] z-10"
+                        className="relative w-full max-w-lg bg-[#e1eef5]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 overflow-hidden flex flex-col max-h-[90vh] z-10"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                        <div className="px-6 py-4 border-b border-white/60 flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                                <h3 className="text-lg font-bold text-[#0c1820]">
                                     {isEditing ? 'Edit Account' : 'New Vault Item'}
                                 </h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                <p className="text-xs text-[#3a5566]">
                                     {isEditing
                                         ? 'Update your stored credential details'
                                         : 'Save a password or credential to your secure vault'}
@@ -206,7 +206,7 @@ export default function VaultModal({
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -217,10 +217,10 @@ export default function VaultModal({
                             {/* Title & Favorite */}
                             <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                        Title <span className="text-slate-400 font-normal">(Friendly name)</span>
+                                    <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                        Title <span className="text-[#3a5566] font-normal">(Friendly name)</span>
                                     </label>
-                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    <span className="text-[11px] text-[#3a5566]">
                                         {form.isFavorite ? '★ Marked as favorite' : 'Click star to pin'}
                                     </span>
                                 </div>
@@ -231,17 +231,17 @@ export default function VaultModal({
                                         value={form.title}
                                         onChange={handleChange}
                                         placeholder="e.g. GitHub, Netflix, Work Email"
-                                        className="flex-1 h-10 px-3.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                        className="flex-1 h-10 px-3.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788]"
                                         autoFocus
                                     />
                                     <button
                                         type="button"
                                         title={form.isFavorite ? 'Favorited (Click to unpin)' : 'Mark as favorite'}
                                         onClick={() => setForm((prev) => ({ ...prev, isFavorite: !prev.isFavorite }))}
-                                        className={`h-10 w-10 shrink-0 flex items-center justify-center rounded-xl border transition-all ${
+                                        className={`h-10 w-10 shrink-0 flex items-center justify-center rounded-xl border transition-all cursor-pointer ${
                                             form.isFavorite
-                                                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-500 shadow-sm shadow-amber-500/10'
-                                                : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
+                                                ? 'bg-amber-50 border-amber-300 text-amber-500 shadow-xs'
+                                                : 'bg-[#f5fafc]/85 border-white/90 text-[#5c7788] hover:text-[#0c1820]'
                                         }`}
                                     >
                                         <Star className={`w-4 h-4 ${form.isFavorite ? 'fill-amber-500 text-amber-500' : ''}`} />
@@ -251,8 +251,8 @@ export default function VaultModal({
 
                             {/* Website URL */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                    <Globe className="w-3.5 h-3.5 text-slate-400" /> Website URL
+                                <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <Globe className="w-3.5 h-3.5 text-[#3a5566]" /> Website URL
                                 </label>
                                 <input
                                     type="text"
@@ -260,14 +260,14 @@ export default function VaultModal({
                                     value={form.url}
                                     onChange={handleChange}
                                     placeholder="e.g. https://github.com/login"
-                                    className="w-full h-10 px-3.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    className="w-full h-10 px-3.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788]"
                                 />
                             </div>
 
                             {/* Username */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-slate-400" /> Username or Email
+                                <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-[#3a5566]" /> Username or Email
                                 </label>
                                 <input
                                     type="text"
@@ -276,32 +276,32 @@ export default function VaultModal({
                                     onChange={handleChange}
                                     placeholder="e.g. user@example.com"
                                     autoComplete="username"
-                                    className="w-full h-10 px-3.5 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    className="w-full h-10 px-3.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788]"
                                 />
                             </div>
 
                             {/* Password & Integrated Generator */}
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                        <KeyRound className="w-3.5 h-3.5 text-slate-400" /> Password *
+                                    <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                        <KeyRound className="w-3.5 h-3.5 text-[#3a5566]" /> Password *
                                     </label>
                                     <div className="flex items-center gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => handleGenerate()}
-                                            className="text-xs font-semibold text-blue-600 dark:text-cyan-400 hover:text-blue-800 dark:hover:text-cyan-300 flex items-center gap-1 hover:underline"
+                                            className="text-xs font-semibold text-[#112838] hover:text-[#1b3d54] flex items-center gap-1 hover:underline cursor-pointer"
                                         >
                                             <Sparkles className="w-3 h-3" /> Generate
                                         </button>
-                                        <span className="text-slate-300 dark:text-slate-700">•</span>
+                                        <span className="text-[#3a5566]/40">•</span>
                                         <button
                                             type="button"
                                             onClick={() => setShowGeneratorOptions((prev) => !prev)}
-                                            className={`text-xs px-2 py-0.5 rounded-md border transition-all flex items-center gap-1 ${
+                                            className={`text-xs px-2 py-0.5 rounded-md border transition-all flex items-center gap-1 cursor-pointer ${
                                                 showGeneratorOptions
-                                                    ? 'bg-blue-50 dark:bg-slate-700/80 text-blue-600 dark:text-cyan-400 border-blue-200 dark:border-cyan-500/40 shadow-sm'
-                                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-slate-200 dark:border-slate-700'
+                                                    ? 'bg-[#d0e4ee] text-[#0e293a] border-[#b8d6e5] shadow-xs'
+                                                    : 'text-[#3a5566] hover:text-[#0c1820] border-white/80'
                                             }`}
                                             title="Configure password rules (length, numbers, symbols)"
                                         >
@@ -319,13 +319,13 @@ export default function VaultModal({
                                         onChange={handleChange}
                                         placeholder="Enter account password"
                                         autoComplete="new-password"
-                                        className="w-full h-10 px-3.5 pr-10 text-sm font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                        className="w-full h-10 px-3.5 pr-10 text-sm font-mono bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788]"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                         title={showPassword ? 'Hide password' : 'Show password'}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -346,12 +346,12 @@ export default function VaultModal({
                                             transition={{ duration: 0.18, ease: 'easeOut' }}
                                             className="overflow-hidden"
                                         >
-                                            <div className="mt-2 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/80 space-y-3 text-xs">
+                                            <div className="mt-2 p-3.5 rounded-xl bg-[#f5fafc]/90 border border-white/90 space-y-3 text-xs">
                                                 {/* Length Slider & Presets */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                                            Length: <span className="font-mono font-bold text-blue-600 dark:text-cyan-400">{genLength} chars</span>
+                                                        <span className="font-semibold text-[#0c1820]">
+                                                            Length: <span className="font-mono font-bold text-[#112838]">{genLength} chars</span>
                                                         </span>
                                                         <div className="flex items-center gap-1">
                                                             {[12, 16, 20, 24].map((preset) => (
@@ -359,10 +359,10 @@ export default function VaultModal({
                                                                     key={preset}
                                                                     type="button"
                                                                     onClick={() => updateLength(preset)}
-                                                                    className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-semibold transition-all ${
+                                                                    className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-semibold transition-all cursor-pointer ${
                                                                         genLength === preset
-                                                                            ? 'bg-blue-600 dark:bg-cyan-500 text-white shadow-sm'
-                                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
+                                                                            ? 'bg-[#112838] text-white shadow-xs'
+                                                                            : 'bg-white/80 text-[#3a5566] hover:text-[#0c1820] border border-white/80'
                                                                     }`}
                                                                 >
                                                                     {preset}
@@ -376,28 +376,31 @@ export default function VaultModal({
                                                         max="48"
                                                         value={genLength}
                                                         onChange={(e) => updateLength(Number(e.target.value))}
-                                                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-cyan-400"
+                                                        style={{
+                                                            background: `linear-gradient(to right, #112838 0%, #112838 ${((genLength - 8) / 40) * 100}%, #b9d1df ${((genLength - 8) / 40) * 100}%, #b9d1df 100%)`
+                                                        }}
+                                                        className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#112838] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#112838]/20"
                                                     />
                                                 </div>
 
                                                 {/* Rule Checkboxes & Regenerate */}
-                                                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/80">
                                                     <div className="flex items-center gap-4">
-                                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300 select-none">
+                                                        <label className="flex items-center gap-1.5 cursor-pointer text-[#0c1820] select-none">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={genNumbers}
                                                                 onChange={(e) => updateNumbers(e.target.checked)}
-                                                                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-0 cursor-pointer"
+                                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#112838] focus:ring-0 cursor-pointer"
                                                             />
                                                             <span className="font-medium">Numbers (0-9)</span>
                                                         </label>
-                                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300 select-none">
+                                                        <label className="flex items-center gap-1.5 cursor-pointer text-[#0c1820] select-none">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={genSymbols}
                                                                 onChange={(e) => updateSymbols(e.target.checked)}
-                                                                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-0 cursor-pointer"
+                                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#112838] focus:ring-0 cursor-pointer"
                                                             />
                                                             <span className="font-medium">Symbols (!@#)</span>
                                                         </label>
@@ -405,7 +408,7 @@ export default function VaultModal({
                                                     <button
                                                         type="button"
                                                         onClick={() => handleGenerate()}
-                                                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-cyan-400 hover:text-blue-700 dark:hover:text-cyan-300 hover:underline"
+                                                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#112838] hover:text-[#1b3d54] hover:underline cursor-pointer"
                                                     >
                                                         <RefreshCw className="w-3 h-3" />
                                                         <span>Regenerate</span>
@@ -419,8 +422,8 @@ export default function VaultModal({
 
                             {/* Notes */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                    <FileText className="w-3.5 h-3.5 text-slate-400" /> Secure Notes (Optional)
+                                <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <FileText className="w-3.5 h-3.5 text-[#3a5566]" /> Secure Notes (Optional)
                                 </label>
                                 <textarea
                                     name="notes"
@@ -428,23 +431,23 @@ export default function VaultModal({
                                     value={form.notes}
                                     onChange={handleChange}
                                     placeholder="Add 2FA backup codes, security questions, or notes..."
-                                    className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                                    className="w-full px-3.5 py-2 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all resize-none placeholder:text-[#5c7788]"
                                 />
                             </div>
 
                             {/* Footer Buttons */}
-                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
+                            <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/60">
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200/80 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-[#3a5566] hover:text-[#0c1820] bg-white/60 hover:bg-white/90 border border-white/80 rounded-xl transition-colors cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-sm transition-all flex items-center gap-2"
+                                    className="px-5 py-2 text-sm font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all flex items-center gap-2 cursor-pointer"
                                 >
                                     {isSubmitting ? 'Saving...' : isEditing ? 'Update Account' : 'Save Account'}
                                 </button>

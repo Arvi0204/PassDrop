@@ -66,48 +66,48 @@ export default function Signup() {
     };
 
     return (
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
-            <div className="w-full max-w-4xl bg-white dark:bg-slate-800/80 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
+        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-transparent">
+            <div className="w-full max-w-4xl bg-[#e1eef5]/70 rounded-3xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
                 
                 {/* Left Brand Panel (Desktop) */}
-                <div className="hidden md:flex md:col-span-5 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-8 flex-col justify-between relative overflow-hidden border-r border-slate-800">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="hidden md:flex md:col-span-5 bg-gradient-to-br from-[#112838] via-[#1a384e] to-[#244c66] text-white p-8 flex-col justify-between relative overflow-hidden border-r border-white/20">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div>
                         <div className="flex items-center gap-2 mb-8">
                             <PassDropLogo size={28} />
                             <span className="font-extrabold text-base tracking-tight">
-                                <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Pass</span>
-                                <span>Drop</span>
+                                <span className="text-white">Pass</span>
+                                <span className="text-[#38bdf8]">Drop</span>
                             </span>
                         </div>
 
                         <h2 className="text-2xl font-black leading-tight mb-3">
                             Set up your <br />
-                            <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-cyan-400 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-white via-[#d0e4ee] to-[#bce1f2] bg-clip-text text-transparent">
                                 private vault.
                             </span>
                         </h2>
 
-                        <p className="text-xs text-slate-400 leading-relaxed mb-6">
+                        <p className="text-xs text-white/80 leading-relaxed mb-6 font-medium">
                             Start securing your digital identity today with military-grade encryption and one-time password drops.
                         </p>
 
-                        <div className="space-y-3 text-xs text-slate-300">
+                        <div className="space-y-3 text-xs text-white/90">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-5 h-5 rounded-lg bg-blue-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                                <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <ShieldCheck className="w-3.5 h-3.5" />
                                 </div>
                                 <span>Zero-knowledge client security</span>
                             </div>
                             <div className="flex items-center gap-2.5">
-                                <div className="w-5 h-5 rounded-lg bg-blue-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                                <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <KeyRound className="w-3.5 h-3.5" />
                                 </div>
                                 <span>Encrypted credential storage</span>
                             </div>
                             <div className="flex items-center gap-2.5">
-                                <div className="w-5 h-5 rounded-lg bg-blue-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                                <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <Sparkles className="w-3.5 h-3.5" />
                                 </div>
                                 <span>Single-view ephemeral sharing</span>
@@ -115,7 +115,7 @@ export default function Signup() {
                         </div>
                     </div>
 
-                    <div className="text-[11px] text-slate-500 pt-6 border-t border-slate-800/80">
+                    <div className="text-[11px] text-white/60 pt-6 border-t border-white/10">
                         100% free · Open source · No trackers
                     </div>
                 </div>
@@ -124,10 +124,10 @@ export default function Signup() {
                 <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
                     <div className="max-w-md mx-auto w-full">
                         <div className="mb-6">
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                            <h3 className="text-2xl font-bold text-[#0c1820]">
                                 Create your account
                             </h3>
-                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            <p className="text-xs sm:text-sm text-[#3a5566] mt-1">
                                 Create a master password to encrypt your entire vault
                             </p>
                         </div>
@@ -136,7 +136,7 @@ export default function Signup() {
                             <div>
                                 <label
                                     htmlFor="username"
-                                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1"
+                                    className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1"
                                 >
                                     Full Name / Username
                                 </label>
@@ -148,14 +148,14 @@ export default function Signup() {
                                     value={form.username}
                                     onChange={onChange}
                                     placeholder="Jane Doe"
-                                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="email"
-                                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1"
+                                    className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1"
                                 >
                                     Email address
                                 </label>
@@ -168,14 +168,14 @@ export default function Signup() {
                                     value={form.email}
                                     onChange={onChange}
                                     placeholder="name@example.com"
-                                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="password"
-                                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1"
+                                    className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1"
                                 >
                                     Master Password
                                 </label>
@@ -188,11 +188,11 @@ export default function Signup() {
                                         value={form.password}
                                         onChange={onChange}
                                         placeholder="Choose a strong master key"
-                                        className="w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                        className="w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#5c7788] hover:text-[#0c1820] transition-colors cursor-pointer"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -203,7 +203,7 @@ export default function Signup() {
                             <div>
                                 <label
                                     htmlFor="confirmPassword"
-                                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1"
+                                    className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1"
                                 >
                                     Confirm Master Password
                                 </label>
@@ -216,7 +216,7 @@ export default function Signup() {
                                         value={form.confirmPassword}
                                         onChange={onChange}
                                         placeholder="Repeat master password"
-                                        className="w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-cyan-400 transition-all"
+                                        className="w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
                                     />
                                 </div>
                             </div>
@@ -228,18 +228,18 @@ export default function Signup() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full mt-3 py-2.5 px-4 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-70"
+                                className="w-full mt-3 py-3 px-4 text-sm font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-70 cursor-pointer"
                             >
                                 <span>{isLoading ? "Creating Vault..." : "Create Free Vault"}</span>
                                 <ArrowRight className="w-4 h-4" />
                             </button>
                         </form>
 
-                        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700/80 text-center text-xs text-slate-500 dark:text-slate-400">
+                        <div className="mt-5 pt-4 border-t border-white/60 text-center text-xs text-[#3a5566]">
                             Already have an account?{' '}
                             <Link
                                 to="/login"
-                                className="font-semibold text-blue-600 dark:text-cyan-400 hover:underline"
+                                className="font-bold text-[#112838] hover:underline"
                             >
                                 Sign in to vault
                             </Link>
