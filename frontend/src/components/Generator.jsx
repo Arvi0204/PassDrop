@@ -128,7 +128,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                 <button
                   type="button"
                   onClick={() => copyText(generatedPassword)}
-                  className="p-2 rounded-lg bg-[#112838] hover:bg-[#1b3d54] text-white transition-all shrink-0 shadow-xs cursor-pointer"
+                  className="p-2 rounded-lg bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] text-white transition-all shrink-0 shadow-xs cursor-pointer"
                   title="Copy password"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -150,7 +150,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                         onClick={() => setSettings({ ...settings, length: preset })}
                         className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all cursor-pointer ${
                           settings.length === preset
-                            ? 'bg-[#112838] text-white shadow-xs'
+                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
                             : 'bg-white/80 text-[#3a5566] hover:text-[#0c1820] border border-white/80'
                         }`}
                       >
@@ -158,7 +158,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                       </button>
                     ))}
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-md bg-[#d0e4ee] text-[#0e293a] font-mono font-bold text-xs border border-[#b8d6e5] shadow-xs">
+                  <span className="px-2.5 py-0.5 rounded-md bg-[#e0f2fe] text-[#0284c7] font-mono font-bold text-xs border border-[#bae6fd] shadow-xs">
                     {settings.length}
                   </span>
                 </div>
@@ -175,9 +175,9 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                     setSettings({ ...settings, length: Number(e.target.value) })
                   }
                   style={{
-                    background: `linear-gradient(to right, #112838 0%, #112838 ${((settings.length - 6) / 34) * 100}%, #b9d1df ${((settings.length - 6) / 34) * 100}%, #b9d1df 100%)`
+                    background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((settings.length - 6) / 34) * 100}%, #b9d1df ${((settings.length - 6) / 34) * 100}%, #b9d1df 100%)`
                   }}
-                  className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#112838] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#112838]/20"
+                  className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#0284c7] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20"
                 />
                 <div className="flex justify-between items-center text-[10px] font-mono text-[#4a697e] mt-1 px-0.5 font-medium">
                   <span>6 chars</span>
@@ -202,7 +202,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                     onChange={() =>
                       setSettings({ ...settings, [key]: !settings[key] })
                     }
-                    className="w-4 h-4 text-[#112838] rounded border-slate-300 focus:ring-0 cursor-pointer"
+                    className="w-4 h-4 text-[#0284c7] rounded border-slate-300 focus:ring-0 cursor-pointer"
                   />
                   <span className="text-xs font-semibold text-[#0c1820]">
                     {label}
@@ -224,7 +224,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
               <button
                 type="button"
                 onClick={() => copyText(generatedPassword)}
-                className="flex-1 py-2.5 px-4 bg-[#112838] hover:bg-[#1b3d54] text-white text-xs font-semibold rounded-xl shadow-md shadow-[#112838]/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] text-white text-xs font-semibold rounded-xl shadow-md shadow-[#0284c7]/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>Copy &amp; Close</span>

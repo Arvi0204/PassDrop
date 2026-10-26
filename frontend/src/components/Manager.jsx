@@ -182,7 +182,7 @@ export default function Manager() {
                                 onClick={() => setActiveFilter('all')}
                                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                                     activeFilter === 'all'
-                                        ? 'bg-[#112838] text-white shadow-xs'
+                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
                                         : 'text-[#3a5566] hover:text-[#0c1820]'
                                 }`}
                             >
@@ -193,7 +193,7 @@ export default function Manager() {
                                 onClick={() => setActiveFilter('favorites')}
                                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                                     activeFilter === 'favorites'
-                                        ? 'bg-[#112838] text-amber-300 shadow-xs'
+                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-amber-200 shadow-xs'
                                         : 'text-[#3a5566] hover:text-[#0c1820]'
                                 }`}
                             >
@@ -205,7 +205,7 @@ export default function Manager() {
                         <button
                             type="button"
                             onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 active:scale-[0.98] transition-all shrink-0 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 active:scale-[0.98] transition-all shrink-0 cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>New Item</span>
@@ -245,7 +245,7 @@ export default function Manager() {
                                     <button
                                         type="button"
                                         onClick={handleOpenCreate}
-                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl transition-colors cursor-pointer shadow-md shadow-[#112838]/20"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl transition-colors cursor-pointer shadow-md shadow-[#0284c7]/25"
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Add Account
                                     </button>

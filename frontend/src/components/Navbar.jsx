@@ -46,7 +46,7 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl border-b border-white/80 shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]">
+      <header className="sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* PassDrop Logo & Wordmark */}
@@ -86,11 +86,11 @@ const Navbar = () => {
                       to={item.path}
                       className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all ${
                         isActive(item.path)
-                          ? "bg-[#d0e4ee] text-[#0e293a] border border-[#b8d6e5] shadow-xs"
+                          ? "bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] shadow-xs"
                           : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#112838]" : "text-[#4a6b82]"}`} />
+                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#0284c7]" : "text-[#4a6b82]"}`} />
                       <span>{item.label}</span>
                     </Link>
                   );
@@ -105,9 +105,10 @@ const Navbar = () => {
                   <button
                     onClick={() => setIsLogoutModalOpen(true)}
                     type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#3a5566] hover:text-rose-600 hover:bg-rose-50/80 border border-white/80 hover:border-rose-200/80 rounded-xl transition-all cursor-pointer"
+                    title="Log Out"
+                    className="group inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border border-rose-200/80 hover:border-rose-300 shadow-xs rounded-xl transition-all cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
+                    <LogOut className="w-3.5 h-3.5 text-rose-500 group-hover:translate-x-0.5 transition-transform" />
                     <span className="hidden sm:inline">Logout</span>
                   </button>
 
@@ -130,7 +131,7 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to="/signup"
-                    className="px-4 py-1.5 text-xs font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all"
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 transition-all"
                   >
                     Sign Up
                   </Link>

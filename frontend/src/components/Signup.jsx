@@ -228,7 +228,7 @@ export default function Signup() {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full mt-3 py-3 px-4 text-sm font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-70 cursor-pointer"
+                                className="w-full mt-3 py-3 px-4 text-sm font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] disabled:opacity-70 cursor-pointer"
                             >
                                 <span>{isLoading ? "Creating Vault..." : "Create Free Vault"}</span>
                                 <ArrowRight className="w-4 h-4" />
@@ -239,7 +239,7 @@ export default function Signup() {
                             Already have an account?{' '}
                             <Link
                                 to="/login"
-                                className="font-bold text-[#112838] hover:underline"
+                                className="font-bold text-[#0284c7] hover:underline"
                             >
                                 Sign in to vault
                             </Link>

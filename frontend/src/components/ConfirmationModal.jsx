@@ -96,7 +96,7 @@ export default function ConfirmationModal({
                                     className={`flex-1 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl text-white transition-all shadow-md cursor-pointer ${
                                         isDelete
                                             ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
-                                            : 'bg-[#112838] hover:bg-[#1b3d54] shadow-[#112838]/20'
+                                            : 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] shadow-[#0284c7]/25'
                                     }`}
                                 >
                                     {confirmText}

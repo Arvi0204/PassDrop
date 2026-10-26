@@ -91,7 +91,7 @@ export default function VaultDetail({
                                 href={formattedUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-[#112838] hover:underline mt-1 truncate font-medium"
+                                className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 truncate font-medium"
                             >
                                 {item.url} <ExternalLink className="w-3 h-3 shrink-0" />
                             </a>
@@ -125,7 +125,7 @@ export default function VaultDetail({
                 {/* Username Field */}
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                        <User className="w-3.5 h-3.5 text-[#112838]" />
+                        <User className="w-3.5 h-3.5 text-[#0284c7]" />
                         <span>Username / Email</span>
                     </div>
                     <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all group">
@@ -136,7 +136,7 @@ export default function VaultDetail({
                             <button
                                 type="button"
                                 onClick={() => handleCopyField(item.username, 'Username')}
-                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors shrink-0 cursor-pointer"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors shrink-0 cursor-pointer"
                                 title="Copy username"
                             >
                                 {copiedField === 'Username' ? (
@@ -152,7 +152,7 @@ export default function VaultDetail({
                 {/* Password Field */}
                 <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                        <KeyRound className="w-3.5 h-3.5 text-[#112838]" />
+                        <KeyRound className="w-3.5 h-3.5 text-[#0284c7]" />
                         <span>Password</span>
                     </div>
                     <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
@@ -175,7 +175,7 @@ export default function VaultDetail({
                             <button
                                 type="button"
                                 onClick={() => handleCopyField(item.password, 'Password')}
-                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors cursor-pointer"
                                 title="Copy password"
                             >
                                 {copiedField === 'Password' ? (
@@ -197,7 +197,7 @@ export default function VaultDetail({
                 {item.url && (
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                            <Globe className="w-3.5 h-3.5 text-[#112838]" />
+                            <Globe className="w-3.5 h-3.5 text-[#0284c7]" />
                             <span>Website Address</span>
                         </div>
                         <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
@@ -209,7 +209,7 @@ export default function VaultDetail({
                                     href={formattedUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors"
+                                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors"
                                     title="Open website"
                                 >
                                     <ExternalLink className="w-4 h-4" />
@@ -235,7 +235,7 @@ export default function VaultDetail({
                 {item.notes && (
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                            <FileText className="w-3.5 h-3.5 text-[#112838]" />
+                            <FileText className="w-3.5 h-3.5 text-[#0284c7]" />
                             <span>Secure Notes</span>
                         </div>
                         <div className="p-4 rounded-xl bg-[#f5fafc]/85 border border-white/90 text-sm text-[#0c1820] whitespace-pre-wrap font-sans leading-relaxed shadow-xs">

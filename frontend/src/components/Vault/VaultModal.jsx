@@ -361,7 +361,7 @@ export default function VaultModal({
                                                                     onClick={() => updateLength(preset)}
                                                                     className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-semibold transition-all cursor-pointer ${
                                                                         genLength === preset
-                                                                            ? 'bg-[#112838] text-white shadow-xs'
+                                                                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
                                                                             : 'bg-white/80 text-[#3a5566] hover:text-[#0c1820] border border-white/80'
                                                                     }`}
                                                                 >
@@ -377,9 +377,9 @@ export default function VaultModal({
                                                         value={genLength}
                                                         onChange={(e) => updateLength(Number(e.target.value))}
                                                         style={{
-                                                            background: `linear-gradient(to right, #112838 0%, #112838 ${((genLength - 8) / 40) * 100}%, #b9d1df ${((genLength - 8) / 40) * 100}%, #b9d1df 100%)`
+                                                            background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((genLength - 8) / 40) * 100}%, #b9d1df ${((genLength - 8) / 40) * 100}%, #b9d1df 100%)`
                                                         }}
-                                                        className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#112838] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#112838]/20"
+                                                        className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#0284c7] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20"
                                                     />
                                                 </div>
 
@@ -447,7 +447,7 @@ export default function VaultModal({
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="px-5 py-2 text-sm font-semibold text-white bg-[#112838] hover:bg-[#1b3d54] rounded-xl shadow-md shadow-[#112838]/20 transition-all flex items-center gap-2 cursor-pointer"
+                                    className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 transition-all flex items-center gap-2 cursor-pointer"
                                 >
                                     {isSubmitting ? 'Saving...' : isEditing ? 'Update Account' : 'Save Account'}
                                 </button>

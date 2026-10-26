@@ -17,13 +17,13 @@ export default function VaultItemCard({
             onClick={() => onSelect(item)}
             className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left overflow-hidden ${
                 isSelected
-                    ? 'bg-gradient-to-r from-[#d0e4ee]/95 to-[#f5fafc]/90 border-[#112838]/30 shadow-xs ring-1 ring-[#112838]/15'
+                    ? 'bg-gradient-to-r from-[#e0f2fe]/95 to-[#f8fafc]/90 border-[#0284c7]/40 shadow-xs ring-1 ring-[#0284c7]/25'
                     : 'bg-[#e1eef5]/65 hover:bg-[#e1eef5]/90 border-white/70 hover:border-white shadow-xs backdrop-blur-md'
             }`}
         >
             {/* Active Left Indicator Bar */}
             {isSelected && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#112838] shadow-[0_0_8px_rgba(17,40,56,0.5)]" />
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#0284c7] shadow-[0_0_10px_rgba(2,132,199,0.7)]" />
             )}
 
             <div className="flex items-center gap-3 min-w-0 flex-1 pl-1">
@@ -67,7 +67,7 @@ export default function VaultItemCard({
                         e.stopPropagation();
                         onCopyPassword(item.password);
                     }}
-                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#112838] hover:bg-[#d0e4ee] transition-colors"
+                    className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors"
                 >
                     <KeyRound className="w-3.5 h-3.5" />
                 </button>
