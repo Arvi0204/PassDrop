@@ -108,7 +108,8 @@ export function playVaultEntrance(root, { onDone } = {}) {
             ],
             { duration: 900, easing: 'ease-in-out' }
         );
-        if (navigator.vibrate) navigator.vibrate(10);
+        // browsers block vibrate() until the user has interacted with the page
+        if (navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate(10);
     }, Math.max(0, last - 300));
 
     later(complete, last + 950);
