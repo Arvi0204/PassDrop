@@ -16,6 +16,8 @@ import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
 import { useTide } from '../context/useTide';
 import { playVaultEntrance } from '../lib/vaultEntrance';
+import { motion, AnimatePresence } from 'framer-motion';
+import { variants, spring, ease, duration } from '../lib/motion';
 
 export default function Manager() {
     const navigate = useNavigate();
@@ -43,6 +45,12 @@ export default function Manager() {
     const tide = useTide();
     const rootRef = useRef(null);
     const [fetched, setFetched] = useState(false);
+
+    // Rows animate in only after the first load, so the login entrance isn't doubled up
+    const animateEnter = useRef(false);
+    useEffect(() => {
+        if (fetched) animateEnter.current = true;
+    }, [fetched]);
 
     // hide the targets before the first paint so nothing flashes under the water
     useLayoutEffect(() => {
@@ -247,7 +255,14 @@ export default function Manager() {
                         </div>
 
                         {filteredItems.length === 0 ? (
-                            <div className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3">
+                            <motion.div
+                                key={searchQuery ? 'no-match' : 'empty'}
+                                variants={variants.fadeUp}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ duration: duration.slow, ease: ease.out }}
+                                className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3"
+                            >
                                 <div className="w-12 h-12 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] mx-auto flex items-center justify-center text-[#112838] shadow-xs">
                                     <KeyRound className="w-6 h-6" />
                                 </div>
@@ -268,22 +283,36 @@ export default function Manager() {
                                         <Plus className="w-3.5 h-3.5" /> Add Account
                                     </button>
                                 )}
-                            </div>
+                            </motion.div>
                         ) : (
-                            <div className="space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
-                                {filteredItems.map((item) => (
-                                    <VaultItemCard
-                                        key={item._id}
-                                        item={item}
-                                        isSelected={item._id === selectedId}
-                                        onSelect={(clickedItem) => {
-                                            setSelectedId(clickedItem._id);
-                                            setMobileView('detail');
-                                        }}
-                                        onCopyUsername={(username) => handleCopy(username, 'Username')}
-                                        onCopyPassword={(password) => handleCopy(password, 'Password')}
-                                    />
-                                ))}
+                            <div className="relative space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
+                                <AnimatePresence initial={false} mode="popLayout">
+                                    {filteredItems.map((item) => (
+                                        <motion.div
+                                            key={item._id}
+                                            layout="position"
+                                            variants={variants.listItem}
+                                            initial={animateEnter.current ? 'hidden' : false}
+                                            animate="visible"
+                                            exit="exit"
+                                            transition={{
+                                                layout: spring.soft,
+                                                default: { duration: duration.base, ease: ease.out }
+                                            }}
+                                        >
+                                            <VaultItemCard
+                                                item={item}
+                                                isSelected={item._id === selectedId}
+                                                onSelect={(clickedItem) => {
+                                                    setSelectedId(clickedItem._id);
+                                                    setMobileView('detail');
+                                                }}
+                                                onCopyUsername={(username) => handleCopy(username, 'Username')}
+                                                onCopyPassword={(password) => handleCopy(password, 'Password')}
+                                            />
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>
@@ -306,13 +335,24 @@ export default function Manager() {
                         </div>
 
                         <div data-entrance className="sticky top-20">
-                            <VaultDetail
-                                item={activeItem}
-                                onEdit={handleOpenEdit}
-                                onDelete={handleDeleteClick}
-                                onToggleFavorite={handleToggleFavorite}
-                                onCopy={handleCopy}
-                            />
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={activeItem?._id ?? 'none'}
+                                    variants={variants.pane}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    transition={{ duration: duration.base, ease: ease.out }}
+                                >
+                                    <VaultDetail
+                                        item={activeItem}
+                                        onEdit={handleOpenEdit}
+                                        onDelete={handleDeleteClick}
+                                        onToggleFavorite={handleToggleFavorite}
+                                        onCopy={handleCopy}
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     </div>
                 </div>

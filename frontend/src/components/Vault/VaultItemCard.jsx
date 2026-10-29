@@ -1,6 +1,8 @@
 import React from 'react';
 import { Star, KeyRound, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 import FaviconImage from './FaviconImage';
+import { spring } from '../../lib/motion';
 
 export default function VaultItemCard({
     item,
@@ -16,7 +18,7 @@ export default function VaultItemCard({
         <div
             data-entrance
             onClick={() => onSelect(item)}
-            className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left overflow-hidden ${
+            className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left ${
                 isSelected
                     ? 'bg-gradient-to-r from-[#e0f2fe]/95 to-[#f8fafc]/90 border-[#0284c7]/40 shadow-xs ring-1 ring-[#0284c7]/25'
                     : 'bg-[#e1eef5]/65 hover:bg-[#e1eef5]/90 border-white/70 hover:border-white shadow-xs backdrop-blur-md'
@@ -24,7 +26,11 @@ export default function VaultItemCard({
         >
             {/* Active Left Indicator Bar */}
             {isSelected && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#0284c7] shadow-[0_0_10px_rgba(2,132,199,0.7)]" />
+                <motion.span
+                    layoutId="vault-selection-bar"
+                    transition={spring.snappy}
+                    className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#0284c7] shadow-[0_0_10px_rgba(2,132,199,0.7)]"
+                />
             )}
 
             <div className="flex items-center gap-3 min-w-0 flex-1 pl-1">
