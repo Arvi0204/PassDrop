@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
 import {
     Star,
     ExternalLink,
     Copy,
-    Check,
     Eye,
     EyeOff,
     Edit3,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
+import CopyIcon from './CopyIcon';
 
 export default function VaultDetail({
     item,
@@ -28,6 +29,18 @@ export default function VaultDetail({
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
+
+    // The star pops when the user toggles favorite. It does not pop on first render, so
+    // selecting an account stays calm.
+    const starControls = useAnimationControls();
+    const lastFavorite = useRef(item?.isFavorite);
+    useEffect(() => {
+        if (!item) return;
+        if (lastFavorite.current !== item.isFavorite) {
+            starControls.start({ scale: [1, 1.5, 1], transition: { duration: 0.35, ease: 'easeOut' } });
+        }
+        lastFavorite.current = item.isFavorite;
+    }, [item, starControls]);
 
     if (!item) {
         return (
@@ -77,13 +90,15 @@ export default function VaultDetail({
                                 onClick={() => onToggleFavorite(item)}
                                 className="p-1.5 rounded-xl text-[#5c7788] hover:text-amber-500 hover:bg-amber-50 transition-all cursor-pointer"
                             >
-                                <Star
-                                    className={`w-5 h-5 ${
-                                        item.isFavorite
-                                            ? 'text-amber-500 fill-amber-500'
-                                            : 'hover:text-amber-500'
-                                    }`}
-                                />
+                                <motion.span animate={starControls} className="inline-flex">
+                                    <Star
+                                        className={`w-5 h-5 ${
+                                            item.isFavorite
+                                                ? 'text-amber-500 fill-amber-500'
+                                                : 'hover:text-amber-500'
+                                        }`}
+                                    />
+                                </motion.span>
                             </button>
                         </div>
                         {formattedUrl && (
@@ -139,11 +154,7 @@ export default function VaultDetail({
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors shrink-0 cursor-pointer"
                                 title="Copy username"
                             >
-                                {copiedField === 'Username' ? (
-                                    <Check className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                    <Copy className="w-4 h-4" />
-                                )}
+                                <CopyIcon copied={copiedField === 'Username'} icon={Copy} />
                             </button>
                         )}
                     </div>
@@ -178,11 +189,7 @@ export default function VaultDetail({
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors cursor-pointer"
                                 title="Copy password"
                             >
-                                {copiedField === 'Password' ? (
-                                    <Check className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                    <Copy className="w-4 h-4" />
-                                )}
+                                <CopyIcon copied={copiedField === 'Password'} icon={Copy} />
                             </button>
                         </div>
                     </div>
@@ -220,11 +227,7 @@ export default function VaultDetail({
                                     className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                     title="Copy URL"
                                 >
-                                    {copiedField === 'Website URL' ? (
-                                        <Check className="w-4 h-4 text-emerald-600" />
-                                    ) : (
-                                        <Copy className="w-4 h-4" />
-                                    )}
+                                    <CopyIcon copied={copiedField === 'Website URL'} icon={Copy} />
                                 </button>
                             </div>
                         </div>

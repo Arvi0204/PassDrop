@@ -10,7 +10,6 @@ import {
   Menu,
   X
 } from "lucide-react";
-import toast from "react-hot-toast";
 import passwordContext from "../context/passwordContext";
 import PassDropLogo from "./common/PassDropLogo";
 import Generator from "./Generator";
@@ -50,7 +49,6 @@ const Navbar = () => {
     // navigate and drain in the same tick, so the first frame already has the login page under the water
     navigate("/login");
     tide.drain();
-    toast.success("Logged out successfully");
   };
 
   const navLinks = [

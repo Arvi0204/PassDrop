@@ -106,19 +106,23 @@ export default function Manager() {
         return passwordArray.find((item) => item._id === selectedId) || null;
     }, [passwordArray, selectedId]);
 
-    // Copy handler with clipboard feedback
+    // Copy and favorite are confirmed in place (the icon becomes a check, the star pops), so they
+    // no longer raise a toast. This message is for screen readers, which can't see those cues.
+    const [announcement, setAnnouncement] = useState({ id: 0, text: '' });
+    const announce = (text) => setAnnouncement((prev) => ({ id: prev.id + 1, text }));
+
     const handleCopy = (text, label) => {
         navigator.clipboard.writeText(text);
-        toast.success(`Copied ${label} to clipboard!`);
+        announce(`${label} copied to clipboard`);
     };
 
     // Toggle favorite state
     const handleToggleFavorite = async (item) => {
         const newFavState = !item.isFavorite;
-        await editPass(item._id, { isFavorite: newFavState });
-        toast(newFavState ? 'Added to favorites ⭐' : 'Removed from favorites', {
-            icon: newFavState ? '⭐' : 'ℹ️'
-        });
+        const res = await editPass(item._id, { isFavorite: newFavState });
+        if (res?.success) {
+            announce(newFavState ? 'Added to favorites' : 'Removed from favorites');
+        }
     };
 
     // Open Edit modal
@@ -176,6 +180,9 @@ export default function Manager() {
 
     return (
         <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+            <div role="status" aria-live="polite" className="sr-only">
+                <span key={announcement.id}>{announcement.text}</span>
+            </div>
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Top Action Bar */}
                 <div data-entrance className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">

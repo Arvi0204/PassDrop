@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Star, KeyRound, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import FaviconImage from './FaviconImage';
+import CopyIcon from './CopyIcon';
 import { spring } from '../../lib/motion';
 
 export default function VaultItemCard({
@@ -13,6 +14,17 @@ export default function VaultItemCard({
 }) {
     const displayTitle = item.title?.trim() || item.url?.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0] || 'Untitled Account';
     const displaySubtitle = item.username || item.url || 'No username';
+
+    // Inline confirmation for the hover copy buttons: the icon turns into a check for a moment
+    const [copied, setCopied] = useState(null); // 'username' | 'password' | null
+    const timer = useRef(null);
+    useEffect(() => () => clearTimeout(timer.current), []);
+    const copyWithFeedback = (kind, copy, value) => {
+        copy(value);
+        setCopied(kind);
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setCopied(null), 1500);
+    };
 
     return (
         <div
@@ -53,18 +65,18 @@ export default function VaultItemCard({
             </div>
 
             {/* Quick hover copy actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+            <div className={`flex items-center gap-1 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0 ${copied ? 'opacity-100' : 'opacity-0'}`}>
                 {item.username && (
                     <button
                         type="button"
                         title="Copy Username"
                         onClick={(e) => {
                             e.stopPropagation();
-                            onCopyUsername(item.username);
+                            copyWithFeedback('username', onCopyUsername, item.username);
                         }}
                         className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors"
                     >
-                        <User className="w-3.5 h-3.5" />
+                        <CopyIcon copied={copied === 'username'} icon={User} className="w-3.5 h-3.5" />
                     </button>
                 )}
                 <button
@@ -72,11 +84,11 @@ export default function VaultItemCard({
                     title="Copy Password"
                     onClick={(e) => {
                         e.stopPropagation();
-                        onCopyPassword(item.password);
+                        copyWithFeedback('password', onCopyPassword, item.password);
                     }}
                     className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors"
                 >
-                    <KeyRound className="w-3.5 h-3.5" />
+                    <CopyIcon copied={copied === 'password'} icon={KeyRound} className="w-3.5 h-3.5" />
                 </button>
             </div>
         </div>

@@ -51,7 +51,6 @@ export default function Login() {
                 tide.queueEntrance();
                 navigate("/");
                 // the vault releases the water once its data is ready (see Manager.jsx)
-                toast.success("Welcome back to your vault!");
             } else {
                 drained = failTide();
                 const errors = json.errors || [{ msg: json.error || "Login failed. Check your credentials." }];
