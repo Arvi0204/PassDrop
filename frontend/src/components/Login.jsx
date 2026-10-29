@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, KeyRound, Sparkles, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate, Link } from "react-router-dom";
 import PassDropLogo from './common/PassDropLogo';
+import { useTide } from '../context/useTide';
 
 export default function Login() {
     const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -11,9 +12,25 @@ export default function Login() {
     const navigate = useNavigate();
     const host = import.meta.env.VITE_BACKEND;
 
+    // Tide transition: water rises behind the card while the server checks credentials
+    const tide = useTide();
+    const cardRef = useRef(null);
+    const succeeded = useRef(false);
+
+    useEffect(() => () => {
+        if (!succeeded.current) tide.abort();
+    }, [tide]);
+
+    const failTide = async () => {
+        tide.shake(cardRef.current);
+        await tide.cancel();
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        let drained = Promise.resolve();
+        tide.begin();
 
         try {
             const response = await fetch(`${host}/api/auth/login`, {
@@ -28,9 +45,15 @@ export default function Login() {
 
             if (json.success) {
                 sessionStorage.setItem('token', json.authToken);
+                succeeded.current = true;
+                tide.leave(cardRef.current);
+                await tide.complete();
+                tide.queueEntrance();
                 navigate("/");
+                // the vault releases the water once its data is ready (see Manager.jsx)
                 toast.success("Welcome back to your vault!");
             } else {
+                drained = failTide();
                 const errors = json.errors || [{ msg: json.error || "Login failed. Check your credentials." }];
                 errors.forEach(error => {
                     toast.error(error.msg);
@@ -38,9 +61,11 @@ export default function Login() {
             }
         } catch (error) {
             console.error("Login fetch error:", error);
+            drained = failTide();
             toast.error("Cannot connect to backend server. Make sure it is running on port 3000.");
         } finally {
-            setIsLoading(false);
+            // keep the button locked until the water has receded after a failed attempt
+            drained.then(() => setIsLoading(false));
         }
     };
 
@@ -51,7 +76,7 @@ export default function Login() {
 
     return (
         <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-transparent">
-            <div className="w-full max-w-4xl bg-[#e1eef5]/70 rounded-3xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
+            <div ref={cardRef} className="relative z-[26] w-full max-w-4xl bg-[#e1eef5]/70 rounded-3xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
                 
                 {/* Left Brand Panel (Desktop) */}
                 <div className="hidden md:flex md:col-span-5 bg-gradient-to-br from-[#112838] via-[#1a384e] to-[#244c66] text-white p-8 flex-col justify-between relative overflow-hidden border-r border-white/20">

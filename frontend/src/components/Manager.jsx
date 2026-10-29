@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
@@ -14,6 +14,8 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
+import { useTide } from '../context/useTide';
+import { playVaultEntrance } from '../lib/vaultEntrance';
 
 export default function Manager() {
     const navigate = useNavigate();
@@ -37,13 +39,29 @@ export default function Manager() {
     // Mobile navigation state ('list' | 'detail')
     const [mobileView, setMobileView] = useState('list');
 
+    // Entrance animation: only after a fresh login/signup, once the vault data has arrived
+    const tide = useTide();
+    const rootRef = useRef(null);
+    const [fetched, setFetched] = useState(false);
+
+    // hide the targets before the first paint so nothing flashes under the water
+    useLayoutEffect(() => {
+        if (tide.peekEntrance()) rootRef.current?.classList.add('entrance-pending');
+    }, [tide]);
+
+    useEffect(() => {
+        if (!fetched || !tide.peekEntrance()) return undefined;
+        tide.release(); // clear the water as the vault surfaces
+        return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance });
+    }, [fetched, tide]);
+
     // Authentication check & initial data fetch
     useEffect(() => {
         const token = sessionStorage.getItem('token');
         if (!token) {
             navigate('/login');
         } else {
-            getPasswords();
+            getPasswords().then(() => setFetched(true));
         }
     }, []);
 
@@ -149,10 +167,10 @@ export default function Manager() {
     }, [passwordArray]);
 
     return (
-        <div className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+        <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Top Action Bar */}
-                <div className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div data-entrance className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
                     {/* Search Input */}
                     <div className="relative w-full md:w-96">
                         <Search className="w-4 h-4 text-[#5c7788] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -221,7 +239,7 @@ export default function Manager() {
                             mobileView === 'detail' ? 'hidden md:block' : 'block'
                         }`}
                     >
-                        <div className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
+                        <div data-entrance className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
                             <span>
                                 {activeFilter === 'favorites' ? 'Favorite Accounts' : 'Vault Accounts'}
                             </span>
@@ -287,7 +305,7 @@ export default function Manager() {
                             </button>
                         </div>
 
-                        <div className="sticky top-20">
+                        <div data-entrance className="sticky top-20">
                             <VaultDetail
                                 item={activeItem}
                                 onEdit={handleOpenEdit}

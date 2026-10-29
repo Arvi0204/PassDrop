@@ -14,6 +14,7 @@ export default function VaultItemCard({
 
     return (
         <div
+            data-entrance
             onClick={() => onSelect(item)}
             className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left overflow-hidden ${
                 isSelected

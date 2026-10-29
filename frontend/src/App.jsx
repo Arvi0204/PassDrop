@@ -5,6 +5,7 @@ import {
   Route
 } from "react-router-dom"
 import PasswordState from './context/PasswordState'
+import { TideProvider } from './context/TideContext'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import Manager from './components/Manager'
@@ -16,6 +17,7 @@ import ExtensionInstructions from './components/ExtensionInstructions'
 function App() {
   return (
     <PasswordState>
+      <TideProvider>
       <Router>
         <Toaster
           position="bottom-right"
@@ -54,6 +56,7 @@ function App() {
           </div>
         </div>
       </Router>
+      </TideProvider>
     </PasswordState>
   )
 }

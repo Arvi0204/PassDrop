@@ -1,0 +1,63 @@
+/* ------------------------------------------------------------------
+   Tide transition: a translucent water layer that rises behind the
+   auth card while credentials are checked, then floods the screen.
+   Layering: page background < water (z-25) < auth card (z-26) < navbar (z-30)
+------------------------------------------------------------------- */
+.tide-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 46px);
+  z-index: 25;
+  pointer-events: none;
+  /* parked below the viewport; TideContext animates it with the Web Animations API */
+  transform: translateY(100vh);
+  will-change: transform;
+}
+
+.tide-wave {
+  position: relative;
+  height: 46px;
+  overflow: hidden;
+}
+
+.tide-wave i {
+  position: absolute;
+  inset: 0;
+  width: 200%;
+  background-repeat: repeat-x;
+  background-size: 50% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 46' preserveAspectRatio='none'%3E%3Cpath d='M0 46 V24 Q50 4 100 24 T200 24 T300 24 T400 24 V46Z' fill='%230284c7' fill-opacity='.34'/%3E%3C/svg%3E");
+  animation: tide-wave 1.6s linear infinite;
+}
+
+.tide-wave i.tide-wave-back {
+  animation-duration: 2.6s;
+  animation-direction: reverse;
+  transform: translateY(-7px);
+}
+
+.tide-water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46px;
+  bottom: 0;
+  background: rgba(2, 132, 199, 0.34);
+  -webkit-backdrop-filter: blur(7px) saturate(1.2);
+  backdrop-filter: blur(7px) saturate(1.2);
+}
+
+@keyframes tide-wave {
+  to { transform: translateX(-50%); }
+}
+
+/* Vault entrance: targets stay hidden until playVaultEntrance() takes over (see lib/vaultEntrance.js) */
+.entrance-pending [data-entrance] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tide-wave i { animation: none; }
+}
