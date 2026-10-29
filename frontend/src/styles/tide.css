@@ -49,6 +49,12 @@
   backdrop-filter: blur(7px) saturate(1.2);
 }
 
+/* During logout the water sits above the navbar (30) and the login card (26) so the whole
+   screen is submerged, but below the confirmation dialog (50) */
+.tide-root.tide-over {
+  z-index: 40;
+}
+
 @keyframes tide-wave {
   to { transform: translateX(-50%); }
 }

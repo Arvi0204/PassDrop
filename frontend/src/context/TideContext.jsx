@@ -19,6 +19,11 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  *   tide.complete()        success: floods to the top (resolves when full)
  *   tide.cancel()          failure: water recedes (~1s), resolves when empty
  *   tide.abort()           instantly resets (e.g. the user left the page mid-request)
+ *
+ * Logout is the vault being drained, like pulling the plug on a full tub:
+ *   tide.fillIn()          the water fades in behind the logout confirmation dialog
+ *   tide.fadeOut()         the user cancelled the dialog: the water fades away again
+ *   tide.drain()           the user confirmed: the level falls, flat, revealing the login page
  *   tide.release()         fades the water out, revealing the page underneath
  *   tide.shake(el)         horizontal error shake for an element
  *   tide.leave(el)         lifts an element away as the water floods
@@ -35,6 +40,7 @@ export function TideProvider({ children }) {
     const moveAnim = useRef(null);
     const fadeAnim = useRef(null);
     const run = useRef(0);
+    const logoutActive = useRef(false); // true from the dialog opening until the water has gone
     const apiRef = useRef(null);
     const entrance = useRef({ queued: false, timer: null });
 
@@ -64,6 +70,7 @@ export function TideProvider({ children }) {
     }, []);
 
     const reset = useCallback(() => {
+        rootRef.current?.classList.remove('tide-over');
         moveAnim.current?.cancel();
         fadeAnim.current?.cancel();
         moveAnim.current = null;
@@ -104,7 +111,57 @@ export function TideProvider({ children }) {
             },
 
             abort() {
+                // a logout in progress owns the water; the login page mounting must not cut it short
+                if (logoutActive.current) return;
                 run.current += 1;
+                reset();
+            },
+
+            async fillIn() {
+                const el = rootRef.current;
+                if (!el) return;
+
+                logoutActive.current = true;
+                run.current += 1;
+                moveAnim.current?.cancel();
+                fadeAnim.current?.cancel();
+                el.classList.add('tide-over'); // above the navbar and the login card, below the dialog
+
+                // pinned at full level, then faded in while the user reads the dialog
+                moveAnim.current = el.animate(
+                    [{ transform: `translateY(${yForLevel(1)}px)` }],
+                    { duration: 1, fill: 'forwards' }
+                );
+                const ms = prefersReducedMotion() ? 1 : 450;
+                fadeAnim.current = el.animate([{ opacity: 0 }, { opacity: 1 }], {
+                    duration: ms,
+                    easing: 'ease',
+                    fill: 'forwards'
+                });
+                await wait(ms);
+            },
+
+            async fadeOut() {
+                const el = rootRef.current;
+                if (!el) return;
+
+                const from = Number(getComputedStyle(el).opacity);
+                const ms = prefersReducedMotion() ? 1 : 350;
+                fadeAnim.current?.cancel();
+                fadeAnim.current = el.animate([{ opacity: from }, { opacity: 0 }], {
+                    duration: ms,
+                    easing: 'ease',
+                    fill: 'forwards'
+                });
+                await wait(ms);
+                logoutActive.current = false;
+                reset();
+            },
+
+            async drain() {
+                // fast at first, easing out: a draining tub empties quickly, then trickles
+                await move(0, 900, 'cubic-bezier(.2,.6,.55,.88)');
+                logoutActive.current = false;
                 reset();
             },
 
