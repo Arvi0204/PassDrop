@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import PassDropLogo from '../components/common/PassDropLogo';
 import { TideContext } from './useTide';
 import '../styles/tide.css';
 
@@ -25,6 +26,8 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  *   tide.fadeOut()         the user cancelled the dialog: the water fades away again
  *   tide.drain()           the user confirmed: the level falls, flat, revealing the login page
  *   tide.release()         fades the water out, revealing the page underneath
+ *   tide.welcome(title, subtitle)  shows a message over the full water (used after signup) and
+ *                          resolves once it has had time to be read; release() fades it with the water
  *   tide.shake(el)         horizontal error shake for an element
  *   tide.leave(el)         lifts an element away as the water floods
  *
@@ -43,6 +46,7 @@ export function TideProvider({ children }) {
     const logoutActive = useRef(false); // true from the dialog opening until the water has gone
     const apiRef = useRef(null);
     const entrance = useRef({ queued: false, timer: null });
+    const [message, setMessage] = useState(null); // { title, subtitle, visible }
 
     const currentY = () =>
         new DOMMatrixReadOnly(getComputedStyle(rootRef.current).transform).m42;
@@ -71,6 +75,7 @@ export function TideProvider({ children }) {
 
     const reset = useCallback(() => {
         rootRef.current?.classList.remove('tide-over');
+        setMessage(null);
         moveAnim.current?.cancel();
         fadeAnim.current?.cancel();
         moveAnim.current = null;
@@ -95,6 +100,7 @@ export function TideProvider({ children }) {
             },
 
             async release() {
+                setMessage((m) => (m ? { ...m, visible: false } : m)); // the message leaves with the water
                 const id = run.current;
                 const el = rootRef.current;
                 if (!el) return;
@@ -108,6 +114,15 @@ export function TideProvider({ children }) {
                 await wait(ms);
                 // a new begin() during the fade means the layer is in use again
                 if (run.current === id) reset();
+            },
+
+            // Signup: once the water has flooded the screen, greet the user in the animation itself
+            // instead of in a corner toast.
+            async welcome(title, subtitle) {
+                setMessage({ title, subtitle, visible: false });
+                await wait(30); // let it mount hidden, then fade it in
+                setMessage((m) => (m ? { ...m, visible: true } : m));
+                await wait(prefersReducedMotion() ? 600 : 1300); // fade-in plus time to read it
             },
 
             abort() {
@@ -217,6 +232,16 @@ export function TideProvider({ children }) {
     return (
         <TideContext.Provider value={api}>
             {children}
+            {/* outside the aria-hidden water layer so screen readers hear it */}
+            <div className={`tide-message${message?.visible ? ' show' : ''}`} role="status" aria-live="polite">
+                {message && (
+                    <>
+                        <PassDropLogo size={56} />
+                        <h2>{message.title}</h2>
+                        {message.subtitle && <p>{message.subtitle}</p>}
+                    </>
+                )}
+            </div>
             <div ref={rootRef} className="tide-root" aria-hidden="true">
                 <div className="tide-wave">
                     <i />

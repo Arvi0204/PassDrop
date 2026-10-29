@@ -258,14 +258,15 @@ export default function Manager() {
                             <span>
                                 {activeFilter === 'favorites' ? 'Favorite Accounts' : 'Vault Accounts'}
                             </span>
-                            <span className="text-[#3a5566]">{filteredItems.length} items</span>
+                            <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
-                        {filteredItems.length === 0 ? (
+                        {filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
                             <motion.div
                                 key={searchQuery ? 'no-match' : 'empty'}
+                                data-entrance
                                 variants={variants.fadeUp}
-                                initial="hidden"
+                                initial={animateEnter.current ? 'hidden' : false}
                                 animate="visible"
                                 transition={{ duration: duration.slow, ease: ease.out }}
                                 className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3"

@@ -64,10 +64,10 @@ export default function Signup() {
                 succeeded.current = true;
                 tide.leave(cardRef.current);
                 await tide.complete();
+                await tide.welcome('Welcome to PassDrop', 'Your vault is ready');
                 tide.queueEntrance();
                 navigate("/");
                 // the vault releases the water once its data is ready (see Manager.jsx)
-                toast.success("Account created! Vault initialized.");
             } else {
                 drained = failTide();
                 const errors = json.errors || [{ msg: json.error || 'Failed to create account' }];
