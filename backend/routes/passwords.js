@@ -27,6 +27,9 @@ const toDecryptedItem = (item) => {
     }
 };
 
+// Internal fields (the encryption IV and the owner id) are not part of the API
+const toClient = ({ iv, user, ...item }) => item;
+
 // ==========================================
 // Handlers for both RESTful and legacy paths
 // ==========================================
@@ -40,7 +43,7 @@ const handleGetAll = async (req, res) => {
             .sort({ createdAt: -1 })
             .toArray();
 
-        const decryptedRecords = records.map(toDecryptedItem);
+        const decryptedRecords = records.map(toDecryptedItem).map(toClient);
         return res.json(decryptedRecords);
     } catch (error) {
         console.error('Error fetching passwords:', error.message);
@@ -77,11 +80,11 @@ const handleCreate = async (req, res) => {
         const result = await collection.insertOne(newDoc);
 
         // Return the created item with PLAINTEXT password so frontend state stays consistent
-        return res.status(201).json({
+        return res.status(201).json(toClient({
             ...newDoc,
             _id: result.insertedId,
             password // Keep plaintext in response for immediate client use
-        });
+        }));
     } catch (error) {
         console.error('Error saving password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
@@ -138,7 +141,7 @@ const handleUpdate = async (req, res) => {
             decryptedDoc.password = password;
         }
 
-        return res.json(decryptedDoc);
+        return res.json(toClient(decryptedDoc));
     } catch (error) {
         console.error('Error updating password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
@@ -166,7 +169,7 @@ const handleDelete = async (req, res) => {
         }
 
         await collection.deleteOne({ _id: new ObjectId(id) });
-        return res.json({ success: true, message: 'Password deleted successfully', deletedPass: existing });
+        return res.json({ success: true, message: 'Password deleted successfully', deletedPass: toClient({ ...existing, password: undefined }) });
     } catch (error) {
         console.error('Error deleting password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
