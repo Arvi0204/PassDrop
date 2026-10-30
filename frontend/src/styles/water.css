@@ -65,6 +65,43 @@
   white-space: pre;
 }
 
+/* characters that a drop has just carried into a generated password */
+.pw-flash {
+  border-radius: 3px;
+  animation: pw-flash 1s ease-out;
+}
+
+@keyframes pw-flash {
+  0% { background: rgba(72, 202, 228, 0.7); }
+  100% { background: rgba(72, 202, 228, 0); }
+}
+
+/* the drop that carries characters in, and the ripple where it lands */
+.pw-fly img {
+  display: block;
+}
+
+.pw-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.pw-splash {
+  position: fixed;
+  z-index: 59;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 2px solid rgba(72, 202, 228, 0.95);
+  box-shadow: 0 0 12px rgba(72, 202, 228, 0.55);
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pw-surf i { animation: none; }
 }
