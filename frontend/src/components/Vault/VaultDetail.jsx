@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
 import {
     Star,
     ExternalLink,
     Copy,
-    Check,
     Eye,
     EyeOff,
     Edit3,
@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
+import CopyIcon from './CopyIcon';
+import IconSwap from '../common/IconSwap';
+import WaterMask, { useLingering } from './WaterMask';
 
 export default function VaultDetail({
     item,
@@ -28,6 +31,20 @@ export default function VaultDetail({
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
+    // the real password is only in the page while it is revealed, and until the water has covered it again
+    const showText = useLingering(showPassword, 360);
+
+    // The star pops when the user toggles favorite. It does not pop on first render, so
+    // selecting an account stays calm.
+    const starControls = useAnimationControls();
+    const lastFavorite = useRef(item?.isFavorite);
+    useEffect(() => {
+        if (!item) return;
+        if (lastFavorite.current !== item.isFavorite) {
+            starControls.start({ scale: [1, 1.5, 1], transition: { duration: 0.35, ease: 'easeOut' } });
+        }
+        lastFavorite.current = item.isFavorite;
+    }, [item, starControls]);
 
     if (!item) {
         return (
@@ -77,13 +94,15 @@ export default function VaultDetail({
                                 onClick={() => onToggleFavorite(item)}
                                 className="p-1.5 rounded-xl text-[#5c7788] hover:text-amber-500 hover:bg-amber-50 transition-all cursor-pointer"
                             >
-                                <Star
-                                    className={`w-5 h-5 ${
-                                        item.isFavorite
-                                            ? 'text-amber-500 fill-amber-500'
-                                            : 'hover:text-amber-500'
-                                    }`}
-                                />
+                                <motion.span animate={starControls} className="inline-flex">
+                                    <Star
+                                        className={`w-5 h-5 ${
+                                            item.isFavorite
+                                                ? 'text-amber-500 fill-amber-500'
+                                                : 'hover:text-amber-500'
+                                        }`}
+                                    />
+                                </motion.span>
                             </button>
                         </div>
                         {formattedUrl && (
@@ -139,11 +158,7 @@ export default function VaultDetail({
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors shrink-0 cursor-pointer"
                                 title="Copy username"
                             >
-                                {copiedField === 'Username' ? (
-                                    <Check className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                    <Copy className="w-4 h-4" />
-                                )}
+                                <CopyIcon copied={copiedField === 'Username'} icon={Copy} />
                             </button>
                         )}
                     </div>
@@ -155,22 +170,20 @@ export default function VaultDetail({
                         <KeyRound className="w-3.5 h-3.5 text-[#0284c7]" />
                         <span>Password</span>
                     </div>
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                    <div className="relative overflow-hidden flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                        {/* the water covers the field while the password is hidden, and drains away to uncover it */}
                         <span className="font-mono text-sm tracking-wider text-[#0c1820] select-all truncate">
-                            {showPassword ? item.password : '••••••••••••••••'}
+                            {showText ? item.password : '\u00A0'}
                         </span>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <WaterMask revealed={showPassword} />
+                        <div className="relative z-[4] flex items-center gap-1 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((prev) => !prev)}
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                 title={showPassword ? 'Hide password' : 'Show password'}
                             >
-                                {showPassword ? (
-                                    <EyeOff className="w-4 h-4" />
-                                ) : (
-                                    <Eye className="w-4 h-4" />
-                                )}
+                                <IconSwap swapped={showPassword} from={Eye} to={EyeOff} />
                             </button>
                             <button
                                 type="button"
@@ -178,18 +191,14 @@ export default function VaultDetail({
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0284c7] hover:bg-[#e0f2fe] transition-colors cursor-pointer"
                                 title="Copy password"
                             >
-                                {copiedField === 'Password' ? (
-                                    <Check className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                    <Copy className="w-4 h-4" />
-                                )}
+                                <CopyIcon copied={copiedField === 'Password'} icon={Copy} />
                             </button>
                         </div>
                     </div>
 
                     {/* Password Strength Meter */}
                     <div className="pt-1.5">
-                        <PasswordStrength password={item.password} />
+                        <PasswordStrength password={item.password} mode="saved" onChange={() => onEdit(item)} />
                     </div>
                 </div>
 
@@ -220,11 +229,7 @@ export default function VaultDetail({
                                     className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                     title="Copy URL"
                                 >
-                                    {copiedField === 'Website URL' ? (
-                                        <Check className="w-4 h-4 text-emerald-600" />
-                                    ) : (
-                                        <Copy className="w-4 h-4" />
-                                    )}
+                                    <CopyIcon copied={copiedField === 'Website URL'} icon={Copy} />
                                 </button>
                             </div>
                         </div>

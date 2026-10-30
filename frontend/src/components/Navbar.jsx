@@ -10,14 +10,16 @@ import {
   Menu,
   X
 } from "lucide-react";
-import toast from "react-hot-toast";
 import passwordContext from "../context/passwordContext";
 import PassDropLogo from "./common/PassDropLogo";
 import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
+import { spring } from "../lib/motion";
+import { useTide } from "../context/useTide";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
+  const tide = useTide();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,12 +29,26 @@ const Navbar = () => {
 
   const token = sessionStorage.getItem("token");
 
-  const confirmLogout = async () => {
-    await setPasswordArray([]);
-    sessionStorage.removeItem("token");
-    navigate("/login");
-    toast.success("Logged out successfully");
+  // Logout is the vault being drained, like pulling the plug on a full tub: the water fades
+  // in behind the confirmation dialog, and the moment the user confirms the level falls to
+  // reveal the login page.
+  const openLogoutDialog = () => {
+    setIsLogoutModalOpen(true);
+    tide.fillIn();
+  };
+
+  const cancelLogout = () => {
     setIsLogoutModalOpen(false);
+    tide.fadeOut();
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutModalOpen(false);
+    setPasswordArray([]);
+    sessionStorage.removeItem("token");
+    // navigate and drain in the same tick, so the first frame already has the login page under the water
+    navigate("/login");
+    tide.drain();
   };
 
   const navLinks = [
@@ -84,14 +100,22 @@ const Navbar = () => {
                     <Link
                       key={item.label}
                       to={item.path}
-                      className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all ${
+                      className={`relative flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-colors ${
                         isActive(item.path)
-                          ? "bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] shadow-xs"
+                          ? "text-[#0284c7]"
                           : "text-[#3a5566] hover:text-[#0c1820] hover:bg-white/60"
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive(item.path) ? "text-[#0284c7]" : "text-[#4a6b82]"}`} />
-                      <span>{item.label}</span>
+                      {/* shared layoutId: the highlight slides to whichever link becomes active */}
+                      {isActive(item.path) && (
+                        <motion.span
+                          layoutId="nav-active-pill"
+                          transition={spring.snappy}
+                          className="absolute inset-0 rounded-xl bg-[#e0f2fe] border border-[#bae6fd] shadow-xs"
+                        />
+                      )}
+                      <Icon className={`relative w-4 h-4 ${isActive(item.path) ? "text-[#0284c7]" : "text-[#4a6b82]"}`} />
+                      <span className="relative">{item.label}</span>
                     </Link>
                   );
                 })}
@@ -103,7 +127,7 @@ const Navbar = () => {
               {token ? (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setIsLogoutModalOpen(true)}
+                    onClick={openLogoutDialog}
                     type="button"
                     title="Log Out"
                     className="group inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50/80 hover:bg-rose-100/90 border border-rose-200/80 hover:border-rose-300 shadow-xs rounded-xl transition-all cursor-pointer"
@@ -192,7 +216,7 @@ const Navbar = () => {
       {/* Logout Confirmation Modal */}
       <ConfirmationModal
         isOpen={isLogoutModalOpen}
-        onClose={() => setIsLogoutModalOpen(false)}
+        onClose={cancelLogout}
         onConfirm={confirmLogout}
         message="Are you sure you want to log out of PassDrop?"
         confirmText="Log Out"

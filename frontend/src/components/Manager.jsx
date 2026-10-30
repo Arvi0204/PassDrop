@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Search,
@@ -14,6 +14,10 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
+import { useTide } from '../context/useTide';
+import { playVaultEntrance } from '../lib/vaultEntrance';
+import { motion, AnimatePresence } from 'framer-motion';
+import { variants, spring, ease, duration } from '../lib/motion';
 
 export default function Manager() {
     const navigate = useNavigate();
@@ -37,13 +41,35 @@ export default function Manager() {
     // Mobile navigation state ('list' | 'detail')
     const [mobileView, setMobileView] = useState('list');
 
+    // Entrance animation: only after a fresh login/signup, once the vault data has arrived
+    const tide = useTide();
+    const rootRef = useRef(null);
+    const [fetched, setFetched] = useState(false);
+
+    // Rows animate in only after the first load, so the login entrance isn't doubled up
+    const animateEnter = useRef(false);
+    useEffect(() => {
+        if (fetched) animateEnter.current = true;
+    }, [fetched]);
+
+    // hide the targets before the first paint so nothing flashes under the water
+    useLayoutEffect(() => {
+        if (tide.peekEntrance()) rootRef.current?.classList.add('entrance-pending');
+    }, [tide]);
+
+    useEffect(() => {
+        if (!fetched || !tide.peekEntrance()) return undefined;
+        tide.release(); // clear the water as the vault surfaces
+        return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance });
+    }, [fetched, tide]);
+
     // Authentication check & initial data fetch
     useEffect(() => {
         const token = sessionStorage.getItem('token');
         if (!token) {
             navigate('/login');
         } else {
-            getPasswords();
+            getPasswords().then(() => setFetched(true));
         }
     }, []);
 
@@ -80,19 +106,23 @@ export default function Manager() {
         return passwordArray.find((item) => item._id === selectedId) || null;
     }, [passwordArray, selectedId]);
 
-    // Copy handler with clipboard feedback
+    // Copy and favorite are confirmed in place (the icon becomes a check, the star pops), so they
+    // no longer raise a toast. This message is for screen readers, which can't see those cues.
+    const [announcement, setAnnouncement] = useState({ id: 0, text: '' });
+    const announce = (text) => setAnnouncement((prev) => ({ id: prev.id + 1, text }));
+
     const handleCopy = (text, label) => {
         navigator.clipboard.writeText(text);
-        toast.success(`Copied ${label} to clipboard!`);
+        announce(`${label} copied to clipboard`);
     };
 
     // Toggle favorite state
     const handleToggleFavorite = async (item) => {
         const newFavState = !item.isFavorite;
-        await editPass(item._id, { isFavorite: newFavState });
-        toast(newFavState ? 'Added to favorites ⭐' : 'Removed from favorites', {
-            icon: newFavState ? '⭐' : 'ℹ️'
-        });
+        const res = await editPass(item._id, { isFavorite: newFavState });
+        if (res?.success) {
+            announce(newFavState ? 'Added to favorites' : 'Removed from favorites');
+        }
     };
 
     // Open Edit modal
@@ -149,10 +179,13 @@ export default function Manager() {
     }, [passwordArray]);
 
     return (
-        <div className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+        <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+            <div role="status" aria-live="polite" className="sr-only">
+                <span key={announcement.id}>{announcement.text}</span>
+            </div>
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Top Action Bar */}
-                <div className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div data-entrance className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
                     {/* Search Input */}
                     <div className="relative w-full md:w-96">
                         <Search className="w-4 h-4 text-[#5c7788] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -221,15 +254,23 @@ export default function Manager() {
                             mobileView === 'detail' ? 'hidden md:block' : 'block'
                         }`}
                     >
-                        <div className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
+                        <div data-entrance className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
                             <span>
                                 {activeFilter === 'favorites' ? 'Favorite Accounts' : 'Vault Accounts'}
                             </span>
-                            <span className="text-[#3a5566]">{filteredItems.length} items</span>
+                            <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
-                        {filteredItems.length === 0 ? (
-                            <div className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3">
+                        {filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
+                            <motion.div
+                                key={searchQuery ? 'no-match' : 'empty'}
+                                data-entrance
+                                variants={variants.fadeUp}
+                                initial={animateEnter.current ? 'hidden' : false}
+                                animate="visible"
+                                transition={{ duration: duration.slow, ease: ease.out }}
+                                className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl text-slate-500 space-y-3"
+                            >
                                 <div className="w-12 h-12 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] mx-auto flex items-center justify-center text-[#112838] shadow-xs">
                                     <KeyRound className="w-6 h-6" />
                                 </div>
@@ -250,22 +291,36 @@ export default function Manager() {
                                         <Plus className="w-3.5 h-3.5" /> Add Account
                                     </button>
                                 )}
-                            </div>
+                            </motion.div>
                         ) : (
-                            <div className="space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
-                                {filteredItems.map((item) => (
-                                    <VaultItemCard
-                                        key={item._id}
-                                        item={item}
-                                        isSelected={item._id === selectedId}
-                                        onSelect={(clickedItem) => {
-                                            setSelectedId(clickedItem._id);
-                                            setMobileView('detail');
-                                        }}
-                                        onCopyUsername={(username) => handleCopy(username, 'Username')}
-                                        onCopyPassword={(password) => handleCopy(password, 'Password')}
-                                    />
-                                ))}
+                            <div className="relative space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto pr-1">
+                                <AnimatePresence initial={false} mode="popLayout">
+                                    {filteredItems.map((item) => (
+                                        <motion.div
+                                            key={item._id}
+                                            layout="position"
+                                            variants={variants.listItem}
+                                            initial={animateEnter.current ? 'hidden' : false}
+                                            animate="visible"
+                                            exit="exit"
+                                            transition={{
+                                                layout: spring.soft,
+                                                default: { duration: duration.base, ease: ease.out }
+                                            }}
+                                        >
+                                            <VaultItemCard
+                                                item={item}
+                                                isSelected={item._id === selectedId}
+                                                onSelect={(clickedItem) => {
+                                                    setSelectedId(clickedItem._id);
+                                                    setMobileView('detail');
+                                                }}
+                                                onCopyUsername={(username) => handleCopy(username, 'Username')}
+                                                onCopyPassword={(password) => handleCopy(password, 'Password')}
+                                            />
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
                         )}
                     </div>
@@ -287,14 +342,25 @@ export default function Manager() {
                             </button>
                         </div>
 
-                        <div className="sticky top-20">
-                            <VaultDetail
-                                item={activeItem}
-                                onEdit={handleOpenEdit}
-                                onDelete={handleDeleteClick}
-                                onToggleFavorite={handleToggleFavorite}
-                                onCopy={handleCopy}
-                            />
+                        <div data-entrance className="sticky top-20">
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={activeItem?._id ?? 'none'}
+                                    variants={variants.pane}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    transition={{ duration: duration.base, ease: ease.out }}
+                                >
+                                    <VaultDetail
+                                        item={activeItem}
+                                        onEdit={handleOpenEdit}
+                                        onDelete={handleDeleteClick}
+                                        onToggleFavorite={handleToggleFavorite}
+                                        onCopy={handleCopy}
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     </div>
                 </div>

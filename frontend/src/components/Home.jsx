@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { KeyRound, Sparkles, Download, ArrowRight } from 'lucide-react';
+import Reveal from './common/Reveal';
 
 const Home = () => {
     const token = sessionStorage.getItem('token');
@@ -35,39 +36,47 @@ const Home = () => {
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
                     {/* Trust Pill */}
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/90 bg-white/80 text-[#0e293a] text-xs font-semibold mb-8 shadow-xs">
-                        <span className="w-2 h-2 rounded-full bg-[#112838] animate-pulse" />
-                        <span>Zero-knowledge · AES-256 encrypted · Secure by design</span>
-                    </div>
+                    <Reveal index={0}>
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/90 bg-white/80 text-[#0e293a] text-xs font-semibold mb-8 shadow-xs">
+                            <span className="w-2 h-2 rounded-full bg-[#112838] animate-pulse" />
+                            <span>Zero-knowledge · AES-256 encrypted · Secure by design</span>
+                        </div>
+                    </Reveal>
 
-                    <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#0c1820] leading-[1.15] mb-6">
-                        Your passwords,{' '}
-                        <br className="hidden sm:inline" />
-                        <span className="bg-gradient-to-r from-[#112838] via-[#24546e] to-[#3a7594] bg-clip-text text-transparent">
-                            one secure drop.
-                        </span>
-                    </h1>
+                    <Reveal index={1}>
+                        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#0c1820] leading-[1.15] mb-6">
+                            Your passwords,{' '}
+                            <br className="hidden sm:inline" />
+                            <span className="bg-gradient-to-r from-[#112838] via-[#24546e] to-[#3a7594] bg-clip-text text-transparent">
+                                one secure drop.
+                            </span>
+                        </h1>
+                    </Reveal>
 
-                    <p className="text-base sm:text-lg text-[#1e3b4d] max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-                        PassDrop securely stores, generates, and autofills your digital identities.
-                        Experience clean Nordic frosted glass privacy engineered for zero-knowledge safety.
-                    </p>
+                    <Reveal index={2}>
+                        <p className="text-base sm:text-lg text-[#1e3b4d] max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+                            PassDrop securely stores, generates, and autofills your digital identities.
+                            Experience clean Nordic frosted glass privacy engineered for zero-knowledge safety.
+                        </p>
+                    </Reveal>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link
-                            to={token ? "/" : "/signup"}
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 transition-all hover:scale-[1.02]"
-                        >
-                            <span>{token ? "Open My Vault" : "Get Started for Free"}</span>
-                            <ArrowRight className="w-4 h-4" />
-                        </Link>
-                        <a
-                            href="#features"
-                            className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all"
-                        >
-                            Explore Features
-                        </a>
-                    </div>
+                    <Reveal index={3}>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <Link
+                                to={token ? "/" : "/signup"}
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 transition-all hover:scale-[1.02]"
+                            >
+                                <span>{token ? "Open My Vault" : "Get Started for Free"}</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                            <a
+                                href="#features"
+                                className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all"
+                            >
+                                Explore Features
+                            </a>
+                        </div>
+                    </Reveal>
                 </div>
             </section>
 
@@ -83,11 +92,13 @@ const Home = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {features.map((feat) => {
+                    {features.map((feat, i) => {
                         const Icon = feat.icon;
                         return (
-                            <div
+                            <Reveal
                                 key={feat.title}
+                                index={i}
+                                inView
                                 className="p-6 rounded-2xl bg-[#e1eef5]/70 border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl transition-all"
                             >
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center border mb-4 shadow-xs ${feat.accent}`}>
@@ -99,7 +110,7 @@ const Home = () => {
                                 <p className="text-sm text-[#3a5566] leading-relaxed">
                                     {feat.description}
                                 </p>
-                            </div>
+                            </Reveal>
                         );
                     })}
                 </div>

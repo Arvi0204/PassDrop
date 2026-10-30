@@ -1,0 +1,107 @@
+/* ------------------------------------------------------------------
+   Waterline: a small tank laid over a password field. Hidden, the field
+   is full of water with 16 dots in it; revealed, the water drains away
+   and uncovers the real characters. Clear-water palette.
+------------------------------------------------------------------- */
+.pw-water {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* the sheet is 10px taller than the field so the wave edge sits just above it when covered */
+.pw-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  height: calc(100% + 10px);
+  will-change: transform;
+}
+
+.pw-surf {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+}
+
+/* the surface is a mask, so the colour follows the water palette */
+.pw-surf i {
+  position: absolute;
+  inset: 0;
+  width: 200%;
+  background-color: #e3f4fc;
+  animation: pw-wave 1.5s linear infinite;
+  -webkit-mask: url('../assets/wave-mask.svg') repeat-x 0 0 / 50% 100%;
+  mask: url('../assets/wave-mask.svg') repeat-x 0 0 / 50% 100%;
+}
+
+.pw-surf i.pw-surf-back {
+  opacity: 0.55;
+  animation-duration: 2.4s;
+  animation-direction: reverse;
+  transform: translateY(-2px);
+}
+
+@keyframes pw-wave {
+  to { transform: translateX(-50%); }
+}
+
+.pw-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  background: linear-gradient(180deg, #e3f4fc, #b9e2f5);
+  color: rgba(12, 24, 32, 0.82);
+  font-weight: 700;
+  white-space: pre;
+}
+
+/* characters that a drop has just carried into a generated password */
+.pw-flash {
+  border-radius: 3px;
+  animation: pw-flash 1s ease-out;
+}
+
+@keyframes pw-flash {
+  0% { background: rgba(72, 202, 228, 0.7); }
+  100% { background: rgba(72, 202, 228, 0); }
+}
+
+/* the drop that carries characters in, and the ripple where it lands */
+.pw-fly img {
+  display: block;
+}
+
+.pw-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.pw-splash {
+  position: fixed;
+  z-index: 59;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 2px solid rgba(72, 202, 228, 0.95);
+  box-shadow: 0 0 12px rgba(72, 202, 228, 0.55);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-surf i { animation: none; }
+}

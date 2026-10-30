@@ -1,65 +1,100 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Sparkles, X, RefreshCw } from "lucide-react";
 import PasswordStrength from "./Vault/PasswordStrength";
+import GeneratorOptions from "./common/GeneratorOptions";
+import { flyDropInto, dropIsInstant } from "../lib/dropIn";
+import { generatePassword as buildPassword, DEFAULT_OPTIONS } from "../lib/passwordGen";
+import "../styles/water.css";
+import useEscapeKey from "../lib/useEscapeKey";
 
-const CHARACTER_SETS = {
-  letters: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  numbers: "0123456789",
-  specialChars: "!@#$%^&*()_+[]{}|;:,.<>?",
+// Visual only: characters shown while a new password "rolls in". The real password is chosen
+// separately with crypto.getRandomValues and is what gets copied.
+const ROLL_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+
+/**
+ * Shows `value`. When `rollId` changes, the characters spin through random ones and settle
+ * on the real ones one after another from left to right, like a slot machine. A change of
+ * `value` without a new `rollId` (slider, toggles) is shown immediately.
+ */
+const RollingPassword = ({ value, rollId, flash }) => {
+  const [shown, setShown] = useState(value);
+  const rolling = useRef(false);
+  const lastRoll = useRef(rollId);
+  const latest = useRef(value);
+  latest.current = value;
+
+  // declared before the value effect so `rolling` is already set when both run together
+  useEffect(() => {
+    if (rollId === lastRoll.current) return undefined;
+    lastRoll.current = rollId;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(latest.current);
+      return undefined;
+    }
+
+    rolling.current = true;
+    const start = performance.now();
+    const tick = () => {
+      const target = latest.current;
+      const stagger = Math.min(24, 460 / Math.max(target.length, 1));
+      const locked = Math.floor((performance.now() - start - 160) / stagger);
+      if (locked >= target.length) {
+        clearInterval(timer);
+        rolling.current = false;
+        setShown(target);
+        return;
+      }
+      let out = "";
+      for (let i = 0; i < target.length; i += 1) {
+        out += i < locked ? target[i] : ROLL_CHARS[Math.floor(Math.random() * ROLL_CHARS.length)];
+      }
+      setShown(out);
+    };
+    const timer = setInterval(tick, 45);
+    tick();
+
+    return () => {
+      clearInterval(timer);
+      rolling.current = false;
+    };
+  }, [rollId]);
+
+  useEffect(() => {
+    if (!rolling.current) setShown(value);
+  }, [value]);
+
+  return (
+    <>
+      {[...shown].map((ch, i) => {
+        const added =
+          flash && !rolling.current && (flash.kind === "symbol" ? /[^A-Za-z0-9]/.test(ch) : /[0-9]/.test(ch));
+        return (
+          <span key={i} className={added ? "pw-flash" : undefined}>
+            {ch}
+          </span>
+        );
+      })}
+    </>
+  );
 };
 
 const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
-  const [settings, setSettings] = useState({
-    length: 16,
-    includeNumbers: true,
-    includeSpecialChars: true,
-  });
+  useEscapeKey(isOpen, () => setIsGeneratorModalOpen(false));
+
+  const [settings, setSettings] = useState(DEFAULT_OPTIONS);
 
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [copied, setCopied] = useState(false);
+  const [rollId, setRollId] = useState(0); // bump to make the password roll in
+  const [flash, setFlash] = useState(null); // characters a drop has just carried in: { kind: 'symbol' | 'number' }
+  const skipRegen = useRef(false); // set while a drop is in flight, so the new password waits for it to land
+  const previewRef = useRef(null);
 
-  const secureRandomChar = (str) => {
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    return str.charAt(array[0] % str.length);
-  };
-
-  const secureRandomInt = (max) => {
-    if (max <= 0) return 0;
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    return array[0] % max;
-  };
-
-  const generatePassword = () => {
-    let charset = CHARACTER_SETS.letters;
-    const requiredChars = [];
-
-    if (settings.includeNumbers) {
-      charset += CHARACTER_SETS.numbers;
-      requiredChars.push(secureRandomChar(CHARACTER_SETS.numbers));
-    }
-
-    if (settings.includeSpecialChars) {
-      charset += CHARACTER_SETS.specialChars;
-      requiredChars.push(secureRandomChar(CHARACTER_SETS.specialChars));
-    }
-
-    const effectiveLength = Math.max(requiredChars.length, settings.length || 8);
-    const fillLength = Math.max(0, effectiveLength - requiredChars.length);
-
-    let password = Array.from({ length: fillLength }, () =>
-      secureRandomChar(charset)
-    ).join("");
-
-    requiredChars.forEach((char) => {
-      const randomIndex = secureRandomInt(password.length + 1);
-      password =
-        password.slice(0, randomIndex) + char + password.slice(randomIndex);
-    });
-    setGeneratedPassword(password);
+  const generatePassword = (cfg = settings) => {
+    setGeneratedPassword(buildPassword(cfg));
   };
 
   const copyText = (text) => {
@@ -74,9 +109,45 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
 
   useEffect(() => {
     if (isOpen) {
+      if (skipRegen.current) {
+        skipRegen.current = false;
+        return;
+      }
+      setFlash(null);
       generatePassword();
     }
   }, [settings, isOpen]);
+
+  // the password rolls in when the dialog opens and when Regenerate is pressed, not while the
+  // length slider or the toggles are being adjusted
+  useEffect(() => {
+    if (isOpen) setRollId((n) => n + 1);
+  }, [isOpen]);
+
+  const regenerate = () => {
+    setFlash(null);
+    generatePassword();
+    setRollId((n) => n + 1);
+  };
+
+  // Ticking an option carries its characters into the password: a drop flies from the check
+  // box to the preview and the new password appears where it lands, with the new characters
+  // highlighted. Unticking just regenerates.
+  const toggleOption = (key, boxEl) => {
+    const next = { ...settings, [key]: !settings[key] };
+
+    if (!next[key] || dropIsInstant() || !previewRef.current) {
+      setSettings(next);
+      return;
+    }
+
+    skipRegen.current = true;
+    setSettings(next);
+    flyDropInto(boxEl, previewRef.current, () => {
+      generatePassword(next);
+      setFlash({ kind: key === "includeNumbers" ? "number" : "symbol" });
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -122,8 +193,8 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
             {/* Password Preview Box */}
             <div className="space-y-2 mb-6">
               <div className="relative flex items-center justify-between p-3.5 bg-[#f5fafc]/85 border border-white/90 rounded-xl shadow-xs">
-                <span className="font-mono text-base font-semibold text-[#0c1820] select-all truncate pr-10">
-                  {generatedPassword}
+                <span ref={previewRef} className="font-mono text-base font-semibold text-[#0c1820] select-all truncate pr-10">
+                  <RollingPassword value={generatedPassword} rollId={rollId} flash={flash} />
                 </span>
                 <button
                   type="button"
@@ -137,85 +208,19 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
               <PasswordStrength password={generatedPassword} />
             </div>
 
-            {/* Length Slider & Quick Presets */}
-            <div className="mb-6 space-y-2.5">
-              <div className="flex justify-between items-center text-xs font-semibold text-[#0c1820]">
-                <span>Password Length</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-1">
-                    {[12, 16, 20, 24].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setSettings({ ...settings, length: preset })}
-                        className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-semibold transition-all cursor-pointer ${
-                          settings.length === preset
-                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
-                            : 'bg-white/80 text-[#3a5566] hover:text-[#0c1820] border border-white/80'
-                        }`}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-md bg-[#e0f2fe] text-[#0284c7] font-mono font-bold text-xs border border-[#bae6fd] shadow-xs">
-                    {settings.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* High-visibility Slider Track with fill gradient */}
-              <div className="relative py-1">
-                <input
-                  type="range"
-                  min="6"
-                  max="40"
-                  value={settings.length}
-                  onChange={(e) =>
-                    setSettings({ ...settings, length: Number(e.target.value) })
-                  }
-                  style={{
-                    background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${((settings.length - 6) / 34) * 100}%, #b9d1df ${((settings.length - 6) / 34) * 100}%, #b9d1df 100%)`
-                  }}
-                  className="w-full h-2.5 rounded-lg appearance-none cursor-pointer accent-[#0284c7] border border-white/90 shadow-inner focus:outline-none focus:ring-2 focus:ring-[#0284c7]/20"
-                />
-                <div className="flex justify-between items-center text-[10px] font-mono text-[#4a697e] mt-1 px-0.5 font-medium">
-                  <span>6 chars</span>
-                  <span>40 chars</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Checkboxes */}
-            <div className="space-y-3 mb-6">
-              {[
-                { id: "numbers", label: "Include Numbers (0-9)", key: "includeNumbers" },
-                { id: "symbols", label: "Include Symbols (!@#$...)", key: "includeSpecialChars" },
-              ].map(({ id, label, key }) => (
-                <label
-                  key={id}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-white/80 bg-white/50 hover:bg-white/80 cursor-pointer transition-colors shadow-xs"
-                >
-                  <input
-                    type="checkbox"
-                    checked={settings[key]}
-                    onChange={() =>
-                      setSettings({ ...settings, [key]: !settings[key] })
-                    }
-                    className="w-4 h-4 text-[#0284c7] rounded border-slate-300 focus:ring-0 cursor-pointer"
-                  />
-                  <span className="text-xs font-semibold text-[#0c1820]">
-                    {label}
-                  </span>
-                </label>
-              ))}
+            <div className="mb-6">
+              <GeneratorOptions
+                settings={settings}
+                onLength={(length) => setSettings({ ...settings, length })}
+                onToggle={toggleOption}
+              />
             </div>
 
             {/* Regenerate & Copy Button */}
             <div className="flex gap-2.5">
               <button
                 type="button"
-                onClick={generatePassword}
+                onClick={regenerate}
                 className="flex-1 py-2.5 px-4 bg-white/70 hover:bg-white text-[#3a5566] hover:text-[#0c1820] border border-white/80 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <RefreshCw className="w-3.5 h-3.5" />

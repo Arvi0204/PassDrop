@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
+import useEscapeKey from '../lib/useEscapeKey';
 
 export default function ConfirmationModal({
     isOpen,
@@ -10,6 +11,8 @@ export default function ConfirmationModal({
     message,
     confirmText = 'Confirm'
 }) {
+    useEscapeKey(isOpen, onClose);
+
     // Inferred intent based on text
     const lowerMsg = (message || '').toLowerCase();
     const lowerConfirm = (confirmText || '').toLowerCase();

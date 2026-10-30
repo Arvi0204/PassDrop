@@ -1,0 +1,108 @@
+/* ------------------------------------------------------------------
+   Tide transition: a translucent water layer that rises behind the
+   auth card while credentials are checked, then floods the screen.
+   Layering: page background < water (z-25) < auth card (z-26) < navbar (z-30)
+------------------------------------------------------------------- */
+.tide-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 46px);
+  z-index: 25;
+  pointer-events: none;
+  /* parked below the viewport; TideContext animates it with the Web Animations API */
+  transform: translateY(100vh);
+  will-change: transform;
+}
+
+.tide-wave {
+  position: relative;
+  height: 46px;
+  overflow: hidden;
+}
+
+.tide-wave i {
+  position: absolute;
+  inset: 0;
+  width: 200%;
+  background-repeat: repeat-x;
+  background-size: 50% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 46' preserveAspectRatio='none'%3E%3Cpath d='M0 46 V24 Q50 4 100 24 T200 24 T300 24 T400 24 V46Z' fill='%230284c7' fill-opacity='.34'/%3E%3C/svg%3E");
+  animation: tide-wave 1.6s linear infinite;
+}
+
+.tide-wave i.tide-wave-back {
+  animation-duration: 2.6s;
+  animation-direction: reverse;
+  transform: translateY(-7px);
+}
+
+.tide-water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46px;
+  bottom: 0;
+  background: rgba(2, 132, 199, 0.34);
+  -webkit-backdrop-filter: blur(7px) saturate(1.2);
+  backdrop-filter: blur(7px) saturate(1.2);
+}
+
+/* During logout the water sits above the navbar (30) and the login card (26) so the whole
+   screen is submerged, but below the confirmation dialog (50) */
+.tide-root.tide-over {
+  z-index: 40;
+}
+
+/* Welcome message shown over the full water after signup (above the water, below the navbar) */
+.tide-message {
+  position: fixed;
+  inset: 0;
+  z-index: 27;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  color: #0c1820;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tide-message.show {
+  opacity: 1;
+  transform: none;
+}
+
+.tide-message h2 {
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 24px rgba(255, 255, 255, 0.6);
+}
+
+.tide-message p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d4d60;
+}
+
+@keyframes tide-wave {
+  to { transform: translateX(-50%); }
+}
+
+/* Vault entrance: targets stay hidden until playVaultEntrance() takes over (see lib/vaultEntrance.js) */
+/* !important: some targets (the empty-state card) carry an inline opacity from framer-motion */
+.entrance-pending [data-entrance] {
+  opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tide-wave i { animation: none; }
+  .tide-message { transition: none; transform: none; }
+}
