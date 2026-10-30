@@ -20,6 +20,7 @@ import GeneratorOptions from '../common/GeneratorOptions';
 import WaterMask from './WaterMask';
 import { flyDropInto, dropIsInstant } from '../../lib/dropIn';
 import { generatePassword, DEFAULT_OPTIONS } from '../../lib/passwordGen';
+import useEscapeKey from '../../lib/useEscapeKey';
 
 export default function VaultModal({
     isOpen,
@@ -27,6 +28,8 @@ export default function VaultModal({
     initialData,
     onSave
 }) {
+    useEscapeKey(isOpen, onClose);
+
     const isEditing = Boolean(initialData?._id);
 
     const [form, setForm] = useState({

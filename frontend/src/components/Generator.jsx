@@ -7,6 +7,7 @@ import GeneratorOptions from "./common/GeneratorOptions";
 import { flyDropInto, dropIsInstant } from "../lib/dropIn";
 import { generatePassword as buildPassword, DEFAULT_OPTIONS } from "../lib/passwordGen";
 import "../styles/water.css";
+import useEscapeKey from "../lib/useEscapeKey";
 
 // Visual only: characters shown while a new password "rolls in". The real password is chosen
 // separately with crypto.getRandomValues and is what gets copied.
@@ -81,6 +82,8 @@ const RollingPassword = ({ value, rollId, flash }) => {
 };
 
 const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
+  useEscapeKey(isOpen, () => setIsGeneratorModalOpen(false));
+
   const [settings, setSettings] = useState(DEFAULT_OPTIONS);
 
   const [generatedPassword, setGeneratedPassword] = useState("");
