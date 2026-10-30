@@ -3,6 +3,9 @@ import { Eye, EyeOff, ShieldCheck, KeyRound, Sparkles, ArrowRight } from 'lucide
 import toast from "react-hot-toast";
 import { useNavigate, Link } from "react-router-dom";
 import PassDropLogo from './common/PassDropLogo';
+import IconSwap from './common/IconSwap';
+import { ErrorLine, useShake } from './common/FormError';
+import { motion } from 'framer-motion';
 import { useTide } from '../context/useTide';
 
 export default function Signup() {
@@ -15,6 +18,8 @@ export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const confirmRef = useRef(null);
+    const { controls: confirmShake, shake } = useShake();
     const navigate = useNavigate();
     const host = import.meta.env.VITE_BACKEND;
 
@@ -36,6 +41,8 @@ export default function Signup() {
         e.preventDefault();
         if (form.password !== form.confirmPassword) {
             setPasswordError("Passwords do not match");
+            shake();
+            confirmRef.current?.focus();
             return;
         } else {
             setPasswordError('');
@@ -88,6 +95,7 @@ export default function Signup() {
     const onChange = (e) => {
         const { name, value } = e.target;
         setForm(prevForm => ({ ...prevForm, [name]: value }));
+        if (passwordError) setPasswordError('');
     };
 
     return (
@@ -220,12 +228,12 @@ export default function Signup() {
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#5c7788] hover:text-[#0c1820] transition-colors cursor-pointer"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                     >
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        <IconSwap swapped={showPassword} from={Eye} to={EyeOff} className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
 
-                            <div>
+                            <motion.div animate={confirmShake}>
                                 <label
                                     htmlFor="confirmPassword"
                                     className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1"
@@ -235,20 +243,19 @@ export default function Signup() {
                                 <div className="relative">
                                     <input
                                         id="confirmPassword"
+                                        ref={confirmRef}
                                         name="confirmPassword"
                                         type={showPassword ? "text" : "password"}
                                         required
                                         value={form.confirmPassword}
                                         onChange={onChange}
                                         placeholder="Repeat master password"
-                                        className="w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
+                                        className={`w-full px-3.5 py-2 pr-10 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs ${passwordError ? 'border-rose-300 ring-2 ring-rose-400/30' : ''}`}
                                     />
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            {passwordError && (
-                                <p className="text-xs font-semibold text-rose-500">{passwordError}</p>
-                            )}
+                            <ErrorLine>{passwordError}</ErrorLine>
 
                             <button
                                 type="submit"

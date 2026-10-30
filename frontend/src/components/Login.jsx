@@ -3,6 +3,7 @@ import { Eye, EyeOff, ShieldCheck, KeyRound, Sparkles, ArrowRight } from 'lucide
 import toast from 'react-hot-toast';
 import { useNavigate, Link } from "react-router-dom";
 import PassDropLogo from './common/PassDropLogo';
+import IconSwap from './common/IconSwap';
 import { useTide } from '../context/useTide';
 
 export default function Login() {
@@ -187,7 +188,7 @@ export default function Login() {
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#5c7788] hover:text-[#0c1820] transition-colors cursor-pointer"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                     >
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        <IconSwap swapped={showPassword} from={Eye} to={EyeOff} className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
