@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PasswordStrength from './PasswordStrength';
+import IconSwap from '../common/IconSwap';
+import WaterMask from './WaterMask';
 
 const CHARACTER_SETS = {
     letters: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -82,6 +84,7 @@ export default function VaultModal({
     });
 
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordFocused, setPasswordFocused] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Inline generator configuration state
@@ -317,17 +320,24 @@ export default function VaultModal({
                                         name="password"
                                         value={form.password}
                                         onChange={handleChange}
+                                        onFocus={() => setPasswordFocused(true)}
+                                        onBlur={() => setPasswordFocused(false)}
                                         placeholder="Enter account password"
                                         autoComplete="new-password"
                                         className="w-full h-10 px-3.5 pr-10 text-sm font-mono bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788]"
                                     />
+                                    {/* Water covers a hidden password. It drains while you type in the field, when the
+                                        password is shown, and when there is nothing to hide yet. */}
+                                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                                        <WaterMask revealed={showPassword || passwordFocused || !form.password} />
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                         title={showPassword ? 'Hide password' : 'Show password'}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
+                                        className="absolute z-[4] right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                     >
-                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        <IconSwap swapped={showPassword} from={Eye} to={EyeOff} />
                                     </button>
                                 </div>
 

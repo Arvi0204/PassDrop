@@ -19,6 +19,8 @@ import {
 import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
 import CopyIcon from './CopyIcon';
+import IconSwap from '../common/IconSwap';
+import WaterMask, { useLingering } from './WaterMask';
 
 export default function VaultDetail({
     item,
@@ -29,6 +31,8 @@ export default function VaultDetail({
 }) {
     const [showPassword, setShowPassword] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
+    // the real password is only in the page while it is revealed, and until the water has covered it again
+    const showText = useLingering(showPassword, 360);
 
     // The star pops when the user toggles favorite. It does not pop on first render, so
     // selecting an account stays calm.
@@ -166,22 +170,20 @@ export default function VaultDetail({
                         <KeyRound className="w-3.5 h-3.5 text-[#0284c7]" />
                         <span>Password</span>
                     </div>
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                    <div className="relative overflow-hidden flex items-center justify-between p-3.5 rounded-xl bg-[#f5fafc]/85 border border-white/90 hover:border-[#112838]/40 shadow-xs transition-all">
+                        {/* the water covers the field while the password is hidden, and drains away to uncover it */}
                         <span className="font-mono text-sm tracking-wider text-[#0c1820] select-all truncate">
-                            {showPassword ? item.password : '••••••••••••••••'}
+                            {showText ? item.password : '\u00A0'}
                         </span>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <WaterMask revealed={showPassword} />
+                        <div className="relative z-[4] flex items-center gap-1 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((prev) => !prev)}
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                 title={showPassword ? 'Hide password' : 'Show password'}
                             >
-                                {showPassword ? (
-                                    <EyeOff className="w-4 h-4" />
-                                ) : (
-                                    <Eye className="w-4 h-4" />
-                                )}
+                                <IconSwap swapped={showPassword} from={Eye} to={EyeOff} />
                             </button>
                             <button
                                 type="button"
