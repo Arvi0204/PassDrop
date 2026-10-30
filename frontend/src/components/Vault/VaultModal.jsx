@@ -343,7 +343,7 @@ export default function VaultModal({
 
                                 {/* Strength Meter */}
                                 <div className="pt-0.5">
-                                    <PasswordStrength password={form.password} />
+                                    <PasswordStrength password={form.password} mode="typing" />
                                 </div>
 
                                 {/* Expandable Inline Generator Options Drawer */}

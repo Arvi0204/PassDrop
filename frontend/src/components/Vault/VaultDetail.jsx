@@ -198,7 +198,7 @@ export default function VaultDetail({
 
                     {/* Password Strength Meter */}
                     <div className="pt-1.5">
-                        <PasswordStrength password={item.password} />
+                        <PasswordStrength password={item.password} mode="saved" onChange={() => onEdit(item)} />
                     </div>
                 </div>
 
