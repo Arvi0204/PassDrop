@@ -2,6 +2,7 @@ import { h, replaceChildren } from './dom.js';
 import { icon, logo } from './icons.js';
 import { ask } from './bridge.js';
 import { plainField, secretField } from './controls.js';
+import { createGenerator } from './generator.js';
 import { titleOf, timeAgo, openableUrl, colourIndex } from './format.js';
 import { WEB_APP_URL } from '../config.js';
 import { entriesForPage, hostOf } from '../match.js';
@@ -30,6 +31,7 @@ export function renderVault({ session, onSignedOut, onExpired }) {
     error: '', query: '', chosen: 0, pageUrl: '', view: 'home', detailId: null
   };
   const root = h('div', { class: 'screen' });
+  const generator = createGenerator();
   let menuOpen = false;
 
   // ---------------------------------------------------------------- sync
@@ -113,6 +115,8 @@ export function renderVault({ session, onSignedOut, onExpired }) {
     h('div', { class: 'head' },
       h('div', { class: 'brand' }, logo(26), h('span', null, 'Pass', h('b', null, 'Drop'))),
       syncBox,
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Password generator', onClick: () => generator.open() },
+        icon('sparkles', 'w-[18px] h-[18px]')),
       menuButton
     ),
     menu,
@@ -240,7 +244,8 @@ export function renderVault({ session, onSignedOut, onExpired }) {
   // ---------------------------------------------------------------- keyboard and menus
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
-    if (menuOpen) { toggleMenu(false); menuButton.focus(); }
+    if (generator.isOpen()) generator.close();
+    else if (menuOpen) { toggleMenu(false); menuButton.focus(); }
     else if (state.view === 'detail') showHome();
   });
   document.addEventListener('click', (event) => {
