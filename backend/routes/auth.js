@@ -13,6 +13,9 @@ const connectToDb = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// When a token stops working, as a millisecond timestamp, so clients need not decode the JWT
+const tokenExpiry = (token) => jwt.decode(token).exp * 1000;
+
 // ========================================================
 // ROUTE 1: Register User (POST /api/auth/createuser, POST /api/auth/register)
 // ========================================================
@@ -56,7 +59,7 @@ const handleCreateUser = async (req, res) => {
         };
         const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-        return res.status(201).json({ success: true, authToken });
+        return res.status(201).json({ success: true, authToken, expiresAt: tokenExpiry(authToken) });
     } catch (err) {
         console.error('Registration error:', err.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
@@ -117,7 +120,7 @@ router.post('/login', [
         };
         const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-        return res.json({ success: true, authToken });
+        return res.json({ success: true, authToken, expiresAt: tokenExpiry(authToken) });
     } catch (err) {
         console.error('Login error:', err.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });

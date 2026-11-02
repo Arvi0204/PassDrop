@@ -1,55 +1,35 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { spring, duration, ease } from '../../lib/motion';
+import { strengthOf } from '../../lib/passwordStrength';
 
-export const calculateStrength = (password) => {
-    if (!password) {
-        return {
-            score: 0,
-            label: 'Empty',
-            barClass: 'bg-white/60',
-            badgeClass: 'bg-white/60 text-[#3a5566] border-white/80'
-        };
-    }
-
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (password.length >= 14) score += 1;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-
-    if (password.length < 8) {
-        return {
-            score: 1,
-            label: 'Weak (Too Short)',
-            barClass: 'bg-gradient-to-r from-rose-500 to-rose-400 shadow-xs shadow-rose-500/20',
-            badgeClass: 'bg-rose-50 text-rose-700 border-rose-200'
-        };
-    }
-
-    if (score <= 2) {
-        return {
-            score: 2,
-            label: 'Weak',
-            barClass: 'bg-gradient-to-r from-amber-500 to-amber-400 shadow-xs shadow-amber-500/20',
-            badgeClass: 'bg-amber-50 text-amber-700 border-amber-200'
-        };
-    }
-    if (score <= 4) {
-        return {
-            score: 3,
-            label: 'Good',
-            barClass: 'bg-gradient-to-r from-[#112838] to-[#285d77] shadow-xs shadow-[#112838]/20',
-            badgeClass: 'bg-[#d0e4ee] text-[#0e293a] border-[#b8d6e5]'
-        };
-    }
-    return {
-        score: 4,
-        label: 'Strong',
+// The look of each score; the scoring itself lives in lib/passwordStrength.js
+const LOOKS = {
+    0: {
+        barClass: 'bg-white/60',
+        badgeClass: 'bg-white/60 text-[#3a5566] border-white/80'
+    },
+    1: {
+        barClass: 'bg-gradient-to-r from-rose-500 to-rose-400 shadow-xs shadow-rose-500/20',
+        badgeClass: 'bg-rose-50 text-rose-700 border-rose-200'
+    },
+    2: {
+        barClass: 'bg-gradient-to-r from-amber-500 to-amber-400 shadow-xs shadow-amber-500/20',
+        badgeClass: 'bg-amber-50 text-amber-700 border-amber-200'
+    },
+    3: {
+        barClass: 'bg-gradient-to-r from-[#112838] to-[#285d77] shadow-xs shadow-[#112838]/20',
+        badgeClass: 'bg-[#d0e4ee] text-[#0e293a] border-[#b8d6e5]'
+    },
+    4: {
         barClass: 'bg-gradient-to-r from-emerald-600 to-teal-500 shadow-xs shadow-emerald-500/20',
         badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200'
-    };
+    }
+};
+
+export const calculateStrength = (password) => {
+    const { score, label } = strengthOf(password);
+    return { score, label, ...LOOKS[score] };
 };
 
 /** What is wrong with a password, in plain words. */
