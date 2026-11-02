@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       rollupOptions: {
         input: {
+          popup: resolve(__dirname, 'popup.html'),
           background: resolve(__dirname, 'src/background.js')
         },
         output: {

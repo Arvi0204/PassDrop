@@ -17,6 +17,14 @@ export function buildManifest({ version, backendOrigin }) {
       service_worker: 'background.js',
       type: 'module'
     },
+    action: {
+      default_popup: 'popup.html',
+      default_icon: {
+        16: 'icons/icon16.png',
+        32: 'icons/icon32.png',
+        192: 'icons/icon192.png'
+      }
+    },
     icons: {
       16: 'icons/icon16.png',
       32: 'icons/icon32.png',
