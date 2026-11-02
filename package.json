@@ -5,14 +5,17 @@
   "description": "PassHaven - Secure password management ecosystem across web, serverless API, and browser extension",
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "web_extension"
   ],
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build:frontend": "npm run build --workspace=frontend",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "build:extension": "npm run build --workspace=web_extension",
+    "package:extension": "npm run package --workspace=web_extension"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
