@@ -39,7 +39,7 @@ npm install
 ### 3. Configure environment variables
 Create a `.env` file in the root directory with the following:
 ```env
-VITE_BACKEND=https://pass-haven-backend.vercel.app
+VITE_BACKEND=http://localhost:3000
 ```
 
 ### 4. Run the development server
@@ -53,14 +53,7 @@ npm run build
 ```
 
 ### 6. Deploy
-The frontend can be deployed to **Netlify** or similar platforms. Ensure the environment variables are set correctly.
-
----
-
-## Deployment
-
-The frontend is currently deployed at:
-**[PassDrop Frontend](https://pass-haven.netlify.app)**
+The web app and the API are deployed together as one **Vercel** project (see `vercel.json` at the repository root). In production the app calls the API on its own address under `/api`, so no `VITE_BACKEND` is needed there.
 
 ---
 

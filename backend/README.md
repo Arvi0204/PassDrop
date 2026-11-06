@@ -81,9 +81,7 @@ Failures are `{ success: false, errors: [{ msg }] }` (validation) or `{ success:
 
 ## Deployment
 
-The backend is hosted on **Vercel**.
-
-**Live API URL**: [PassDrop Backend](https://pass-haven-backend.vercel.app)
+The backend is deployed on **Vercel** together with the web app, as one project: the web app is served as static files and this Express app runs as a serverless function under `/api` (see `vercel.json` and `api/index.js` at the repository root). Set `MONGODB_URI`, `JWT_SECRET` and `ENCRYPTION_KEY` in the project's environment variables.
 
 ---
 
