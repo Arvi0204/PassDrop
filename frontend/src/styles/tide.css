@@ -28,7 +28,7 @@
   width: 200%;
   background-repeat: repeat-x;
   background-size: 50% 100%;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 46' preserveAspectRatio='none'%3E%3Cpath d='M0 46 V24 Q50 4 100 24 T200 24 T300 24 T400 24 V46Z' fill='%230284c7' fill-opacity='.34'/%3E%3C/svg%3E");
+  background-image: url('../assets/tide-wave.svg');
   animation: tide-wave 1.6s linear infinite;
 }
 
