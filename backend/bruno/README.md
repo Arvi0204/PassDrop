@@ -1,6 +1,6 @@
-# PassHaven Bruno API Collection
+# PassDrop Bruno API Collection
 
-This directory contains a complete [Bruno](https://www.usebruno.com/) collection for testing and inspecting the PassHaven REST API.
+This directory contains a complete [Bruno](https://www.usebruno.com/) collection for testing and inspecting the PassDrop REST API.
 
 ## How to Open in Bruno
 

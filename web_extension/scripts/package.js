@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = resolve(root, 'dist');
-const output = resolve(root, '../frontend/public/PassHavenWeb.zip');
+const output = resolve(root, '../frontend/public/PassDrop.zip');
 
 if (!existsSync(resolve(dist, 'manifest.json'))) {
   throw new Error('dist/ is empty. Run `npm run build` first (or use `npm run package`).');

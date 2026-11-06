@@ -1,6 +1,6 @@
-# PassHaven - Backend
+# PassDrop - Backend
 
-This is the backend repository of PassHaven, a password manager app that prioritizes security and performance. The backend handles user authentication, encrypted storage of passwords, and API operations for the frontend and Chrome extension.
+This is the backend repository of PassDrop, a password manager app that prioritizes security and performance. The backend handles user authentication, encrypted storage of passwords, and API operations for the frontend and Chrome extension.
 
 ---
 
@@ -83,7 +83,7 @@ Failures are `{ success: false, errors: [{ msg }] }` (validation) or `{ success:
 
 The backend is hosted on **Vercel**.
 
-**Live API URL**: [PassHaven Backend](https://pass-haven-backend.vercel.app)
+**Live API URL**: [PassDrop Backend](https://pass-haven-backend.vercel.app)
 
 ---
 

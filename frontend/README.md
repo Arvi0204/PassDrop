@@ -1,6 +1,6 @@
-# PassHaven - Frontend
+# PassDrop - Frontend
 
-Welcome to the frontend repository of PassHaven, a secure and user-friendly password manager app. This application provides features like storing, searching, and autofilling passwords, all designed with a sleek and responsive UI.
+Welcome to the frontend repository of PassDrop, a secure and user-friendly password manager app. This application provides features like storing, searching, and autofilling passwords, all designed with a sleek and responsive UI.
 
 ---
 
@@ -60,7 +60,7 @@ The frontend can be deployed to **Netlify** or similar platforms. Ensure the env
 ## Deployment
 
 The frontend is currently deployed at:
-**[PassHaven Frontend](https://pass-haven.netlify.app)**
+**[PassDrop Frontend](https://pass-haven.netlify.app)**
 
 ---
 

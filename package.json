@@ -2,7 +2,7 @@
   "name": "passhaven-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "PassHaven - Secure password management ecosystem across web, serverless API, and browser extension",
+  "description": "PassDrop - Secure password management ecosystem across web, serverless API, and browser extension",
   "workspaces": [
     "frontend",
     "backend",

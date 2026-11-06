@@ -49,7 +49,7 @@ Runs the matching and API tests with Node's built-in test runner. No browser nee
 
 ## Release zip
 
-The web app's Extension page offers `frontend/public/PassHavenWeb.zip`. To rebuild it:
+The web app's Extension page offers `frontend/public/PassDrop.zip`. To rebuild it:
 
 1. Put the **real** server addresses in `.env` (or in `.env.production`, which wins for release builds).
 2. `npm run package` (from the repository root: `npm run package:extension`).

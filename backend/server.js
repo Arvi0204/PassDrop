@@ -18,13 +18,13 @@ app.use('/api/passwords', require('./routes/passwords'));
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'PassHaven API is running' });
+  res.json({ message: 'PassDrop API is running' });
 });
 
 // Start a local server while preserving the exported app for Vercel.
 if (require.main === module) {
   app.listen(port, () => {
-    console.log(`PassHaven backend listening on port http://localhost:${port}`);
+    console.log(`PassDrop backend listening on port http://localhost:${port}`);
   });
 }
 
