@@ -56,10 +56,21 @@
   right: 0;
   top: 10px;
   bottom: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #e3f4fc, #b9e2f5);
+}
+
+/* the same box as the sheet (10px taller than the body), so a counter-move of 100% cancels the
+   sheet's move exactly; the top padding puts the dots back at the middle of the field */
+.pw-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  height: calc(100% + 10px);
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  background: linear-gradient(180deg, #e3f4fc, #b9e2f5);
+  padding: 10px 14px 0;
   color: rgba(12, 24, 32, 0.82);
   font-weight: 700;
   white-space: pre;

@@ -4,8 +4,8 @@ import '../../styles/water.css';
 
 const DOTS = '•'.repeat(16); // always 16, so a hidden field never gives away the password length
 
-// Drain: fast first, then easing out (the same curve as the logout drain).
-const DRAIN = { duration: 0.3, ease: [0.2, 0.6, 0.55, 0.88] };
+// Drain: a gentle start, a steady fall, then it slows as the last water leaves.
+const DRAIN = { duration: 0.6, ease: [0.25, 0.25, 0.5, 0.9] };
 const FILL = { duration: 0.34, ease: [0.25, 0.8, 0.35, 1] };
 
 /**
@@ -33,19 +33,31 @@ export function useLingering(active, lingerMs) {
  * The water is opaque, so the real text is never visible until the surface has passed it.
  */
 export default function WaterMask({ revealed }) {
+    const transition = revealed ? DRAIN : FILL;
     return (
         <div className="pw-water" aria-hidden="true">
             <motion.div
                 className="pw-sheet"
                 initial={false}
                 animate={{ y: revealed ? '100%' : '0%' }}
-                transition={revealed ? DRAIN : FILL}
+                transition={transition}
             >
                 <div className="pw-surf">
                     <i />
                     <i className="pw-surf-back" />
                 </div>
-                <div className="pw-body font-mono text-sm tracking-wider">{DOTS}</div>
+                <div className="pw-body">
+                    {/* the dots move up by exactly what the water moves down, so they stay put and the
+                        falling surface uncovers them instead of carrying them along like a slide */}
+                    <motion.div
+                        className="pw-dots font-mono text-sm tracking-wider"
+                        initial={false}
+                        animate={{ y: revealed ? '-100%' : '0%' }}
+                        transition={transition}
+                    >
+                        {DOTS}
+                    </motion.div>
+                </div>
             </motion.div>
         </div>
     );

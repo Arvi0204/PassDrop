@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal';
 import Reveal from './common/Reveal';
+import PasswordStrength from './Vault/PasswordStrength';
 import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -297,6 +298,9 @@ export default function UserDetails() {
                                         >
                                             <IconSwap swapped={showPassword} from={Eye} to={EyeOff} className="h-4 w-4" />
                                         </button>
+                                    </div>
+                                    <div className="mt-3">
+                                        <PasswordStrength password={updatedPassword.newPassword} mode="typing" />
                                     </div>
                                 </div>
 
