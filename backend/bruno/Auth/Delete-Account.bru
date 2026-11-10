@@ -6,10 +6,16 @@ meta {
 
 delete {
   url: {{baseUrl}}/api/auth/me
-  body: none
+  body: json
   auth: none
 }
 
 headers {
   auth-token: {{authToken}}
+}
+
+body:json {
+  {
+    "currentPassword": "MasterPassword123!"
+  }
 }

@@ -8,6 +8,7 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fetchUser = require('../middleware/fetchUser');
+const requirePassword = require('../middleware/requirePassword');
 const connectToDb = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -15,6 +16,12 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // When a token stops working, as a millisecond timestamp, so clients need not decode the JWT
 const tokenExpiry = (token) => jwt.decode(token).exp * 1000;
+
+const BCRYPT_COST = 12;
+
+// `v` ties the token to the account's tokenVersion, which moves on when the password changes
+const signToken = (id, version = 0) =>
+    jwt.sign({ user: { id }, v: version }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN, algorithm: 'HS256' });
 
 // ========================================================
 // ROUTE 1: Register User (POST /api/auth/createuser, POST /api/auth/register)
@@ -40,24 +47,18 @@ const handleCreateUser = async (req, res) => {
         }
 
         // Hash the master password
-        const salt = await bcrypt.genSalt(10);
-        const secPass = await bcrypt.hash(req.body.password, salt);
+        const secPass = await bcrypt.hash(req.body.password, BCRYPT_COST);
 
         const newUser = await db.collection('users').insertOne({
             username: req.body.username.trim(),
             email: normalizedEmail,
             password: secPass,
+            tokenVersion: 0,
             createdAt: new Date(),
             lastLogin: new Date()
         });
 
-        // Sign JWT token with expiration
-        const payload = {
-            user: {
-                id: newUser.insertedId
-            }
-        };
-        const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        const authToken = signToken(newUser.insertedId);
 
         return res.status(201).json({ success: true, authToken, expiresAt: tokenExpiry(authToken) });
     } catch (err) {
@@ -113,12 +114,7 @@ router.post('/login', [
             { $set: { lastLogin: new Date() } }
         );
 
-        const payload = {
-            user: {
-                id: user._id
-            }
-        };
-        const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        const authToken = signToken(user._id, user.tokenVersion);
 
         return res.json({ success: true, authToken, expiresAt: tokenExpiry(authToken) });
     } catch (err) {
@@ -159,35 +155,36 @@ const handleChangePassword = async (req, res) => {
     if (errors.length !== 0) {
         return res.status(400).json({ success, errors });
     }
-    const { newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;
+
+    if (newPassword === currentPassword) {
+        return res.status(400).json({
+            success,
+            error: 'New master password must be different from old master password'
+        });
+    }
 
     try {
         const db = await connectToDb();
-        const user = await db.collection('users').findOne({ _id: new ObjectId(req.user.id) });
+        const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_COST);
 
+        // Bumping tokenVersion signs out every other session, including a stolen token
+        const user = await db.collection('users').findOneAndUpdate(
+            { _id: new ObjectId(req.user.id) },
+            { $set: { password: hashedPassword, updatedAt: new Date() }, $inc: { tokenVersion: 1 } },
+            { returnDocument: 'after', projection: { tokenVersion: 1 } }
+        );
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
 
-        const passwordCompare = await bcrypt.compare(newPassword, user.password);
-        if (passwordCompare) {
-            return res.status(400).json({
-                success,
-                errors: [{ msg: 'New master password must be different from old master password' }]
-            });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        await db.collection('users').updateOne(
-            { _id: new ObjectId(req.user.id) },
-            { $set: { password: hashedPassword, updatedAt: new Date() } }
-        );
-
+        // The caller gets a fresh token so this session stays signed in
+        const authToken = signToken(req.user.id, user.tokenVersion);
         return res.status(200).json({
             success: true,
-            message: 'Password updated successfully! Please login with updated credentials'
+            message: 'Password updated successfully! Other sessions were signed out',
+            authToken,
+            expiresAt: tokenExpiry(authToken)
         });
     } catch (error) {
         console.error('Change password error:', error.message);
@@ -199,7 +196,7 @@ const changePasswordValidation = [
     body('newPassword', 'Password must be at least 8 characters').isLength({ min: 8 })
 ];
 
-router.post('/change-password', fetchUser, changePasswordValidation, handleChangePassword);
+router.post('/change-password', fetchUser, changePasswordValidation, requirePassword, handleChangePassword);
 
 // ========================================================
 // ROUTE 5: Delete Account (DELETE /api/auth/me)
@@ -225,6 +222,6 @@ const handleDeleteUser = async (req, res) => {
     }
 };
 
-router.delete('/me', fetchUser, handleDeleteUser);
+router.delete('/me', fetchUser, requirePassword, handleDeleteUser);
 
 module.exports = router;

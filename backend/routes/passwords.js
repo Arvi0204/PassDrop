@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const fetchUser = require('../middleware/fetchUser');
+const requirePassword = require('../middleware/requirePassword');
 const { ObjectId } = require('mongodb');
 const { body, validationResult } = require('express-validator');
 const connectToDb = require('../db');
@@ -214,6 +215,6 @@ router.put('/:id', fetchUser, handleUpdate);
 router.delete('/:id', fetchUser, handleDelete);
 
 // DELETE all credentials for logged-in user
-router.delete('/', fetchUser, handleDeleteAll);
+router.delete('/', fetchUser, requirePassword, handleDeleteAll);
 
 module.exports = router;

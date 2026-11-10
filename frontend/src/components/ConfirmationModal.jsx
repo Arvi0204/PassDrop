@@ -9,6 +9,7 @@ export default function ConfirmationModal({
     onConfirm,
     title,
     message,
+    children,
     confirmText = 'Confirm'
 }) {
     useEscapeKey(isOpen, onClose);
@@ -81,6 +82,7 @@ export default function ConfirmationModal({
                             <p className="mt-2 text-sm text-[#3a5566] leading-relaxed max-w-sm">
                                 {message}
                             </p>
+                            {children}
 
                             {/* Action Buttons */}
                             <div className="mt-6 flex items-center gap-3 w-full">

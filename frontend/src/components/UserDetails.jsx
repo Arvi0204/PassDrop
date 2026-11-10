@@ -17,7 +17,7 @@ export default function UserDetails() {
         lastLogin: ""
     });
     const host = import.meta.env.VITE_BACKEND;
-    const [updatedPassword, setUpdatedPassword] = useState({ newPassword: "", confirmNewPassword: "" });
+    const [updatedPassword, setUpdatedPassword] = useState({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +26,7 @@ export default function UserDetails() {
     const doneTimer = useRef(null);
     const { controls: confirmShake, shake } = useShake();
     const [modalState, setModalState] = useState({ isOpen: false, message: "", action: null });
+    const [confirmPassword, setConfirmPassword] = useState('');
     const token = sessionStorage.getItem("token");
     const navigate = useNavigate();
 
@@ -81,13 +82,16 @@ export default function UserDetails() {
                     'auth-token': token
                 },
                 body: JSON.stringify({
+                    currentPassword: updatedPassword.currentPassword,
                     newPassword: updatedPassword.newPassword
                 })
             });
             const json = await response.json();
             if (json.success) {
                 // the button shows the success, so no toast
-                setUpdatedPassword({ newPassword: "", confirmNewPassword: "" });
+                // the old token stops working with the old password, so swap in the fresh one
+                sessionStorage.setItem('token', json.authToken);
+                setUpdatedPassword({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
                 setSaveState('done');
                 doneTimer.current = setTimeout(() => setSaveState('idle'), 2400);
             } else {
@@ -100,6 +104,11 @@ export default function UserDetails() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const closeModal = () => {
+        setModalState(prev => ({ ...prev, isOpen: false }));
+        setConfirmPassword('');
     };
 
     const openConfirmModal = (actionType) => {
@@ -125,18 +134,18 @@ export default function UserDetails() {
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token
-                }
+                },
+                body: JSON.stringify({ currentPassword: confirmPassword })
             });
             const json = await response.json();
             if (json.success) {
                 toast.success("All credentials deleted from vault");
-                setModalState({ ...modalState, isOpen: false });
+                closeModal();
             } else {
                 toast.error(json.error || "Failed to delete passwords");
             }
         } catch (error) {
             toast.error("An error occurred");
-            setModalState({ ...modalState, isOpen: false });
         }
     };
 
@@ -147,20 +156,20 @@ export default function UserDetails() {
                 headers: {
                     'Content-Type': 'application/json',
                     'auth-token': token
-                }
+                },
+                body: JSON.stringify({ currentPassword: confirmPassword })
             });
             const json = await response.json();
             if (json.success) {
                 toast.success(json.message || "Account deleted successfully");
                 sessionStorage.removeItem('token');
-                setModalState({ ...modalState, isOpen: false });
+                closeModal();
                 navigate("/home");
             } else {
                 toast.error(json.error || "Failed to delete account");
             }
         } catch (error) {
             toast.error("An error occurred deleting account");
-            setModalState({ ...modalState, isOpen: false });
         }
     };
 
@@ -275,6 +284,23 @@ export default function UserDetails() {
                             </p>
 
                             <form onSubmit={handleChangePassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1.5">
+                                        Current Master Password
+                                    </label>
+                                    <input
+                                        id="currentPassword"
+                                        name="currentPassword"
+                                        type="password"
+                                        autoComplete="current-password"
+                                        placeholder="Enter your current master password"
+                                        required
+                                        value={updatedPassword.currentPassword}
+                                        onChange={onChange}
+                                        className="w-full px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] shadow-xs transition-all"
+                                    />
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-semibold text-[#0c1820] uppercase tracking-wider mb-1.5">
                                         New Master Password
@@ -402,11 +428,20 @@ export default function UserDetails() {
             {/* Confirmation Modal */}
             <ConfirmationModal
                 isOpen={modalState.isOpen}
-                onClose={() => setModalState({ ...modalState, isOpen: false })}
+                onClose={closeModal}
                 onConfirm={modalState.action}
                 message={modalState.message}
                 confirmText="Yes, I'm sure"
-            />
+            >
+                <input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Enter your master password to confirm"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="mt-4 w-full px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] shadow-xs transition-all"
+                />
+            </ConfirmationModal>
         </div>
     );
 }
