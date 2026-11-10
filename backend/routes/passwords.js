@@ -100,6 +100,11 @@ const handleUpdate = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Invalid password ID format' });
     }
 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     const { url, username, password, title, notes, isFavorite } = req.body;
 
     try {
@@ -198,8 +203,21 @@ const handleDeleteAll = async (req, res) => {
 // RESTful Routes
 // ==========================================
 
+// Item fields must be plain strings of a sane size (objects would otherwise be stored as-is)
+const fieldValidation = [
+    body(['url', 'username', 'title']).optional({ values: 'null' }).isString().isLength({ max: 2048 }),
+    body('notes').optional({ values: 'null' }).isString().isLength({ max: 10000 }),
+    body('isFavorite').optional({ values: 'null' }).isBoolean(),
+];
+
 const createValidation = [
-    body('password', 'Password cannot be blank').notEmpty()
+    body('password', 'Password cannot be blank').isString().notEmpty().isLength({ max: 1024 }),
+    ...fieldValidation
+];
+
+const updateValidation = [
+    body('password').optional({ values: 'null' }).isString().isLength({ max: 1024 }),
+    ...fieldValidation
 ];
 
 // GET all credentials for logged-in user
@@ -209,7 +227,7 @@ router.get('/', fetchUser, handleGetAll);
 router.post('/', fetchUser, createValidation, handleCreate);
 
 // UPDATE credential by ID
-router.put('/:id', fetchUser, handleUpdate);
+router.put('/:id', fetchUser, updateValidation, handleUpdate);
 
 // DELETE single credential by ID
 router.delete('/:id', fetchUser, handleDelete);

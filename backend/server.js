@@ -1,5 +1,13 @@
 const dotenv = require('dotenv');
 dotenv.config();
+
+// Fail at start-up rather than on the first request
+if (!/^[0-9a-f]{64}$/i.test(process.env.ENCRYPTION_KEY || '')) {
+    throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+}
+if ((process.env.JWT_SECRET || '').length < 32) {
+    console.warn('JWT_SECRET is shorter than 32 characters; use a long random value');
+}
 const express = require('express');
 
 const app = express();
@@ -19,6 +27,13 @@ app.use('/api/passwords', require('./routes/passwords'));
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ message: 'PassDrop API is running' });
+});
+
+// Keep stack traces out of responses (a malformed JSON body ends up here too)
+app.use((err, req, res, next) => {
+    if (err.type !== 'entity.parse.failed' && err.type !== 'entity.too.large') console.error('Unhandled error:', err.message);
+    const status = err.status >= 400 && err.status < 500 ? err.status : 500;
+    res.status(status).json({ success: false, error: status === 500 ? 'Internal Server Error' : 'Bad request' });
 });
 
 // Start a local server while preserving the exported app for Vercel.
