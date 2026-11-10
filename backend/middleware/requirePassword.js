@@ -1,6 +1,6 @@
-const bcrypt = require('bcryptjs');
 const { ObjectId } = require('mongodb');
 const connectToDb = require('../db');
+const { checkPassword, LOCKED_MESSAGE } = require('../utils/passwordGuard');
 
 // Destructive actions ask for the master password again, so a stolen token alone cannot do them
 const requirePassword = async (req, res, next) => {
@@ -12,7 +12,11 @@ const requirePassword = async (req, res, next) => {
     try {
         const db = await connectToDb();
         const user = await db.collection('users').findOne({ _id: new ObjectId(req.user.id) });
-        if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+        const result = await checkPassword(db, user, currentPassword);
+        if (result === 'locked') {
+            return res.status(429).json({ success: false, error: LOCKED_MESSAGE });
+        }
+        if (result !== 'ok') {
             return res.status(403).json({ success: false, error: 'Current master password is incorrect' });
         }
         next();

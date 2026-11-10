@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fetchUser = require('../middleware/fetchUser');
 const requirePassword = require('../middleware/requirePassword');
+const { checkPassword, LOCKED_MESSAGE } = require('../utils/passwordGuard');
 const connectToDb = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -93,15 +94,12 @@ router.post('/login', [
         const db = await connectToDb();
 
         const user = await db.collection('users').findOne({ email: normalizedEmail });
-        if (!user) {
-            return res.status(400).json({
-                success,
-                errors: [{ msg: 'Please login with valid credentials' }]
-            });
-        }
 
-        const passwordCompare = await bcrypt.compare(password, user.password);
-        if (!passwordCompare) {
+        const result = await checkPassword(db, user, password);
+        if (result === 'locked') {
+            return res.status(429).json({ success, errors: [{ msg: LOCKED_MESSAGE }] });
+        }
+        if (result !== 'ok') {
             return res.status(400).json({
                 success,
                 errors: [{ msg: 'Please login with valid credentials' }]
