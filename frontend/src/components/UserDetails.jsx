@@ -3,6 +3,7 @@ import { Eye, EyeOff, User, Mail, Calendar, Clock, KeyRound, AlertTriangle, Tras
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal';
+import authFetch from '../lib/authFetch';
 import Reveal from './common/Reveal';
 import PasswordStrength from './Vault/PasswordStrength';
 import IconSwap from './common/IconSwap';
@@ -42,7 +43,7 @@ export default function UserDetails() {
 
     const fetchUserDetails = async () => {
         try {
-            const response = await fetch(`${host}/api/auth/me`, {
+            const response = await authFetch(`${host}/api/auth/me`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -75,7 +76,7 @@ export default function UserDetails() {
         setIsLoading(true);
         setSaveState('saving');
         try {
-            const response = await fetch(`${host}/api/auth/change-password`, {
+            const response = await authFetch(`${host}/api/auth/change-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ export default function UserDetails() {
 
     const handleDeleteAllPasswords = async () => {
         try {
-            const response = await fetch(`${host}/api/passwords`, {
+            const response = await authFetch(`${host}/api/passwords`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function UserDetails() {
 
     const handleDeleteAccount = async () => {
         try {
-            const response = await fetch(`${host}/api/auth/me`, {
+            const response = await authFetch(`${host}/api/auth/me`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

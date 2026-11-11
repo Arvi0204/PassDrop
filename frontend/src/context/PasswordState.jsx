@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import PasswordContext from "./passwordContext";
 import toast from "react-hot-toast";
+import authFetch from "../lib/authFetch";
 
 const PasswordState = (props) => {
     const host = import.meta.env.VITE_BACKEND;
@@ -14,7 +15,7 @@ const PasswordState = (props) => {
 
         setIsLoading(true);
         try {
-            const response = await fetch(`${host}/api/passwords`, {
+            const response = await authFetch(`${host}/api/passwords`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -43,7 +44,7 @@ const PasswordState = (props) => {
             : { url: urlOrItem, username, password, title, notes, isFavorite };
 
         try {
-            const response = await fetch(`${host}/api/passwords`, {
+            const response = await authFetch(`${host}/api/passwords`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -81,7 +82,7 @@ const PasswordState = (props) => {
         }
 
         try {
-            const response = await fetch(`${host}/api/passwords/${id}`, {
+            const response = await authFetch(`${host}/api/passwords/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ const PasswordState = (props) => {
     // Delete a single credential
     const deletePass = async (id) => {
         try {
-            const response = await fetch(`${host}/api/passwords/${id}`, {
+            const response = await authFetch(`${host}/api/passwords/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ const PasswordState = (props) => {
     // Delete all credentials
     const deleteAllPasswords = async () => {
         try {
-            const response = await fetch(`${host}/api/passwords`, {
+            const response = await authFetch(`${host}/api/passwords`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
