@@ -21,19 +21,30 @@ export function hostOf(address) {
 }
 
 /**
- * True when the saved address is the page's host, or a parent of it ("example.com" matches
- * "login.example.com"). "example.com" does not match "example.com.evil.com" or "notexample.com".
+ * True when the saved address is exactly the page's host (apart from a leading "www."). Subdomains
+ * do not match: a login saved for "example.com" is not offered on "evil.example.com", because anyone
+ * can be given a subdomain of a shared site. Ports are ignored.
  */
 export function matchesHost(savedAddress, pageHost) {
   const saved = hostOf(savedAddress);
-  const page = hostOf(pageHost);
-  if (!saved || !page) return false;
-  return page === saved || page.endsWith(`.${saved}`);
+  return saved !== '' && saved === hostOf(pageHost);
+}
+
+const THIS_COMPUTER = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Pages a password may go to: https, or plain http on this computer (for developing). */
+export function isFillablePage(pageUrl) {
+  try {
+    const { protocol, hostname } = new URL(pageUrl);
+    return protocol === 'https:' || (protocol === 'http:' && THIS_COMPUTER.has(hostname));
+  } catch {
+    return false;
+  }
 }
 
 /** Entries from the vault that belong to the page at `pageUrl`. */
 export function entriesForPage(vault, pageUrl) {
+  if (!isFillablePage(pageUrl)) return [];
   const pageHost = hostOf(pageUrl);
-  if (!pageHost) return [];
   return vault.filter((entry) => matchesHost(entry.url, pageHost));
 }
