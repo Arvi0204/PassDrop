@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autofill test forms</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; max-width: 460px; margin: 24px auto; }
+      nav a { margin-right: 10px; }
+      label, input, button { display: block; margin: 6px 0; }
+      #seen { color: #0a7; font-family: monospace; white-space: pre; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Serve this folder (for example `npx serve web_extension/dev` or `python -m http.server`) and open
+      http://localhost:<port>/test-forms.html?case=plain  (http on localhost is allowed for filling).
+      Save a login for "localhost" in PassDrop, then click the username or password field: a PassDrop menu opens under it.
+      Cases: plain, controlled, decoy, signup, twostep, search.
+    -->
+    <nav id="nav"></nav>
+    <h1 id="title"></h1>
+    <div id="stage"></div>
+    <p id="seen" aria-live="polite"></p>
+
+    <script>
+      const which = new URLSearchParams(location.search).get('case') || 'plain';
+      const stage = document.getElementById('stage');
+      const seen = document.getElementById('seen');
+      document.getElementById('title').textContent = `Case: ${which}`;
+      document.getElementById('nav').innerHTML = ['plain', 'controlled', 'decoy', 'signup', 'twostep', 'search']
+        .map((c) => `<a href="?case=${c}">${c}</a>`).join('');
+
+      const form = (html) => { stage.innerHTML = `<form onsubmit="return false">${html}</form>`; };
+
+      // A field that behaves like a React-controlled input: it keeps its own copy of the value and only
+      // "sees" a change when the real value differs from that copy at the time of an input event.
+      function controlled(input, name) {
+        const nativeGet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').get;
+        let tracked = '';
+        Object.defineProperty(input, 'value', { configurable: true, get: () => nativeGet.call(input), set: (v) => { tracked = v; } });
+        input.addEventListener('input', () => {
+          const real = nativeGet.call(input);
+          if (real !== tracked) { tracked = real; seen.textContent += `${name} seen by framework: ${real}\n`; }
+        });
+      }
+
+      if (which === 'plain') {
+        form(`<label>Username <input id="username" name="username" type="text"></label>
+              <label>Password <input id="password" name="password" type="password"></label>
+              <button>Sign in</button>`);
+      } else if (which === 'controlled') {
+        form(`<label>Username <input id="username" type="text"></label>
+              <label>Password <input id="password" type="password"></label><button>Sign in</button>`);
+        controlled(document.getElementById('username'), 'username');
+        controlled(document.getElementById('password'), 'password');
+      } else if (which === 'decoy') {
+        form(`<input id="decoy-hidden" type="text" style="display:none">
+              <input id="decoy-offpage" type="text" style="position:absolute;left:-9999px">
+              <input id="decoy-clear" type="password" style="opacity:0">
+              <input id="decoy-tiny" type="text" style="width:1px;height:1px;padding:0;border:0">
+              <label>Username <input id="username" type="text"></label>
+              <label>Password <input id="password" type="password"></label><button>Sign in</button>`);
+      } else if (which === 'signup') {
+        form(`<label>Username <input id="username" type="text"></label>
+              <label>Password <input id="password" type="password" autocomplete="new-password"></label>
+              <label>Repeat password <input id="password2" type="password" autocomplete="new-password"></label>
+              <button>Create account</button>`);
+      } else if (which === 'twostep') {
+        form(`<label>Email <input id="email" type="email" autocomplete="username"></label><button id="next">Next</button>`);
+        document.getElementById('next').addEventListener('click', () => {
+          stage.innerHTML = `<form onsubmit="return false"><label>Password <input id="password" type="password" autocomplete="current-password"></label><button>Sign in</button></form>`;
+        });
+      } else if (which === 'search') {
+        stage.innerHTML = `<input id="site-search" type="text" placeholder="Search the site">
+          <div><label>Username <input id="username" type="text"></label>
+          <label>Password <input id="password" type="password"></label><button>Sign in</button></div>`;
+      }
+    </script>
+  </body>
+</html>

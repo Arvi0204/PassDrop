@@ -1,16 +1,20 @@
 import { ApiError } from './api.js';
 import { api } from './client.js';
 import { entriesForPage } from './match.js';
+import { titleOf } from './popup/format.js';
 import { getSession, saveSession, clearSession, getCachedVault, setCachedVault } from './storage.js';
 
 // The service worker is the only place that talks to the server or touches the token.
-// The popup and the content script ask it for things with chrome.runtime.sendMessage:
+// The popup asks it for things with chrome.runtime.sendMessage (pages never can):
 //   { type: 'session' }                    -> { ok, session: { email, expiresAt } | null }
 //   { type: 'login', email, password }     -> { ok, session }
 //   { type: 'logout' }                     -> { ok }
-//   { type: 'vault' }                      -> { ok, vault, syncedAt }   what we have now (popup only)
-//   { type: 'sync' }                       -> { ok, vault, syncedAt }   fetch the latest (popup only)
-//   { type: 'matches' }                    -> { ok, entries }           content script: logins for ITS page only
+//   { type: 'vault' }                      -> { ok, vault, syncedAt }   what we have now
+//   { type: 'sync' }                       -> { ok, vault, syncedAt }   fetch the latest
+// The page script (top frame only) may ask for two things, both answered for the address the browser
+// says that frame is on, never for an address the page names:
+//   { type: 'logins' }                     -> { ok, logins: [{ id, title, username }] }   no passwords
+//   { type: 'credentials', id }            -> { ok, username, password }                  one login, after a click
 // A failure is { ok: false, code: 'auth' | 'network' | 'server', error }.
 
 const SYNC_ALARM = 'sync';
@@ -19,7 +23,8 @@ const SYNC_EVERY_MINUTES = 5;
 const fromExtensionPage = (sender) =>
   sender.id === chrome.runtime.id && !sender.tab && !!sender.url?.startsWith(chrome.runtime.getURL(''));
 
-const fromContentScript = (sender) => sender.id === chrome.runtime.id && !!sender.tab && !!sender.url;
+// sender.url is set by the browser, so a page cannot claim to be another site
+const fromTopFrame = (sender) => sender.id === chrome.runtime.id && !!sender.tab && sender.frameId === 0 && !!sender.url;
 
 const publicSession = (session) => (session ? { email: session.email, expiresAt: session.expiresAt } : null);
 
@@ -83,13 +88,22 @@ async function handle(message, sender) {
       return { ok: true, vault: items, syncedAt };
     }
 
-    case 'matches': {
-      if (!fromContentScript(sender)) break;
-      if (!(await getSession())) return { ok: true, entries: [] };
+    case 'logins': {
+      if (!fromTopFrame(sender)) break;
       const { items } = await loadVault();
-      // only what the page needs to fill in, and only for the page that asked
-      const entries = entriesForPage(items, sender.url).map(({ username, password }) => ({ username, password }));
-      return { ok: true, entries };
+      const logins = entriesForPage(items, sender.url).map((e) => ({ id: e._id, title: titleOf(e), username: e.username || '' }));
+      return { ok: true, logins };
+    }
+
+    case 'credentials': {
+      if (!fromTopFrame(sender)) break;
+      const { items } = await loadVault();
+      const entry = items.find((item) => item._id === message.id);
+      // the login must belong to the address this frame is on right now (https, exact host)
+      if (!entry || !entriesForPage([entry], sender.url).length) {
+        return { ok: false, code: 'server', error: "This login isn't saved for the page you're on." };
+      }
+      return { ok: true, username: entry.username, password: entry.password };
     }
 
     default:
