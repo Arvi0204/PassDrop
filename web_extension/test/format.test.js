@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { titleOf, timeAgo, openableUrl, colourIndex } from '../src/popup/format.js';
-import { strengthOf } from '../src/popup/shared.js';
+import { strengthOf, maskFor } from '../src/popup/shared.js';
 
 test('titleOf falls back from title to site to username', () => {
   assert.equal(titleOf({ title: 'GitHub', url: 'github.com', username: 'a' }), 'GitHub');
@@ -42,4 +42,23 @@ test('the shared strength scoring matches the web app', () => {
   assert.equal(strengthOf('summer2020').score, 2);
   assert.equal(strengthOf('Xk29!pQ7vLm').score, 3);
   assert.equal(strengthOf('Xk29!pQ7vLm#aB4cD').label, 'Strong');
+});
+
+test('the hidden password mask follows the length in steps, never exactly', () => {
+  const dots = (length) => maskFor('x'.repeat(length)).length;
+  assert.equal(dots(1), 8);
+  assert.equal(dots(8), 8);
+  assert.equal(dots(9), 12);
+  assert.equal(dots(10), 12);
+  assert.equal(dots(12), 12);
+  assert.equal(dots(13), 16);
+  assert.equal(dots(16), 16);
+  assert.equal(dots(17), 20);
+  assert.equal(dots(21), 24);
+  assert.equal(dots(44), 24); // as many dots as the mask ever shows
+  assert.equal(dots(500), 24);
+  assert.equal(dots(0), 8);
+  assert.equal(maskFor(undefined).length, 8);
+  assert.equal(new Set(maskFor('hunter22')).size, 1); // only dots
+  assert.equal(dots(13), dots(16)); // two nearby lengths look the same
 });

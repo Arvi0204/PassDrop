@@ -310,7 +310,7 @@ export default function VaultModal({
                                         {/* Water covers a hidden password. It drains while you type in the field, when the
                                             password is shown, and when there is nothing to hide yet. */}
                                         <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                                            <WaterMask revealed={showPassword || passwordFocused || !form.password} />
+                                            <WaterMask revealed={showPassword || passwordFocused || !form.password} password={form.password} />
                                         </div>
                                         <button
                                             type="button"

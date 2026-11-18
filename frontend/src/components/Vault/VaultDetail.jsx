@@ -175,7 +175,7 @@ export default function VaultDetail({
                         <span className="font-mono text-sm tracking-wider text-[#0c1820] select-all truncate">
                             {showText ? item.password : '\u00A0'}
                         </span>
-                        <WaterMask revealed={showPassword} />
+                        <WaterMask revealed={showPassword} password={item.password} />
                         <div className="relative z-[4] flex items-center gap-1 shrink-0">
                             <button
                                 type="button"

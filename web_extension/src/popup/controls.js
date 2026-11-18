@@ -1,8 +1,7 @@
 // Small reusable pieces of the popup: copy buttons and the fields that show a login's details.
 import { h, announce } from './dom.js';
 import { icon } from './icons.js';
-
-const MASK = '•'.repeat(16);
+import { maskFor } from './shared.js';
 
 /** An icon button that copies `text`, then shows a check for a moment instead of raising a toast. */
 export function copyButton({ label, text, name = 'copy', className = 'icon-btn' }) {
@@ -37,11 +36,11 @@ export function plainField(label, value) {
 }
 
 /**
- * The password: hidden it shows 16 dots whatever the real length, and the eye shows the real text.
- * The real text is only in the page while it is shown.
+ * The password: hidden it shows dots that follow the real length in steps (never the exact length), and
+ * the eye shows the real text. The real text is only in the page while it is shown.
  */
 export function secretField(label, secret) {
-  const value = h('span', { class: 'val mono mask' }, MASK);
+  const value = h('span', { class: 'val mono mask' }, maskFor(secret));
   const eye = h('button', {
     type: 'button', class: 'icon-btn', title: 'Show password', 'aria-label': 'Show password', 'aria-pressed': 'false'
   }, icon('eye'));
@@ -55,7 +54,7 @@ export function secretField(label, secret) {
   let shown = false;
   eye.addEventListener('click', () => {
     shown = !shown;
-    value.textContent = shown ? secret : MASK;
+    value.textContent = shown ? secret : maskFor(secret);
     value.classList.toggle('mask', !shown);
     eye.setAttribute('aria-pressed', String(shown));
     eye.setAttribute('aria-label', shown ? 'Hide password' : 'Show password');

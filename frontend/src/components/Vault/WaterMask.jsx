@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { maskFor } from '../../lib/passwordMask';
 import '../../styles/water.css';
-
-const DOTS = '•'.repeat(16); // always 16, so a hidden field never gives away the password length
 
 // Drain: a gentle start, a steady fall, then it slows as the last water leaves.
 const DRAIN = { duration: 0.6, ease: [0.25, 0.25, 0.5, 0.9] };
@@ -30,9 +29,10 @@ export function useLingering(active, lingerMs) {
 /**
  * Water over a password field. Place it inside a `relative overflow-hidden` row; it covers the
  * row while the password is hidden, and drains away to uncover it when `revealed` turns true.
- * The water is opaque, so the real text is never visible until the surface has passed it.
+ * The water is opaque, so the real text is never visible until the surface has passed it. The dots on it
+ * follow the length of `password` in steps (see passwordMask), so they never give the exact length away.
  */
-export default function WaterMask({ revealed }) {
+export default function WaterMask({ revealed, password }) {
     const transition = revealed ? DRAIN : FILL;
     return (
         <div className="pw-water" aria-hidden="true">
@@ -55,7 +55,7 @@ export default function WaterMask({ revealed }) {
                         animate={{ y: revealed ? '-100%' : '0%' }}
                         transition={transition}
                     >
-                        {DOTS}
+                        {maskFor(password)}
                     </motion.div>
                 </div>
             </motion.div>
