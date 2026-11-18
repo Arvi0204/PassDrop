@@ -60,7 +60,7 @@ Behaviour worth knowing:
 - `src/context/`: the vault state (`PasswordState`) and the tide animation (`TideContext`).
 - `src/lib/`: plain helpers: the password generator and strength scoring (also imported by the extension), the authenticated fetch, and the animation helpers.
 - `src/styles/`: `tide.css` and `water.css`.
-- `public/`: the favicon and `PassDrop.zip`, the extension download. It is built from `web_extension/`; see [how to rebuild it](../README.md#local-build-or-release-build).
+- `public/`: the favicon. `PassDrop.zip`, the extension download, is also built into this folder, from `web_extension/`, on every deploy. It is git-ignored; see [Local build or release build](../README.md#local-build-or-release-build) to make it locally.
 
 ## The water theme
 

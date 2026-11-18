@@ -140,7 +140,7 @@ Run from the repository root.
 | `npm run dev:backend`, `npm run dev:frontend` | One of the two on its own. |
 | `npm run build:frontend` | Production build of the web app into `frontend/dist`. |
 | `npm run build:extension:dev` | Extension build for local development, into `web_extension/dist`. |
-| `npm run package:extension` | Release build of the extension, and the download zip. See below. |
+| `npm run package:extension` | Release build of the extension, zipped as the web app's download. Vercel runs it on every deploy; run it yourself only to try the download page locally. See below. |
 | `npm run build:extension` | A plain (production) extension build. Rarely what you want; see the note above. |
 | `npm test --workspace=web_extension` | The extension's unit tests. |
 | `npm run test:browser --workspace=web_extension` | The extension's real-Chrome test. Needs Chrome. |
@@ -165,17 +165,17 @@ The extension is the one part with two builds, which differ in which file its ad
 | Output | `web_extension/dist/` | `web_extension/dist/` and `frontend/public/PassDrop.zip` |
 | Used for | Loading unpacked in your own browser | The download on the web app's Extension page |
 
-`frontend/public/PassDrop.zip` is committed, so rebuild and commit it whenever the extension changes. A release build also overwrites `dist/`, so run the dev build again afterwards to go back to local work.
+**The download zip is not committed.** `frontend/public/PassDrop.zip` is git-ignored and Vercel builds it on every deploy (see below), so it always matches the code and there is nothing to rebuild or commit. Run `npm run package:extension` yourself only if you want the Extension page's download link to work in local development. A release build overwrites `web_extension/dist/`, so run the dev build again afterwards to go back to local testing.
 
 ## Deployment
 
 The web app and the API are deployed together as one **Vercel** project:
 
-- `vercel.json` builds the web app (`npm run build:frontend`) and serves `frontend/dist`.
+- `vercel.json` first builds and zips the extension (`npm run package:extension`, using `web_extension/.env.production`), then builds the web app (`npm run build:frontend`), and serves `frontend/dist`. The web app build copies the zip in, so the Extension page's download is always the extension from the same commit.
 - Requests to `/api/*` go to `api/index.js`, which runs the Express app from `backend/` as a serverless function. Every other address serves the web app.
 - The three backend settings (`MONGODB_URI`, `JWT_SECRET`, `ENCRYPTION_KEY`) are set in the Vercel project's environment variables. They are not in the repository.
 
-To deploy, import the repository in Vercel (the settings come from `vercel.json`), add the three variables, and deploy. If the site's address ever changes, update `web_extension/.env.production`, run `npm run package:extension`, and commit the new zip.
+To deploy, import the repository in Vercel (the settings come from `vercel.json`), add the three variables, and deploy. If the site's address ever changes, update `web_extension/.env.production`; the next deploy builds the zip for the new address.
 
 `vercel.json` also sets the security headers, including a Content-Security-Policy. The rate limit on the sign-in endpoint is a Firewall rule in the Vercel dashboard, not code.
 

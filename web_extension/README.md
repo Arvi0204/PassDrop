@@ -57,7 +57,7 @@ The server addresses are fixed when the extension is built, because an extension
 |---|---|---|
 | Command | `npm run build:dev` | `npm run package` |
 | Addresses from | `.env` (localhost) | `.env.production` (the live site) |
-| Output | `dist/` | `dist/` and `../frontend/public/PassDrop.zip` |
+| Output | `dist/` | `dist/` and `../frontend/public/PassDrop.zip` (git-ignored) |
 
 From the repository root, the same commands are `npm run build:extension:dev` and `npm run package:extension`.
 
@@ -94,13 +94,15 @@ Not covered by the automated tests: the service worker inside a really loaded ex
 
 ## Release zip
 
-The web app's Extension page offers `frontend/public/PassDrop.zip`. To rebuild it:
+The web app's Extension page offers `PassDrop.zip`. You do not build or commit it: the Vercel deploy runs `npm run package:extension` before it builds the web app, so the download is always made from the code being deployed. `frontend/public/PassDrop.zip` is git-ignored.
+
+To make it yourself, for example to try the Extension page's download locally:
 
 ```bash
 npm run package        # from the repository root: npm run package:extension
 ```
 
-This builds in production mode, so the addresses come from `.env.production`, and writes the zip with `manifest.json` at the top. Check that `.env.production` holds the live address first, and commit the new zip. The build also overwrites `dist/`, so run `npm run build:dev` again afterwards to go back to a local build.
+This builds in production mode, so the addresses come from `.env.production`, and writes the zip with `manifest.json` at the top. Check that `.env.production` holds the live address, since that is what ships. The build also overwrites `dist/`, so run `npm run build:dev` again afterwards to go back to a local build.
 
 ## Code layout
 

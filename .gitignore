@@ -10,6 +10,8 @@ node_modules/
 # Build artifacts
 dist/
 build/
+# the extension download, built from web_extension/ on every deploy (npm run package:extension)
+frontend/public/PassDrop.zip
 
 # Logs
 npm-debug.log*

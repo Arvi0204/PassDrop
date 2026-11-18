@@ -1,5 +1,6 @@
 // Zips the built extension (dist/) into the file the web app's Extension page offers for download.
-// Run it through `npm run package`, which builds first. The addresses in .env are baked into the
+// Run it through `npm run package`, which builds first. Vercel runs it on every deploy (see vercel.json), so
+// the zip is git-ignored and never committed. The addresses in .env are baked into the
 // build; a release build reads web_extension/.env.production, which wins over .env.
 
 import AdmZip from 'adm-zip';
