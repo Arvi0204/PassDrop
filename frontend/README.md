@@ -1,75 +1,75 @@
-# PassDrop - Frontend
+# PassDrop web app
 
-Welcome to the frontend repository of PassDrop, a secure and user-friendly password manager app. This application provides features like storing, searching, and autofilling passwords, all designed with a sleek and responsive UI.
+The React app where you create an account and manage your vault. It talks to the [API](../backend/README.md) and also serves the browser extension download.
 
----
+For setting up the whole project, start with the [root README](../README.md). This page covers the web app itself.
 
-## Features
+- [Running it](#running-it)
+- [Configuration](#configuration)
+- [What is in it](#what-is-in-it)
+- [Code layout](#code-layout)
+- [The water theme](#the-water-theme)
+- [Build and deploy](#build-and-deploy)
 
-- Search and manage stored passwords.
-- Autofill forms with saved credentials via the Chrome extension.
-- Responsive design with a modern UI styled using **Tailwind CSS**.
-- Integrated danger zone for account and password deletion.
-- Blue theme with vibrant, poppy buttons for better user experience.
+## Running it
 
----
+From the repository root, after `npm install`:
 
-## Tech Stack
-
-- **React**: For building the user interface.
-- **Vite**: As the build tool for faster development.
-- **Tailwind CSS**: For styling the app.
-- **Netlify**: For deployment.
-
----
-
-## Setup Instructions
-
-### 1. Clone the repository
 ```bash
-git clone https://github.com/Arvi0204/passhaven-frontend.git
-cd passhaven-frontend
+npm run dev:frontend     # the web app on its own, at http://localhost:5173
+npm run dev              # the web app and the API together
 ```
 
-### 2. Install dependencies
-```bash
-npm install
-```
+Scripts in this folder (`npm run <name> --workspace=frontend`):
 
-### 3. Configure environment variables
-Create a `.env` file in the root directory with the following:
-```env
-VITE_BACKEND=http://localhost:3000
-```
+| Script | What it does |
+|---|---|
+| `dev` | Vite dev server with hot reload. |
+| `build` | Production build into `dist/`. |
+| `preview` | Serves the production build locally. |
+| `lint` | ESLint. It currently reports many errors; the largest group is the prop-types rule, which this project does not use. |
 
-### 4. Run the development server
-```bash
-npm run dev
-```
+## Configuration
 
-### 5. Build for production
-```bash
-npm run build
-```
+One setting, `VITE_BACKEND`: the address of the API.
 
-### 6. Deploy
-The web app and the API are deployed together as one **Vercel** project (see `vercel.json` at the repository root). In production the app calls the API on its own address under `/api`, so no `VITE_BACKEND` is needed there.
+| Where | Value |
+|---|---|
+| `frontend/.env` (local, not committed) | `http://localhost:3000` |
+| `frontend/.env.production` (committed) | empty, because in production the API is on the web app's own address under `/api` |
 
----
+## What is in it
 
-## Chrome Extension
+| Route | Page |
+|---|---|
+| `/` | The vault: search, add, edit and delete logins, favourites, and the password generator. |
+| `/login`, `/signup` | Sign in and create an account. |
+| `/user` | Account: change the master password (with a strength meter) and the danger zone, which asks for the master password again. |
+| `/extension` | The extension download and the steps to install it. |
+| `/home` | The landing page. |
 
-The frontend includes a route (`/extension`) that guides users on how to load the `.zip` file into their browser and use the extension.
+Behaviour worth knowing:
 
----
+- Passwords are revealed through a waterline that drains away, instead of a plain swap.
+- Feedback appears next to what you did, rather than as toasts, and Escape closes any open dialog.
+- If your session stops working (it expired, or the master password was changed elsewhere), you are sent to the login page.
 
-## Folder Structure
+## Code layout
 
-- **/src**: Contains the React components, pages, and assets.
-- **/public**: Static assets like the favicon and manifest.
+- `src/components/`: pages and UI pieces. `Manager` is the vault and `UserDetails` the Account page. `Vault/` holds the login list, detail and edit dialog, and `common/` shared pieces.
+- `src/context/`: the vault state (`PasswordState`) and the tide animation (`TideContext`).
+- `src/lib/`: plain helpers: the password generator and strength scoring (also imported by the extension), the authenticated fetch, and the animation helpers.
+- `src/styles/`: `tide.css` and `water.css`.
+- `public/`: the favicon and `PassDrop.zip`, the extension download. It is built from `web_extension/`; see [how to rebuild it](../README.md#local-build-or-release-build).
 
----
+## The water theme
+
+The look is built from Tailwind plus two stylesheets, with motion by Framer Motion. `tide.css` is the animation that carries you between pages (its wave is `src/assets/tide-wave.svg`), and `water.css` is the waterline used for revealing passwords.
+
+## Build and deploy
+
+`npm run build:frontend` at the repository root builds the app into `frontend/dist`. It is deployed together with the API as one Vercel project; see [Deployment](../README.md#deployment).
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
+MIT. See the [LICENSE](../LICENSE) at the repository root.
