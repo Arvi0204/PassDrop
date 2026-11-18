@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { titleOf, timeAgo, openableUrl, colourIndex } from '../src/popup/format.js';
+import { titleOf, timeAgo, openableUrl, colourIndex, siteIconUrl } from '../src/popup/format.js';
 import { strengthOf, maskFor } from '../src/popup/shared.js';
 
 test('titleOf falls back from title to site to username', () => {
@@ -61,4 +61,12 @@ test('the hidden password mask follows the length in steps, never exactly', () =
   assert.equal(maskFor(undefined).length, 8);
   assert.equal(new Set(maskFor('hunter22')).size, 1); // only dots
   assert.equal(dots(13), dots(16)); // two nearby lengths look the same
+});
+
+test('the site icon is asked for by public site name only', () => {
+  assert.equal(siteIconUrl('https://www.github.com/login'), 'https://www.google.com/s2/favicons?domain=github.com&sz=64');
+  assert.equal(siteIconUrl('bits-pilani.ac.in'), 'https://www.google.com/s2/favicons?domain=bits-pilani.ac.in&sz=64');
+  for (const private_ of ['localhost:3000', 'http://jira/login', '192.168.1.10', 'http://[::1]:5173', '', null, undefined]) {
+    assert.equal(siteIconUrl(private_), '', String(private_)); // intranet names, IPs and nothing: never sent
+  }
 });

@@ -3,7 +3,7 @@ import { icon, logo } from './icons.js';
 import { ask } from './bridge.js';
 import { plainField, secretField } from './controls.js';
 import { createGenerator } from './generator.js';
-import { titleOf, timeAgo, openableUrl, colourIndex } from './format.js';
+import { titleOf, timeAgo, openableUrl, colourIndex, siteIconUrl } from './format.js';
 import { WEB_APP_URL } from '../config.js';
 import { entriesForPage, hostOf } from '../match.js';
 
@@ -13,10 +13,31 @@ const AVATARS = [
 ];
 const RESYNC_EVERY_MS = 30_000;
 
+const loadedIcons = new Set(); // icons the browser already has, so redrawing the list does not flash the letter first
+
+/** The letter tile for a login, swapped for the site's icon once that has loaded. The letter stays if it never does. */
 function avatar(entry) {
   const name = titleOf(entry);
-  return h('span', { class: `avatar ${AVATARS[colourIndex(name, AVATARS.length)]}`, 'aria-hidden': 'true' },
+  const tile = h('span', { class: `avatar ${AVATARS[colourIndex(name, AVATARS.length)]}`, 'aria-hidden': 'true' },
     name.charAt(0).toUpperCase());
+  const url = siteIconUrl(entry.url);
+  if (!url) return tile;
+
+  const img = new Image();
+  img.alt = '';
+  const show = () => {
+    loadedIcons.add(url);
+    tile.classList.add('icon');
+    tile.replaceChildren(img);
+  };
+  if (loadedIcons.has(url)) {
+    img.src = url; // already in the browser's cache
+    show();
+  } else {
+    img.addEventListener('load', show, { once: true });
+    img.src = url;
+  }
+  return tile;
 }
 
 const link = (href, ...children) => h('a', { class: 'linkrow', href, target: '_blank', rel: 'noreferrer' }, ...children);

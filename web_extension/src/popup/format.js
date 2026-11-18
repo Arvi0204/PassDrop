@@ -1,6 +1,18 @@
 // Small pure helpers for showing vault entries.
 import { hostOf } from '../match.js';
 
+/**
+ * Where to get the icon of a saved site: the same favicon service the web app uses. The browser keeps each
+ * icon for a week (about half a kilobyte each), so this is one small download per site, not one per view.
+ * The service is told the site's name. Names without a dot (intranet hosts such as "jira") and IP
+ * addresses are never sent: they have no public icon and are nobody else's business. Returns '' for those.
+ */
+export function siteIconUrl(address) {
+  const host = hostOf(address);
+  if (!host.includes('.') || /^[\d.]+$/.test(host)) return '';
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+}
+
 /** What to call an entry: its title, else its site, else its username. */
 export const titleOf = (entry) => entry.title || hostOf(entry.url) || entry.username || 'Untitled';
 
