@@ -117,18 +117,18 @@ export default function UserDetails() {
             setModalState({
                 isOpen: true,
                 message: "Are you sure you want to delete ALL stored passwords? This cannot be undone.",
-                action: () => handleDeleteAllPasswords()
+                action: (password) => handleDeleteAllPasswords(password)
             });
         } else if (actionType === 'account') {
             setModalState({
                 isOpen: true,
                 message: "Are you sure you want to delete your entire PassDrop account and all associated credentials? This cannot be undone.",
-                action: () => handleDeleteAccount()
+                action: (password) => handleDeleteAccount(password)
             });
         }
     };
 
-    const handleDeleteAllPasswords = async () => {
+    const handleDeleteAllPasswords = async (password) => {
         try {
             const response = await authFetch(`${host}/api/passwords`, {
                 method: 'DELETE',
@@ -136,7 +136,7 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: confirmPassword })
+                body: JSON.stringify({ currentPassword: password })
             });
             const json = await response.json();
             if (json.success) {
@@ -150,7 +150,7 @@ export default function UserDetails() {
         }
     };
 
-    const handleDeleteAccount = async () => {
+    const handleDeleteAccount = async (password) => {
         try {
             const response = await authFetch(`${host}/api/auth/me`, {
                 method: 'DELETE',
@@ -158,7 +158,7 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: confirmPassword })
+                body: JSON.stringify({ currentPassword: password })
             });
             const json = await response.json();
             if (json.success) {
@@ -430,7 +430,7 @@ export default function UserDetails() {
             <ConfirmationModal
                 isOpen={modalState.isOpen}
                 onClose={closeModal}
-                onConfirm={modalState.action}
+                onConfirm={() => modalState.action(confirmPassword)}
                 message={modalState.message}
                 confirmText="Yes, I'm sure"
             >
