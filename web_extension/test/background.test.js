@@ -87,11 +87,19 @@ test('a subdomain of the saved site gets nothing', async () => {
   assert.equal((await ask({ type: 'credentials', id: 'gh' }, sub)).ok, false);
 });
 
+test('a different port gets nothing', async () => {
+  const other = pageAt('https://github.com:8443/login');
+  assert.deepEqual((await ask({ type: 'logins' }, other)).logins, []);
+  assert.equal((await ask({ type: 'credentials', id: 'gh' }, other)).ok, false);
+  // the default port written out is still the same site
+  assert.equal((await ask({ type: 'credentials', id: 'gh' }, pageAt('https://github.com:443/login'))).ok, true);
+});
+
 test('plain http gets nothing, except on this computer', async () => {
   const http = pageAt('http://github.com/login');
   assert.deepEqual((await ask({ type: 'logins' }, http)).logins, []);
   assert.equal((await ask({ type: 'credentials', id: 'gh' }, http)).ok, false);
-  globalThis.sessionData.vault.items = [{ _id: 'dev', url: 'localhost', username: 'u', password: 'p' }];
+  globalThis.sessionData.vault.items = [{ _id: 'dev', url: 'localhost:5173', username: 'u', password: 'p' }];
   assert.equal((await ask({ type: 'credentials', id: 'dev' }, pageAt('http://localhost:5173/login'))).ok, true);
 });
 

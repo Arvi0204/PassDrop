@@ -13,19 +13,36 @@ const tokens = (el) => (originalHints.get(el) ?? el.getAttribute('autocomplete')
 const asksFor = (el, word) => tokens(el).includes(word);
 
 /**
- * Is this field something a person could see and type in? Honeypots are fields that are hidden or
- * pushed off the page so that only a script fills them in, so those must stay empty.
+ * Is this field something a person could see and type in? Honeypots are fields that are hidden, clipped
+ * away or pushed off the page so that only a script fills them in, so those must stay empty.
+ *
+ * shortcut: a field pushed far below the fold looks like one on a long page, and a field covered by
+ * another element still counts. Upgrade when a site we care about uses either against us.
  */
 export function isVisibleInPage(el) {
-  const win = el.ownerDocument.defaultView;
+  const doc = el.ownerDocument;
+  const win = doc.defaultView;
+  const rect = el.getBoundingClientRect();
+  let shown = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }; // what no ancestor clips away
+
   for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
     const style = win.getComputedStyle(node);
     if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
     if (Number(style.opacity) === 0) return false;
+    if ((style.clipPath && style.clipPath !== 'none') || (style.clip && style.clip !== 'auto')) return false;
+    // an ancestor that hides its overflow cuts the field down to the part inside it (the page itself scrolls)
+    const clips = [style.overflowX, style.overflowY].some((value) => value && value !== 'visible');
+    if (clips && node !== el && node !== doc.documentElement && node !== doc.body) {
+      const box = node.getBoundingClientRect();
+      shown = {
+        left: Math.max(shown.left, box.left), top: Math.max(shown.top, box.top),
+        right: Math.min(shown.right, box.right), bottom: Math.min(shown.bottom, box.bottom)
+      };
+    }
   }
-  const rect = el.getBoundingClientRect();
-  if (rect.width < 4 || rect.height < 4) return false; // 1px fields
+  if (shown.right - shown.left < 4 || shown.bottom - shown.top < 4) return false; // 1px fields, and fields clipped to nothing
   if (rect.right + win.scrollX <= 0 || rect.bottom + win.scrollY <= 0) return false; // pushed off the top or left edge
+  if (rect.left >= win.innerWidth) return false; // pushed off the right edge (a login form never needs a sideways scroll)
   return true;
 }
 
@@ -40,13 +57,13 @@ function pickUsername(candidates) {
 }
 
 /**
- * Looks for a login form in `doc`. Returns:
+ * Looks for a login form in `doc`; with `around` (a field), only the form that field belongs to. Returns:
  *   { status: 'ok', username, password }  at least one of the two is an element (the other may be null:
  *                                         login pages that ask for the username first, then the password)
  *   { status: 'signup' }                  the only password fields belong to a sign-up or change-password form
  *   { status: 'none' }                    nothing to fill
  */
-export function findLoginFields(doc, { isVisible = isVisibleInPage } = {}) {
+export function findLoginFields(doc, { isVisible = isVisibleInPage, around = null } = {}) {
   const FOLLOWING = doc.defaultView.Node.DOCUMENT_POSITION_FOLLOWING;
   const usable = (el) => !el.disabled && !el.readOnly && isVisible(el);
 
@@ -58,6 +75,7 @@ export function findLoginFields(doc, { isVisible = isVisibleInPage } = {}) {
   const groups = new Map();
   for (const el of passwords) groups.set(el.form, [...(groups.get(el.form) || []), el]);
 
+  const forms = []; // one { status: 'ok', username, password } per login form
   let sawSignup = false;
   for (const [form, fields] of groups) {
     // two password fields ("confirm it") or a new-password hint: this form makes a password, it does not use one
@@ -67,13 +85,18 @@ export function findLoginFields(doc, { isVisible = isVisibleInPage } = {}) {
     }
     const [password] = fields;
     const above = texts.filter((el) => el.form === form && el.compareDocumentPosition(password) & FOLLOWING);
-    return { status: 'ok', username: pickUsername(above), password };
+    forms.push({ status: 'ok', username: pickUsername(above), password });
+  }
+  if (forms.length) {
+    return around ? forms.find((f) => f.username === around || f.password === around) ?? { status: 'none' } : forms[0];
   }
   if (sawSignup) return { status: 'signup' };
 
   // no password field yet: a first step that only asks for the username, which must say so
   const firstStep = texts.filter((el) => asksFor(el, 'username') || asksFor(el, 'email'));
-  if (firstStep.length === 1) return { status: 'ok', username: firstStep[0], password: null };
+  if (firstStep.length === 1 && (!around || firstStep[0] === around)) {
+    return { status: 'ok', username: firstStep[0], password: null };
+  }
   return { status: 'none' };
 }
 

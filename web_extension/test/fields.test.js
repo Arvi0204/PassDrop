@@ -75,6 +75,33 @@ test('with a login form and a sign-up form side by side, the login form is used'
   assert.equal(r.password.id, 'lp');
 });
 
+test('with two login forms, `around` picks the one the field belongs to', () => {
+  const doc = page(`
+    <form id="a"><input id="au" type="text"><input id="ap" type="password"></form>
+    <form id="b"><input id="bu" type="text"><input id="bp" type="password"></form>`);
+  const at = (id) => findLoginFields(doc, { isVisible, around: doc.getElementById(id) });
+  assert.equal(findLoginFields(doc, { isVisible }).password.id, 'ap'); // no hint: the first
+  assert.equal(at('bu').password.id, 'bp');
+  assert.equal(at('bp').username.id, 'bu');
+  assert.equal(at('ap').username.id, 'au');
+});
+
+test('`around` a field that is in no login form finds nothing', () => {
+  const doc = page(`
+    <input id="news" type="text" autocomplete="email">
+    <form><input id="u" type="text"><input id="p" type="password"></form>
+    <form><input id="np" type="password"><input id="np2" type="password"></form>`);
+  for (const id of ['news', 'np', 'np2']) {
+    assert.equal(findLoginFields(doc, { isVisible, around: doc.getElementById(id) }).status, 'none', id);
+  }
+});
+
+test('`around` works for a first step that only asks for the username', () => {
+  const doc = page('<form><input id="u" type="email" autocomplete="username"></form><input id="x" type="text">');
+  assert.equal(findLoginFields(doc, { isVisible, around: doc.getElementById('u') }).username.id, 'u');
+  assert.equal(findLoginFields(doc, { isVisible, around: doc.getElementById('x') }).status, 'none');
+});
+
 test('a first step that only asks for the username is filled when it says so', () => {
   const r = find('<form><input id="u" type="email" autocomplete="username"></form>');
   assert.equal(r.status, 'ok');

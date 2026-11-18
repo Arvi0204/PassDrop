@@ -3,6 +3,10 @@
 // this exact page, shows them in a menu the page cannot read, and fetches the password of one login
 // only after a real click on that row. The service worker checks the page address every time.
 //
+// The menu sits in the page's own DOM, so the page can restyle or move it. Because of that, a click on a
+// row is trusted only if the menu is still on screen exactly as drawn, fully visible and on top
+// (see `genuine`), and a page that tampers with the menu's element gets the menu closed.
+//
 // shortcut: top frame only, one menu at a time, closes on scroll instead of following the field.
 
 import { findLoginFields, fillFields, originalHints } from './fields.js';
@@ -57,6 +61,17 @@ function quiet(field) {
   field.setAttribute('autocomplete', 'off');
 }
 
+// The list of logins for this page, kept for a few seconds so a page that keeps moving focus cannot make
+// the extension fetch it over and over.
+const LOOKUP_TTL_MS = 5000;
+let lookup = null; // { at, reply }
+async function logins() {
+  if (lookup && Date.now() - lookup.at < LOOKUP_TTL_MS) return lookup.reply;
+  const reply = await ask({ type: 'logins' });
+  if (reply) lookup = { at: Date.now(), reply };
+  return reply;
+}
+
 let asking = null; // the field whose list is being fetched
 let ticket = 0; // a late answer from the service worker for a menu that is already gone is dropped
 
@@ -67,7 +82,8 @@ const closeMenu = () => {
 
 // The page's own icon (no third party is told which sites you use). A page's security policy may refuse
 // it; then the letter stays.
-const siteIcon = () => document.querySelector('link[rel~="icon" i][href]')?.href || `${location.origin}/favicon.ico`;
+const siteIcon = () =>
+  [...document.querySelectorAll('link[href]')].find((link) => /(^|\s)icon(\s|$)/i.test(link.rel))?.href || `${location.origin}/favicon.ico`;
 
 function showSiteIcon(avatar, url) {
   const img = new Image();
@@ -124,7 +140,12 @@ function showMenu(anchor, logins) {
       text.append(title, user);
       row.append(avatar, text);
       row.addEventListener('click', (event) => {
-        if (event.isTrusted) choose(login.id); // a script on the page cannot press a row
+        if (!event.isTrusted) return; // a script on the page cannot press a row
+        if (!current || !genuine(current, event)) {
+          closeMenu();
+          return;
+        }
+        choose(login.id);
       });
       rows.append(row);
     }
@@ -139,15 +160,51 @@ function showMenu(anchor, logins) {
   const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
   host.style.left = `${left + window.scrollX}px`;
   host.style.top = `${(below ? rect.bottom + 8 : rect.top - height - 8) + window.scrollY}px`;
-  current = { host, anchor, root, close: () => { host.remove(); current = null; } };
+  // anything the page does to the menu's own element (style, class, ...) closes it; changes by CSS rules
+  // that match the element are caught by `genuine` at click time instead
+  const watch = new MutationObserver(closeMenu);
+  watch.observe(host, { attributes: true });
+  current = {
+    host, anchor, root, rect: host.getBoundingClientRect(), shownAt: Date.now(),
+    close: () => { watch.disconnect(); host.remove(); current = null; }
+  };
+}
+
+const TOO_SOON_MS = 300; // a click this soon after the menu appears was aimed at something else
+
+/**
+ * Is the menu really what the user is clicking? A page could fade it out, move it, or put a decoy over it
+ * so that one click on a "Play" button presses a row. So: nothing on the menu or the root element may
+ * hide or transform it, it must still be where it was drawn, and at the click point it must be on top.
+ * A click made with the keyboard has no point, so it skips only that last check; the page cannot press keys.
+ */
+function genuine(menu, event) {
+  if (Date.now() - menu.shownAt < TOO_SOON_MS) return false;
+  for (const node of [menu.host, document.documentElement]) {
+    const style = getComputedStyle(node);
+    if (style.display === 'none' || (style.visibility && style.visibility !== 'visible')) return false;
+    if (Number(style.opacity) < 0.99) return false;
+    if (style.filter && style.filter !== 'none') return false;
+    if (style.transform && style.transform !== 'none') return false;
+    if (style.clipPath && style.clipPath !== 'none') return false;
+    if (style.mixBlendMode && style.mixBlendMode !== 'normal') return false;
+  }
+  const now = menu.host.getBoundingClientRect();
+  const moved = ['left', 'top', 'width', 'height'].some((side) => Math.abs(now[side] - menu.rect[side]) > 2);
+  if (moved) return false;
+  const byKeyboard = event.detail === 0 && event.clientX === 0 && event.clientY === 0;
+  return byKeyboard || document.elementsFromPoint(event.clientX, event.clientY)[0] === menu.host;
 }
 
 async function choose(id) {
+  const anchor = current?.anchor;
+  if (!anchor) return;
   const mine = ++ticket;
   const reply = await ask({ type: 'credentials', id });
   if (mine !== ticket || !reply?.ok) return;
   closeMenu();
-  const found = findLoginFields(document); // the page may have changed since the menu opened
+  // fill the form of the field the user clicked in, not whichever login form the page has by now
+  const found = anchor.isConnected ? findLoginFields(document, { around: anchor }) : { status: 'none' };
   if (found.status !== 'ok') return;
   filling = true;
   try {
@@ -159,17 +216,16 @@ async function choose(id) {
 
 async function onField(event) {
   const target = event.target;
-  if (filling || current?.anchor === target) return;
+  if (!event.isTrusted || filling || current?.anchor === target) return; // a page's own click() or dispatchEvent opens nothing
   closeMenu();
   if (!(target instanceof HTMLInputElement)) return;
-  const found = findLoginFields(document);
-  if (found.status !== 'ok' || (target !== found.username && target !== found.password)) return;
+  if (findLoginFields(document, { around: target }).status !== 'ok') return; // not a login field
   if (known) quiet(target); // before the browser opens its own list
 
   if (asking === target) return; // focus and click on the same field arrive together
   asking = target;
   const mine = ticket;
-  const reply = await ask({ type: 'logins' });
+  const reply = await logins();
   if (asking === target) asking = null;
   if (mine !== ticket || !reply) return;
   known = reply.ok ? reply.logins.length > 0 : reply.code === 'auth';
@@ -181,7 +237,7 @@ async function onField(event) {
 // learn at load whether this page's login form has anything to offer, so the first click is already quiet
 (async () => {
   if (findLoginFields(document).status !== 'ok') return;
-  const reply = await ask({ type: 'logins' });
+  const reply = await logins();
   known = !!reply && (reply.ok ? reply.logins.length > 0 : reply.code === 'auth');
 })();
 

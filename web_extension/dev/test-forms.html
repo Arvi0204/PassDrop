@@ -15,8 +15,8 @@
     <!--
       Serve this folder (for example `npx serve web_extension/dev` or `python -m http.server`) and open
       http://localhost:<port>/test-forms.html?case=plain  (http on localhost is allowed for filling).
-      Save a login for "localhost" in PassDrop, then click the username or password field: a PassDrop menu opens under it.
-      Cases: plain, controlled, decoy, signup, twostep, search.
+      Save a login for this page's address with its port (for example "localhost:3000") in PassDrop, then click the username or password field: a PassDrop menu opens under it.
+      Cases: plain, controlled, decoy, signup, twostep, search, twoforms.
     -->
     <nav id="nav"></nav>
     <h1 id="title"></h1>
@@ -28,7 +28,7 @@
       const stage = document.getElementById('stage');
       const seen = document.getElementById('seen');
       document.getElementById('title').textContent = `Case: ${which}`;
-      document.getElementById('nav').innerHTML = ['plain', 'controlled', 'decoy', 'signup', 'twostep', 'search']
+      document.getElementById('nav').innerHTML = ['plain', 'controlled', 'decoy', 'signup', 'twostep', 'search', 'twoforms']
         .map((c) => `<a href="?case=${c}">${c}</a>`).join('');
 
       const form = (html) => { stage.innerHTML = `<form onsubmit="return false">${html}</form>`; };
@@ -59,6 +59,10 @@
               <input id="decoy-offpage" type="text" style="position:absolute;left:-9999px">
               <input id="decoy-clear" type="password" style="opacity:0">
               <input id="decoy-tiny" type="text" style="width:1px;height:1px;padding:0;border:0">
+              <input id="decoy-right" type="text" style="position:absolute;left:5000px">
+              <input id="decoy-clip" type="password" style="clip-path:inset(100%)">
+              <input id="decoy-legacyclip" type="text" style="position:absolute;clip:rect(0 0 0 0)">
+              <div style="width:1px;height:1px;overflow:hidden"><input id="decoy-overflow" type="text" style="margin-left:300px"></div>
               <label>Username <input id="username" type="text"></label>
               <label>Password <input id="password" type="password"></label><button>Sign in</button>`);
       } else if (which === 'signup') {
@@ -71,6 +75,11 @@
         document.getElementById('next').addEventListener('click', () => {
           stage.innerHTML = `<form onsubmit="return false"><label>Password <input id="password" type="password" autocomplete="current-password"></label><button>Sign in</button></form>`;
         });
+      } else if (which === 'twoforms') {
+        stage.innerHTML = `<form onsubmit="return false"><label>First username <input id="username" type="text"></label>
+            <label>First password <input id="password" type="password"></label><button>Sign in</button></form>
+          <form onsubmit="return false"><label>Second username <input id="username2" type="text"></label>
+            <label>Second password <input id="password2" type="password"></label><button>Sign in</button></form>`;
       } else if (which === 'search') {
         stage.innerHTML = `<input id="site-search" type="text" placeholder="Search the site">
           <div><label>Username <input id="username" type="text"></label>
