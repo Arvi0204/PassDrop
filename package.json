@@ -15,6 +15,7 @@
     "build:frontend": "npm run build --workspace=frontend",
     "install:all": "npm install",
     "build:extension": "npm run build --workspace=web_extension",
+    "build:extension:dev": "npm run build:dev --workspace=web_extension",
     "package:extension": "npm run package --workspace=web_extension"
   },
   "devDependencies": {

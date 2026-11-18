@@ -1,6 +1,6 @@
 // Zips the built extension (dist/) into the file the web app's Extension page offers for download.
 // Run it through `npm run package`, which builds first. The addresses in .env are baked into the
-// build, so point them at the real servers before packaging a release.
+// build; a release build reads web_extension/.env.production, which wins over .env.
 
 import AdmZip from 'adm-zip';
 import { existsSync } from 'node:fs';
