@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
+import { iconUrlForHost } from '../../lib/siteIcon';
 
 const getDomain = (url) => {
     if (!url) return '';
@@ -46,6 +47,7 @@ const getBgColor = (text) => {
 export default function FaviconImage({ url, title, size = 'md' }) {
     const [hasError, setHasError] = useState(false);
     const domain = getDomain(url);
+    const iconUrl = iconUrlForHost(domain);
 
     const sizeClasses = {
         sm: 'w-7 h-7 text-xs',
@@ -59,7 +61,7 @@ export default function FaviconImage({ url, title, size = 'md' }) {
         lg: 'w-6 h-6'
     }[size] || 'w-5 h-5';
 
-    if (!domain || hasError) {
+    if (!iconUrl || hasError) {
         const initial = getInitials(title, url);
         const bgColor = getBgColor(title || domain);
         return (
@@ -72,7 +74,7 @@ export default function FaviconImage({ url, title, size = 'md' }) {
     return (
         <div className={`${sizeClasses} rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0 p-1`}>
             <img
-                src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
+                src={iconUrl}
                 alt={`${title || domain} icon`}
                 className="w-full h-full object-contain rounded"
                 onError={() => setHasError(true)}
