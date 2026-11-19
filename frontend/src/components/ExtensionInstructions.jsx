@@ -1,4 +1,3 @@
-import React from "react";
 import { Download, ShieldAlert } from "lucide-react";
 import PassDropLogo from "./common/PassDropLogo";
 import Reveal from "./common/Reveal";

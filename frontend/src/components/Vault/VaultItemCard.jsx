@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Star, KeyRound, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import FaviconImage from './FaviconImage';

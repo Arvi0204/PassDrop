@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import useEscapeKey from '../lib/useEscapeKey';

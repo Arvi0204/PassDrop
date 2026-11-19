@@ -1,6 +1,5 @@
 import { useAnimationControls, AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
-import React from 'react';
 import { duration, ease } from '../../lib/motion';
 
 /**

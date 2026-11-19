@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from 'react';
 import PasswordContext from "./passwordContext";
 import toast from "react-hot-toast";
 import authFetch from "../lib/authFetch";

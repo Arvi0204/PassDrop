@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { LENGTH_RANGE } from '../../lib/passwordGen';
 

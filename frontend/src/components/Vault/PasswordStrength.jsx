@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { spring, duration, ease } from '../../lib/motion';
 import { strengthOf } from '../../lib/passwordStrength';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { KeyRound, Sparkles, Download, ArrowRight } from 'lucide-react';
 import Reveal from './common/Reveal';

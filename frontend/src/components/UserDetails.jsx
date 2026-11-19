@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, User, Mail, Calendar, Clock, KeyRound, AlertTriangle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -52,7 +52,7 @@ export default function UserDetails() {
             });
             const data = await response.json();
             setUser(data);
-        } catch (error) {
+        } catch {
             toast.error("Failed to fetch user details");
         }
     };
@@ -99,7 +99,7 @@ export default function UserDetails() {
                 setSaveState('idle');
                 toast.error(json.error || "Failed to update master password");
             }
-        } catch (error) {
+        } catch {
             setSaveState('idle');
             toast.error("An error occurred. Check backend connection.");
         } finally {
@@ -145,7 +145,7 @@ export default function UserDetails() {
             } else {
                 toast.error(json.error || "Failed to delete passwords");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred");
         }
     };
@@ -169,7 +169,7 @@ export default function UserDetails() {
             } else {
                 toast.error(json.error || "Failed to delete account");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred deleting account");
         }
     };
