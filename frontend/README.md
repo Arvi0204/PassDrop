@@ -27,7 +27,8 @@ Scripts in this folder (`npm run <name> --workspace=frontend`):
 | `dev` | Vite dev server with hot reload. |
 | `build` | Production build into `dist/`. |
 | `preview` | Serves the production build locally. |
-| `lint` | ESLint. It currently reports many errors; the largest group is the prop-types rule, which this project does not use. |
+| `test` | The component and helper tests (Vitest, with jsdom as a stand-in browser). |
+| `lint` | ESLint. It passes with no errors; a few advisory warnings (hook dependencies, files that export more than components) are left on purpose. |
 
 ## Configuration
 
@@ -60,6 +61,7 @@ Behaviour worth knowing:
 - `src/context/`: the vault state (`PasswordState`) and the tide animation (`TideContext`).
 - `src/lib/`: plain helpers: the password generator and strength scoring (also imported by the extension), the authenticated fetch, and the animation helpers.
 - `src/styles/`: `tide.css` and `water.css`.
+- Tests sit next to the code they check, as `*.test.js` and `*.test.jsx`. `test-setup.js` fills in the few browser features jsdom lacks. Run them with `npm test --workspace=frontend`: they cover the Account page's delete dialog, the password mask, the site icons, the generator, the strength score and the session-expiry handling.
 - `public/`: the favicon. `PassDrop.zip`, the extension download, is also built into this folder, from `web_extension/`, on every deploy. It is git-ignored; see [Local build or release build](../README.md#local-build-or-release-build) to make it locally.
 
 ## The water theme

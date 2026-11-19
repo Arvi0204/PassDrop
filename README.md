@@ -142,17 +142,28 @@ Run from the repository root.
 | `npm run build:extension:dev` | Extension build for local development, into `web_extension/dist`. |
 | `npm run package:extension` | Release build of the extension, zipped as the web app's download. Vercel runs it on every deploy; run it yourself only to try the download page locally. See below. |
 | `npm run build:extension` | A plain (production) extension build. Rarely what you want; see the note above. |
-| `npm test --workspace=web_extension` | The extension's unit tests. |
+| `npm test` | All the automated tests: the web app, the API and the extension. |
 | `npm run test:browser --workspace=web_extension` | The extension's real-Chrome test. Needs Chrome. |
+| `npm run lint --workspace=frontend` | ESLint on the web app. |
 
 ## Testing
 
 ```bash
-npm test --workspace=web_extension          # fast, no browser
-npm run test:browser --workspace=web_extension   # real Chrome, needed for the menu's click checks
+npm test                                         # everything below, no browser needed (the API tests start a real MongoDB; see below)
+npm run test:browser --workspace=web_extension   # real Chrome, needed for the extension menu's click checks
 ```
 
-The extension has automated tests: unit tests with Node's built-in test runner, and a browser test that drives real Chrome (set `CHROME_PATH` if it is not in a usual place). The API has none yet; test it by hand with the requests in [`backend/bruno`](backend/bruno/README.md). The web app has no automated tests either.
+`npm test` runs the tests of all three parts one after another and fails if any of them fails:
+
+| Part | Tests | Tool | What they cover |
+|---|---|---|---|
+| Web app (`frontend/`) | 30 | Vitest and jsdom (a stand-in browser) | The delete dialog (it sends the typed master password), the password mask, the site icons, the generator, the strength score and the session-expiry handling |
+| API (`backend/`) | 49 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, who can touch whose logins, validation limits and encryption at rest |
+| Extension (`web_extension/`) | 72 | Node's built-in runner and jsdom | Address matching, field detection, the service worker's page requests, the content script's rules and the popup helpers |
+
+Each test is a small program that runs part of the code with known input and checks the answer. A good run prints a tick for each test and ends with a summary of passed and failed counts; a failure names the test and shows what it expected. To run one part, use `npm test --workspace=frontend` (or `backend`, `web_extension`).
+
+The browser test (`npm run test:browser --workspace=web_extension`) drives real Chrome with real clicks against the built extension (set `CHROME_PATH` if Chrome is not in a usual place). The API tests start a real, throwaway MongoDB for each test file and never touch your real database. **The first run downloads MongoDB 7.0 once (about 590 MB on Windows)** into `~/.cache/mongodb-binaries`, shared by every project; after that it starts in a second or two. To fetch it ahead of time, run `node -e "require('mongodb-memory-server-core').MongoMemoryServer.create().then(s => s.stop())"` in `backend/`. Try the API by hand with the requests in [`backend/bruno`](backend/bruno/README.md).
 
 ## Local build or release build
 

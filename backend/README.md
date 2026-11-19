@@ -96,10 +96,30 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 - `middleware/`: `fetchUser` (checks the token and its `tokenVersion`) and `requirePassword` (asks for the master password again).
 - `utils/`: `encryption` (AES-256) and `passwordGuard` (checks a master password and counts failures for the lockout).
 - `bruno/`: the API request collection.
+- `test/`: the automated tests. `test-helpers/`: the helper that boots the app against a throwaway MongoDB for them.
 
 ## Testing
 
-There are no automated API tests yet. [`bruno/`](bruno/README.md) holds a [Bruno](https://www.usebruno.com/) collection with a request for every endpoint: open that folder in Bruno and pick the Local environment.
+```bash
+npm test --workspace=backend
+```
+
+49 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+- **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
+- **Logins:** every route needs a token, creating a login stores it encrypted and returns it decrypted without internal fields, listing shows only your own, updating and deleting other people's logins is refused, field limits, and deleting all.
+- **The server and encryption:** malformed and oversized bodies, no framework header, and the encrypt and decrypt round trip.
+
+**The tests use a real MongoDB.** Each test file starts its own throwaway MongoDB with [mongodb-memory-server-core](https://github.com/typegoose/mongodb-memory-server) and throws it away afterwards, so the API's real queries are what get tested, and nothing is mocked. `test-helpers/testApp.js` sets the tests' own secrets and a placeholder database address before the app loads, so not even a `.env` file pointing at your real database is used, and it refuses to carry on unless the throwaway database is on this computer.
+
+The MongoDB version is pinned under `config` in `package.json` (7.0.14). **The first test run downloads that MongoDB once, about 590 MB on Windows**, into `~/.cache/mongodb-binaries` (shared by every project); after that it starts in a second or two. To fetch it ahead of time, run this in `backend/`:
+
+```bash
+node -e "require('mongodb-memory-server-core').MongoMemoryServer.create().then(s => s.stop())"
+```
+
+If the download does not work on your network, download `mongodb-windows-x86_64-7.0.14.zip` from `fastdl.mongodb.org/windows/` in a browser, unzip it, and set `MONGOMS_SYSTEM_BINARY` to the path of its `bin/mongod.exe`.
+
+[`bruno/`](bruno/README.md) holds a [Bruno](https://www.usebruno.com/) collection with a request for every endpoint: open that folder in Bruno and pick the Local environment.
 
 ## License
 
