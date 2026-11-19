@@ -69,8 +69,8 @@ const handleCreateUser = async (req, res) => {
 };
 
 router.post('/register', [
-    body('username', 'Username must contain at least 3 characters').isLength({ min: 3 }),
-    body('email', 'Enter a valid email').isEmail(),
+    body('username', 'Username must contain at least 3 characters').trim().isLength({ min: 3 }),
+    body('email', 'Enter a valid email').trim().isEmail(),
     body('password', 'Password must be at least 8 characters').isLength({ min: 8 })
 ], handleCreateUser);
 
@@ -78,7 +78,7 @@ router.post('/register', [
 // ROUTE 2: Login User (POST /api/auth/login)
 // ========================================================
 router.post('/login', [
-    body('email', 'Enter a valid email').isEmail(),
+    body('email', 'Enter a valid email').trim().isEmail(),
     body('password', 'Password cannot be blank').exists()
 ], async (req, res) => {
     let success = false;
