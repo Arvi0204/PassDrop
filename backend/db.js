@@ -29,7 +29,7 @@ const connectToDb = async () => {
 
     try {
         await client.connect();
-        const dbName = process.env.DB_NAME || 'PassHaven';
+        const dbName = process.env.DB_NAME || 'PassDrop';
         db = client.db(dbName);
         console.log(`Connected to MongoDB database: ${dbName}`);
         return db;

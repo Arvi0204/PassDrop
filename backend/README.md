@@ -34,7 +34,7 @@ Settings come from `backend/.env`. In production they are the Vercel project's e
 | `JWT_SECRET` | yes | Signs sign-in tokens. 32 or more random characters; the API warns if it is shorter. |
 | `ENCRYPTION_KEY` | yes | Encrypts stored logins. Exactly 64 hex characters; the API refuses to start otherwise. |
 | `PORT` | no | Default `3000`. |
-| `DB_NAME` | no | Default `PassHaven`. |
+| `DB_NAME` | no | Default `PassDrop`. |
 | `JWT_EXPIRES_IN` | no | Default `7d`. |
 
 Generate a secret with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.

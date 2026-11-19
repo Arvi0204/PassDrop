@@ -121,7 +121,7 @@ Every setting, by file. A `.env` file is never committed. `.env.example` at the 
 | | `JWT_SECRET` | yes | Signs sign-in tokens. Use 32 or more random characters (the API warns if shorter). |
 | | `ENCRYPTION_KEY` | yes | Key for encrypting stored logins: exactly 64 hex characters. The API refuses to start without a valid one. |
 | | `PORT` | no | API port. Default `3000`. |
-| | `DB_NAME` | no | Database name. Default `PassHaven`. |
+| | `DB_NAME` | no | Database name. Default `PassDrop`. |
 | | `JWT_EXPIRES_IN` | no | How long a sign-in lasts. Default `7d`. |
 | `frontend/.env` | `VITE_BACKEND` | for local work | Address of the API. In production it is empty, because the API is on the web app's own address. See `frontend/.env.production`. |
 | `web_extension/.env` | `VITE_BACKEND` | yes | Address of the API. The extension may only call this origin. |
