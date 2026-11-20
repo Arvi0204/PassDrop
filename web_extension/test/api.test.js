@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createApi, ApiError } from '../src/api.js';
 
-// A fake server that answers the way backend/routes does. The proofs and the wrapped key are opaque strings here:
+// A fake server that answers the way backend/routes does. The proofs and blobs are opaque strings here:
 // the real cryptography is tested in background.test.js.
 const jwt = (exp) =>
   `x.${Buffer.from(JSON.stringify({ user: { id: '1' }, exp })).toString('base64url')}.y`;
@@ -43,11 +43,11 @@ before(async () => {
       }
       if (req.url === '/api/auth/me') {
         return req.headers['auth-token'] === 'good'
-          ? send(200, { username: 'u', email: 'u@x.com' })
+          ? send(200, { _id: 'u1', username: 'u', email: 'u@x.com', kdf: KDF, wrappedVaultKey: WRAPPED })
           : send(401, { success: false, error: 'Please authenticate using a valid token' });
       }
       if (req.url === '/api/passwords') {
-        if (req.headers['auth-token'] === 'good') return send(200, [{ _id: '1', url: 'a.com', username: 'u', password: 'p' }]);
+        if (req.headers['auth-token'] === 'good') return send(200, [{ _id: '1', blob: 'v1.x.y', createdAt: 'c', updatedAt: 'u' }]);
         if (req.headers['auth-token'] === 'shape') return send(200, { not: 'an array' });
         if (req.headers['auth-token'] === 'boom') return send(500, { success: false, error: 'Internal Server Error' });
         if (req.headers['auth-token'] === 'html') return send(502, '<html>bad gateway</html>');
@@ -97,9 +97,15 @@ test('a success reply with no token, or no wrapped vault key, is rejected', asyn
   await assert.rejects(api.login('a@x.com', 'no-key'), (e) => e.kind === 'server');
 });
 
-test('vault is fetched with the auth-token header and returned as an array', async () => {
+test('me carries what unlocking needs: the key settings and the wrapped vault key', async () => {
+  const me = await api.getMe('good');
+  assert.deepEqual([me._id, me.kdf, me.wrappedVaultKey], ['u1', KDF, WRAPPED]);
+});
+
+test('vault is fetched with the auth-token header and returned as an array of encrypted blobs', async () => {
   const vault = await api.getVault('good');
   assert.equal(vault.length, 1);
+  assert.equal(vault[0].blob, 'v1.x.y');
   assert.equal(seen.at(-1).token, 'good');
   assert.equal(seen.at(-1).url, '/api/passwords');
 });

@@ -1,8 +1,8 @@
 // Runs the built content script (dist/content.js) in real Chrome pages and drives it with real, trusted
 // mouse and key events through the DevTools protocol. The service worker is the real src/background.js, bundled
 // and run here in Node with a fake `chrome` (storage in memory), talking to a stub PassDrop API. The stub speaks
-// prelogin, a sign-in proof instead of a password and a wrapped vault key, made with the web app's own
-// vaultCrypto (1000 iterations, so it is fast), and hands the logins out as plain items. The page reaches the
+// the zero-knowledge API: prelogin, a sign-in proof instead of a password, a wrapped vault key and encrypted
+// blobs, all made with the web app's own vaultCrypto (1000 iterations, so it is fast). The page reaches the
 // worker through a DevTools binding that stands in for chrome.runtime.sendMessage.
 //
 //   npm run test:browser          builds the content script first, then runs this
@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { newKdf, deriveKeys, newVaultKey, wrapVaultKey } from '../../frontend/src/lib/vaultCrypto.js';
+import { newKdf, deriveKeys, newVaultKey, wrapVaultKey, encryptItem } from '../../frontend/src/lib/vaultCrypto.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const code = readFileSync(join(root, 'dist/content.js'), 'utf8');
@@ -54,12 +54,13 @@ const keys = await deriveKeys(PASSWORD, kdf);
 const vaultKey = await newVaultKey();
 const wrappedVaultKey = await wrapVaultKey(vaultKey, keys.wrapKey);
 const DEFAULT_LOGINS = [{ id: 'a', title: 'Local dev', username: 'alice' }];
-let items = [];
+let blobs = [];
 // the logins are saved for this page's address (host and port), with the password the checks expect
-const setLogins = (logins) => {
-  items = logins.map((l) => ({
-    _id: l.id, title: l.title, url: `localhost:${web.address().port}`, username: l.username, password: 's3cret!'
-  }));
+const setLogins = async (logins) => {
+  blobs = await Promise.all(logins.map(async (l) => ({
+    _id: l.id, createdAt: 'c', updatedAt: 'u',
+    blob: await encryptItem(vaultKey, { title: l.title, url: `localhost:${web.address().port}`, username: l.username, password: 's3cret!', notes: '', isFavorite: false }, USER)
+  })));
 };
 const api = createServer((req, res) => {
   let raw = '';
@@ -75,7 +76,8 @@ const api = createServer((req, res) => {
         : send(400, { success: false, errors: [{ msg: 'Please login with valid credentials' }] });
     }
     if (req.headers['auth-token'] !== 'tok') return send(401, { success: false, error: 'Please authenticate using a valid token' });
-    if (pathname === '/api/passwords') return send(200, items);
+    if (pathname === '/api/auth/me') return send(200, { _id: USER, email: 'me@x.com', kdf, wrappedVaultKey });
+    if (pathname === '/api/passwords') return send(200, blobs);
     send(404, { success: false, error: 'not found' });
   });
 });
@@ -88,7 +90,7 @@ const area = (data) => ({
   remove: async (keys) => { for (const key of [].concat(keys)) delete data[key]; }
 });
 const localData = {};
-const sessionData = {}; // chrome.storage.session: the vault key and the cached vault
+const sessionData = {}; // chrome.storage.session: the vault key and the decrypted vault
 let listener;
 globalThis.chrome = {
   runtime: { id: 'ext', getURL: (path = '') => `${EXT}${path}`, onMessage: { addListener: (fn) => { listener = fn; } } },
@@ -169,11 +171,13 @@ const signIn = async () => {
   const reply = await toWorker({ type: 'login', email: 'me@x.com', password: PASSWORD }, popup);
   if (!reply.ok) throw new Error(`sign-in failed: ${reply.error}`);
 };
-// the logins the stub server holds, signed in unless told otherwise
-async function open(kase, { logins = DEFAULT_LOGINS, signedIn = true } = {}) {
-  setLogins(logins);
+// the logins the stub server holds, signed in (and unlocked) unless told otherwise; `locked` forgets the vault key
+// the way closing the browser does
+async function open(kase, { logins = DEFAULT_LOGINS, signedIn = true, locked = false } = {}) {
+  await setLogins(logins);
   if (signedIn) await signIn();
   else await toWorker({ type: 'logout' }, popup);
+  if (locked) delete sessionData.vaultKey;
   await load(kase);
 }
 
@@ -400,14 +404,29 @@ await realClick(row());
 v = await values();
 check('refused: nothing is filled when the service worker says no', v.username === '' && v.password === '', JSON.stringify(v));
 
-// ---- the master password: sign in and a wrong password (the real worker with real keys)
+// ---- the master password: sign in, wrong password, locked, unlock (the real worker with real keys)
 await toWorker({ type: 'logout' }, popup);
 let reply = await toWorker({ type: 'login', email: 'me@x.com', password: 'not it' }, popup);
 check('sign-in: a wrong master password is refused and stores nothing', !reply.ok && !Object.keys(localData).length && !Object.keys(sessionData).length, JSON.stringify(reply));
 reply = await toWorker({ type: 'login', email: 'me@x.com', password: PASSWORD }, popup);
-check('sign-in: the right password signs in', reply.ok && reply.session.email === 'me@x.com', JSON.stringify(reply));
+check('sign-in: the right password signs in, unlocked', reply.ok && (await toWorker({ type: 'session' }, popup)).locked === false, JSON.stringify(reply));
 check('sign-in: the token is in storage.local and the vault key in storage.session, the password in neither',
   !!localData.session?.token && !!sessionData.vaultKey && !JSON.stringify([localData, sessionData]).includes(PASSWORD));
+
+await open('plain', { locked: true });
+check('locked: the worker says so', (await toWorker({ type: 'session' }, popup)).locked === true);
+await realClick(field('username'));
+check('locked: the menu shows only the unlock hint, no rows', (await menuOpen()) && (await rows()).length === 0 && /Unlock PassDrop from the toolbar icon to fill your logins here./.test(await menuText()));
+check('locked: no password was asked for or reached the page', !(await sent()).includes('credentials') && !(await menuText()).includes('s3cret') && !(await evaluate('document.documentElement.outerHTML')).includes('s3cret'));
+reply = await toWorker({ type: 'unlock', password: 'not it' }, popup);
+check('locked: a wrong password does not unlock', !reply.ok && reply.code === 'auth' && !sessionData.vaultKey, JSON.stringify(reply));
+reply = await toWorker({ type: 'unlock', password: PASSWORD }, popup);
+check('unlock: the right password unlocks', reply.ok && !!sessionData.vaultKey, JSON.stringify(reply));
+await load('plain');
+await realClick(field('username'));
+check('unlock: the menu lists the login again', (await rows()).length === 1 && /Local dev/.test((await rows())[0]), JSON.stringify(await rows()));
+await realClick(row());
+check('unlock: and a real click fills it', filled(await values()), JSON.stringify(await values()));
 
 const failed = results.filter((x) => !x).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);

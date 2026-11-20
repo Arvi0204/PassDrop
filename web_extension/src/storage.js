@@ -1,7 +1,7 @@
 // What the extension remembers.
 //  - the sign-in (token, when it ends, the email to show, the user id) lives in storage.local, so it survives a restart
-//  - the vault key and the vault, with its decrypted passwords, live only in storage.session: memory, gone when the
-//    browser closes, and not readable by content scripts running inside web pages
+//  - the vault key and the decrypted vault live only in storage.session: memory, gone when the browser closes,
+//    and not readable by content scripts running inside web pages. A sign-in without a vault key is "locked".
 
 const SESSION_KEY = 'session';
 const VAULT_KEY = 'vaultKey'; // the raw vault key, base64
@@ -28,7 +28,7 @@ export async function clearSession() {
   await chrome.storage.session.remove([VAULT_KEY, CACHE_KEY]);
 }
 
-/** The vault key (base64), or null if there is none in this browser session. */
+/** The vault key (base64), or null while the vault is locked. */
 export async function getVaultKey() {
   const { [VAULT_KEY]: key } = await chrome.storage.session.get(VAULT_KEY);
   return key || null;

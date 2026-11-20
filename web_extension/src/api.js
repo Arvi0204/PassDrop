@@ -1,10 +1,10 @@
 // Every call to the PassDrop API lives here. Contract: backend/routes/auth.js and passwords.js.
 //  - the token goes in an `auth-token` header (the raw JWT, no "Bearer")
-//  - the server only ever sees keys derived from the password, never the password (src/background.js does the crypto)
+//  - the server only ever sees keys derived from the password and encrypted blobs (src/background.js does the crypto)
 //  - failures come back as { success: false, errors: [{ msg }] } or { success: false, error }
 
 export class ApiError extends Error {
-  /** @param {'network'|'auth'|'server'} kind */
+  /** @param {'network'|'auth'|'locked'|'server'} kind */
   constructor(message, kind, status = 0) {
     super(message);
     this.kind = kind;
@@ -81,7 +81,7 @@ export function createApi(baseUrl) {
     return request('/api/auth/me', { token });
   }
 
-  /** GET /api/passwords -> every saved login, passwords already decrypted by the server */
+  /** GET /api/passwords -> every saved login as [{ _id, blob, createdAt, updatedAt }]; the blobs are encrypted */
   async function getVault(token) {
     const json = await request('/api/passwords', { token });
     if (!Array.isArray(json)) throw new ApiError('Unexpected reply from the server.', 'server');
