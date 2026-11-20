@@ -10,7 +10,8 @@ import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion, AnimatePresence } from 'framer-motion';
 import { changePassword, reauthKey, unlock } from '../lib/accountApi';
-import { getToken, getUserId, getVaultKey, saveSignIn, signOut } from '../lib/session';
+import RecoveryKey from './RecoveryKey';
+import { clearPendingRecoveryKey, getPendingRecoveryKey, getToken, getUserId, getVaultKey, saveSignIn, signOut } from '../lib/session';
 
 export default function UserDetails() {
     const [user, setUser] = useState({
@@ -32,6 +33,8 @@ export default function UserDetails() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const token = getToken();
     const navigate = useNavigate();
+    // the recovery key made at sign-up, shown here once (see lib/session.js)
+    const [pendingRecoveryKey, setPendingRecoveryKey] = useState(getPendingRecoveryKey);
 
     useEffect(() => () => clearTimeout(doneTimer.current), []);
 
@@ -449,6 +452,13 @@ export default function UserDetails() {
                     className="mt-4 w-full px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] shadow-xs transition-all"
                 />
             </ConfirmationModal>
+            {/* after the dialog above, so it is on top of it (and of its fading backdrop) */}
+            {pendingRecoveryKey && (
+                <RecoveryKey
+                    recoveryKey={pendingRecoveryKey}
+                    onContinue={() => { clearPendingRecoveryKey(); setPendingRecoveryKey(null); }}
+                />
+            )}
         </div>
     );
 }

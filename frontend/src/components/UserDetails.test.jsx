@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import UserDetails from './UserDetails';
-import { saveSignIn, saveVaultKey } from '../lib/session';
+import { getPendingRecoveryKey, saveSignIn, saveVaultKey, setPendingRecoveryKey } from '../lib/session';
 import { deriveKeys, exportVaultKey, newVaultKey, unwrapVaultKey, wrapVaultKey } from '../lib/vaultCrypto';
 
 vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
@@ -44,6 +44,29 @@ async function openDialog(user, buttonName) {
     await user.click(screen.getByRole('button', { name: buttonName }));
     return passwordBox();
 }
+
+describe('the recovery key popup on the Account page', () => {
+    const KEY = '1A2B-3C4D-5E6F-7A8B-9C0D-1E2F-3A4B-5C6D';
+
+    it('shows the key made at sign-up the first time, and not again once it has been saved', async () => {
+        setPendingRecoveryKey(KEY);
+        const user = userEvent.setup();
+        show();
+        expect((await screen.findByTestId('recovery-key')).textContent).toBe(KEY);
+        const next = screen.getByRole('button', { name: /Continue/ });
+        expect(next.disabled).toBe(true); // it cannot be dismissed without ticking the box
+        await user.click(screen.getByRole('checkbox', { name: 'I have saved my recovery key' }));
+        await user.click(next);
+        await waitFor(() => expect(screen.queryByTestId('recovery-key')).toBeNull());
+        expect(getPendingRecoveryKey()).toBeNull();
+    });
+
+    it('shows nothing when there is no key waiting', async () => {
+        show();
+        await screen.findByText('tester');
+        expect(screen.queryByTestId('recovery-key')).toBeNull();
+    });
+});
 
 describe('deleting from the Account page', () => {
     it('Delete All Passwords sends a currentAuthKey derived from the master password that was typed', async () => {
@@ -131,7 +154,7 @@ describe('changing the master password from the Account page', () => {
         expect(Object.keys(sent).sort()).toEqual(['currentAuthKey', 'newAuthKey', 'newKdf', 'newWrappedVaultKey']);
         expect(sent.currentAuthKey).toBe(await authKeyFor(MASTER));
         expect(sent.newAuthKey).toBe(await authKeyFor('a-new-master-pw'));
-        expect(sent.newKdf).toEqual(KDF); // the same salt
+        expect(sent.newKdf).toEqual(KDF); // the same salt: the recovery key is derived with it
         expect(options.body).not.toMatch(/current-master-pw|a-new-master-pw/);
 
         // the new password's key opens the very same vault key

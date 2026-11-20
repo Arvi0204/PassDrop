@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,7 +17,7 @@ import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 import { spring } from "../lib/motion";
 import { useTide } from "../context/useTide";
-import { getToken, lock, signOut } from "../lib/session";
+import { getToken, hasPendingRecoveryKey, lock, signOut, subscribe } from "../lib/session";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
@@ -26,6 +26,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const recoveryKeyPending = useSyncExternalStore(subscribe, hasPendingRecoveryKey); // not yet shown on the Account page
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -124,6 +125,9 @@ const Navbar = () => {
                       )}
                       <Icon className={`relative w-4 h-4 ${isActive(item.path) ? "text-[#0284c7]" : "text-[#4a6b82]"}`} />
                       <span className="relative">{item.label}</span>
+                      {item.path === "/user" && recoveryKeyPending && (
+                        <span className="relative w-2 h-2 rounded-full bg-[#0284c7]" title="Your recovery key is waiting on the Account page" aria-label="Your recovery key is waiting on the Account page" />
+                      )}
                     </Link>
                   );
                 })}
@@ -235,7 +239,9 @@ const Navbar = () => {
         isOpen={isLogoutModalOpen}
         onClose={cancelLogout}
         onConfirm={confirmLogout}
-        message="Are you sure you want to log out of PassDrop?"
+        message={recoveryKeyPending
+          ? "Are you sure you want to log out of PassDrop? You have not seen your recovery key yet. It is shown once on the Account page, and logging out now loses it."
+          : "Are you sure you want to log out of PassDrop?"}
         confirmText="Log Out"
       />
 

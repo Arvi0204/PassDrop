@@ -8,7 +8,7 @@ import { ErrorLine, useShake } from './common/FormError';
 import { motion } from 'framer-motion';
 import { useTide } from '../context/useTide';
 import { signUp } from '../lib/accountApi';
-import { saveSignIn, saveVaultKey } from '../lib/session';
+import { saveSignIn, saveVaultKey, setPendingRecoveryKey } from '../lib/session';
 
 export default function Signup() {
     const [form, setForm] = useState({
@@ -64,6 +64,9 @@ export default function Signup() {
             if (result.ok) {
                 saveSignIn({ token: result.token, userId: result.userId });
                 await saveVaultKey(result.vaultKey);
+                // the recovery key is shown once, as a popup, the first time the Account page is opened (not here: this
+                // is the water's moment); until then it is held in this tab only
+                setPendingRecoveryKey(result.recoveryKey);
                 succeeded.current = true;
                 tide.leave(cardRef.current);
                 await tide.complete();

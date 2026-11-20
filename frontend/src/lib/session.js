@@ -5,6 +5,7 @@ import { exportVaultKey, importVaultKey } from './vaultCrypto';
 const TOKEN = 'passdrop.token';
 const USER_ID = 'passdrop.userId';
 const VAULT_KEY = 'passdrop.vaultKey';
+const PENDING_RECOVERY_KEY = 'passdrop.pendingRecoveryKey';
 
 // components that show the lock state (the vault context) listen here
 const listeners = new Set();
@@ -40,6 +41,19 @@ export async function saveVaultKey(key) {
     changed();
 }
 
+// The recovery key made at sign-up, held (in this tab only) until the Account page has shown it once. It is never sent
+// anywhere; signing out or showing it removes it.
+export const getPendingRecoveryKey = () => sessionStorage.getItem(PENDING_RECOVERY_KEY);
+export const hasPendingRecoveryKey = () => sessionStorage.getItem(PENDING_RECOVERY_KEY) !== null;
+export function setPendingRecoveryKey(key) {
+    sessionStorage.setItem(PENDING_RECOVERY_KEY, key);
+    changed();
+}
+export function clearPendingRecoveryKey() {
+    sessionStorage.removeItem(PENDING_RECOVERY_KEY);
+    changed();
+}
+
 // forget the vault key only: still signed in, the master password unlocks it again
 export function lock() {
     sessionStorage.removeItem(VAULT_KEY);
@@ -50,5 +64,6 @@ export function signOut() {
     localStorage.removeItem(TOKEN);
     localStorage.removeItem(USER_ID);
     sessionStorage.removeItem(VAULT_KEY);
+    sessionStorage.removeItem(PENDING_RECOVERY_KEY);
     changed();
 }

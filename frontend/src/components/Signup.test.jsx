@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Signup from './Signup';
 import { signUp } from '../lib/accountApi';
-import { getVaultKey } from '../lib/session';
+import { getPendingRecoveryKey, getVaultKey } from '../lib/session';
 import { newVaultKey } from '../lib/vaultCrypto';
 
 vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
@@ -17,9 +17,11 @@ vi.mock('../context/useTide', () => ({
     })
 }));
 
+const KEY = '1A2B-3C4D-5E6F-7A8B-9C0D-1E2F-3A4B-5C6D';
+
 describe('Signup', () => {
-    it('signs in and goes straight to the vault', async () => {
-        signUp.mockResolvedValue({ ok: true, token: 'tok', userId: 'user-1', vaultKey: await newVaultKey() });
+    it('signs in and goes straight to the vault, without interrupting the water; the recovery key is held for the Account page', async () => {
+        signUp.mockResolvedValue({ ok: true, token: 'tok', userId: 'user-1', vaultKey: await newVaultKey(), recoveryKey: KEY });
         const user = userEvent.setup();
         render(
             <MemoryRouter initialEntries={['/signup']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -33,9 +35,12 @@ describe('Signup', () => {
         await user.click(screen.getByRole('button', { name: /Create Free Vault/ }));
 
         expect(await screen.findByText('THE VAULT')).toBeTruthy();
+        expect(screen.queryByTestId('recovery-key')).toBeNull(); // no screen in the way of the animation
         expect(localStorage.getItem('passdrop.token')).toBe('tok');
         expect(localStorage.getItem('passdrop.userId')).toBe('user-1');
         expect(await getVaultKey()).not.toBeNull();
+        expect(getPendingRecoveryKey()).toBe(KEY); // waiting for the Account page, in this tab only
+        expect(localStorage.getItem('passdrop.pendingRecoveryKey')).toBeNull();
     });
 
     it('stores nothing when the account cannot be created', async () => {
@@ -53,6 +58,7 @@ describe('Signup', () => {
         await user.click(screen.getByRole('button', { name: /Create Free Vault/ }));
         await vi.waitFor(() => expect(signUp).toHaveBeenCalled());
         expect(localStorage.getItem('passdrop.token')).toBeNull();
+        expect(getPendingRecoveryKey()).toBeNull();
         expect(screen.queryByText('THE VAULT')).toBeNull();
     });
 });
