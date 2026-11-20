@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,6 +7,7 @@ import {
   User,
   Download,
   LogOut,
+  Lock,
   Menu,
   X
 } from "lucide-react";
@@ -16,6 +17,7 @@ import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 import { spring } from "../lib/motion";
 import { useTide } from "../context/useTide";
+import { getToken, hasPendingRecoveryKey, lock, signOut, subscribe } from "../lib/session";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
@@ -24,10 +26,11 @@ const Navbar = () => {
   const location = useLocation();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const recoveryKeyPending = useSyncExternalStore(subscribe, hasPendingRecoveryKey); // not yet shown on the Account page
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const token = sessionStorage.getItem("token");
+  const token = getToken();
 
   // Logout is the vault being drained, like pulling the plug on a full tub: the water fades
   // in behind the confirmation dialog, and the moment the user confirms the level falls to
@@ -45,10 +48,16 @@ const Navbar = () => {
   const confirmLogout = () => {
     setIsLogoutModalOpen(false);
     setPasswordArray([]);
-    sessionStorage.removeItem("token");
+    signOut(); // the token and the vault key
     // navigate and drain in the same tick, so the first frame already has the login page under the water
     navigate("/login");
     tide.drain();
+  };
+
+  // Lock keeps the sign-in but forgets the vault key; the vault page then asks for the master password
+  const lockVault = () => {
+    lock();
+    navigate("/");
   };
 
   const navLinks = [
@@ -116,6 +125,9 @@ const Navbar = () => {
                       )}
                       <Icon className={`relative w-4 h-4 ${isActive(item.path) ? "text-[#0284c7]" : "text-[#4a6b82]"}`} />
                       <span className="relative">{item.label}</span>
+                      {item.path === "/user" && recoveryKeyPending && (
+                        <span className="relative w-2 h-2 rounded-full bg-[#0284c7]" title="Your recovery key is waiting on the Account page" aria-label="Your recovery key is waiting on the Account page" />
+                      )}
                     </Link>
                   );
                 })}
@@ -126,6 +138,15 @@ const Navbar = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               {token ? (
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={lockVault}
+                    type="button"
+                    title="Lock vault"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#112838] hover:text-[#0c1820] bg-white/60 hover:bg-white/90 border border-white/90 shadow-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-[#4a6b82]" />
+                    <span className="hidden sm:inline">Lock</span>
+                  </button>
                   <button
                     onClick={openLogoutDialog}
                     type="button"
@@ -218,7 +239,9 @@ const Navbar = () => {
         isOpen={isLogoutModalOpen}
         onClose={cancelLogout}
         onConfirm={confirmLogout}
-        message="Are you sure you want to log out of PassDrop?"
+        message={recoveryKeyPending
+          ? "Are you sure you want to log out of PassDrop? You have not seen your recovery key yet. It is shown once on the Account page, and logging out now loses it."
+          : "Are you sure you want to log out of PassDrop?"}
         confirmText="Log Out"
       />
 

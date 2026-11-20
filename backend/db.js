@@ -3,9 +3,14 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const uri = process.env.MONGODB_URI;
 let client;
 let db;
+
+/** One account per email (also settles two simultaneous sign-ups), and a quick way to list one user's logins. */
+const ensureIndexes = async (database) => {
+    await database.collection('users').createIndex({ email: 1 }, { unique: true });
+    await database.collection('passwords').createIndex({ user: 1 });
+};
 
 /**
  * Connect to MongoDB and reuse connection across invocations.
@@ -32,6 +37,12 @@ const connectToDb = async () => {
         const dbName = process.env.DB_NAME || 'PassDrop';
         db = client.db(dbName);
         console.log(`Connected to MongoDB database: ${dbName}`);
+        try {
+            await ensureIndexes(db);
+        } catch (err) {
+            // an index that cannot be built (say, two old accounts on one email) must not take the whole API down
+            console.error('Could not create indexes:', err.message);
+        }
         return db;
     } catch (err) {
         console.error('Failed to connect to MongoDB:', err.message);
@@ -39,4 +50,5 @@ const connectToDb = async () => {
     }
 };
 
+connectToDb.ensureIndexes = ensureIndexes;
 module.exports = connectToDb;

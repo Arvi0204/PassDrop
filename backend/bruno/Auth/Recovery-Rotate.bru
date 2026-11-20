@@ -1,0 +1,23 @@
+meta {
+  name: Replace Recovery Key
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/auth/recovery/rotate
+  body: json
+  auth: none
+}
+
+headers {
+  auth-token: {{authToken}}
+}
+
+body:json {
+  {
+    "currentAuthKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    "recoveryAuthKey": "Hx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQA=",
+    "recoveryWrappedKey": "v1.AAECAwQFBgcICQoL.QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3"
+  }
+}

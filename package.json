@@ -17,7 +17,8 @@
     "install:all": "npm install",
     "build:extension": "npm run build --workspace=web_extension",
     "build:extension:dev": "npm run build:dev --workspace=web_extension",
-    "package:extension": "npm run package --workspace=web_extension"
+    "package:extension": "npm run package --workspace=web_extension",
+    "test:e2e": "npm run build:frontend && node e2e/vault.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

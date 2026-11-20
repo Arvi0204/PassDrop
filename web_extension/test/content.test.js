@@ -33,7 +33,7 @@ before(async () => {
 });
 
 // load the script into a fresh page; `html` may have no login form
-async function load(html = PAGE) {
+async function load(html = PAGE, failure = null) {
   const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'https://example.com/login', pretendToBeVisual: true });
   window = dom.window;
   window.Element.prototype.getBoundingClientRect = () => ({ left: 10, top: 10, right: 210, bottom: 40, width: 200, height: 30 }); // no layout in jsdom
@@ -43,6 +43,7 @@ async function load(html = PAGE) {
       id: 'ext',
       sendMessage: async (message) => {
         sent.push(message.type);
+        if (failure) return failure; // e.g. { ok: false, code: 'locked' }
         return message.type === 'logins'
           ? { ok: true, logins: [{ id: 'a', title: 'Example', username: 'alice' }] }
           : { ok: true, username: 'alice', password: 'secret' };
@@ -92,4 +93,13 @@ test('nothing is ever filled by events the page makes', async () => {
   assert.equal(window.document.getElementById('u').value, '');
   assert.equal(window.document.getElementById('p').value, '');
   assert.ok(!sent.includes('credentials'));
+});
+
+test('a locked vault: only the list is asked for, nothing is filled, and a page click still opens nothing', async () => {
+  await load(PAGE, { ok: false, code: 'locked', error: 'Unlock PassDrop to see your logins.' });
+  window.document.getElementById('u').click();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.deepEqual(sent, ['logins']);
+  assert.equal(menus().length, 0);
+  assert.equal(window.document.getElementById('u').value, '');
 });

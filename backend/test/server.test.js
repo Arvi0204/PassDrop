@@ -1,7 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const { request } = require('../test-helpers/testApp');
-const { encrypt, decrypt } = require('../utils/encryption');
 
 describe('the server', () => {
     test('answers on the root address', async () => {
@@ -28,26 +27,19 @@ describe('the server', () => {
     });
 });
 
-describe('encryption of stored passwords', () => {
-    test('round-trips text, including unicode', () => {
-        for (const text of ['secret', 'pässwörd-日本語-🔑', 'x'.repeat(1024), ' spaces ']) {
-            assert.equal(decrypt(encrypt(text)), text);
-        }
-    });
-
-    test('uses a fresh random IV each time, so the same password never looks the same twice', () => {
-        const a = encrypt('same');
-        const b = encrypt('same');
-        assert.notEqual(a.iv, b.iv);
-        assert.notEqual(a.encryptedData, b.encryptedData);
-    });
-
-    test('does not decrypt with the wrong IV or damaged data into the original', () => {
-        const { iv, encryptedData } = encrypt('secret');
-        const other = encrypt('other').iv;
-        let result;
-        try { result = decrypt({ iv: other, encryptedData }); } catch { result = null; }
-        assert.notEqual(result, 'secret');
-        assert.throws(() => decrypt({ iv, encryptedData: 'zz' }));
+describe('the server holds no vault key', () => {
+    // (a developer's backend/.env may still define ENCRYPTION_KEY from before; what matters is that nothing reads it)
+    test('no code reads ENCRYPTION_KEY and the server-side encryption module is gone', () => {
+        const fs = require('node:fs');
+        const path = require('node:path');
+        const sources = [];
+        const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+            if (e.name === 'node_modules' || e.name === 'test' || e.name === 'bruno') return;
+            const p = path.join(dir, e.name);
+            if (e.isDirectory()) walk(p); else if (e.name.endsWith('.js')) sources.push(p);
+        });
+        walk(path.join(__dirname, '..'));
+        for (const file of sources) assert.ok(!/ENCRYPTION_KEY/.test(fs.readFileSync(file, 'utf8')), `${file} still mentions ENCRYPTION_KEY`);
+        assert.equal(fs.existsSync(path.join(__dirname, '..', 'utils', 'encryption.js')), false);
     });
 });

@@ -7,6 +7,8 @@ import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion } from 'framer-motion';
 import { useTide } from '../context/useTide';
+import { signUp } from '../lib/accountApi';
+import { saveSignIn, saveVaultKey, setPendingRecoveryKey } from '../lib/session';
 
 export default function Signup() {
     const [form, setForm] = useState({
@@ -53,21 +55,18 @@ export default function Signup() {
         tide.begin();
 
         try {
-            const response = await fetch(`${host}/api/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: form.username,
-                    email: form.email,
-                    password: form.password
-                })
+            const result = await signUp(host, {
+                username: form.username,
+                email: form.email,
+                password: form.password
             });
 
-            const json = await response.json();
-            if (json.success) {
-                sessionStorage.setItem('token', json.authToken);
+            if (result.ok) {
+                saveSignIn({ token: result.token, userId: result.userId });
+                await saveVaultKey(result.vaultKey);
+                // the recovery key is shown once, as a popup, the first time the Account page is opened (not here: this
+                // is the water's moment); until then it is held in this tab only
+                setPendingRecoveryKey(result.recoveryKey);
                 succeeded.current = true;
                 tide.leave(cardRef.current);
                 await tide.complete();
@@ -77,9 +76,8 @@ export default function Signup() {
                 // the vault releases the water once its data is ready (see Manager.jsx)
             } else {
                 drained = failTide();
-                const errors = json.errors || [{ msg: json.error || 'Failed to create account' }];
-                errors.forEach(error => {
-                    toast.error(error.msg);
+                result.errors.forEach(msg => {
+                    toast.error(msg);
                 });
             }
         } catch (error) {
@@ -123,7 +121,7 @@ export default function Signup() {
                         </h2>
 
                         <p className="text-xs text-white/80 leading-relaxed mb-6 font-medium">
-                            Start securing your digital identity today with military-grade encryption and one-time password drops.
+                            Your logins are encrypted in your browser with a key made from your master password, so the server only stores data it cannot read.
                         </p>
 
                         <div className="space-y-3 text-xs text-white/90">
@@ -131,7 +129,7 @@ export default function Signup() {
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <ShieldCheck className="w-3.5 h-3.5" />
                                 </div>
-                                <span>Zero-knowledge client security</span>
+                                <span>Zero-knowledge: only you can read your vault</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">

@@ -1,0 +1,11 @@
+meta {
+  name: Prelogin (key settings for an email)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/auth/prelogin?email=tester@example.com
+  body: none
+  auth: none
+}

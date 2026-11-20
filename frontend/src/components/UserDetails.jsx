@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, User, Mail, Calendar, Clock, KeyRound, AlertTriangle, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Calendar, Clock, KeyRound, AlertTriangle, Trash2, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal';
@@ -9,6 +9,9 @@ import PasswordStrength from './Vault/PasswordStrength';
 import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion, AnimatePresence } from 'framer-motion';
+import { changePassword, reauthKey, regenerateRecoveryKey, unlock } from '../lib/accountApi';
+import RecoveryKey from './RecoveryKey';
+import { clearPendingRecoveryKey, getPendingRecoveryKey, getToken, getUserId, getVaultKey, saveSignIn, setPendingRecoveryKey as holdRecoveryKey, signOut } from '../lib/session';
 
 export default function UserDetails() {
     const [user, setUser] = useState({
@@ -26,10 +29,12 @@ export default function UserDetails() {
     const confirmRef = useRef(null);
     const doneTimer = useRef(null);
     const { controls: confirmShake, shake } = useShake();
-    const [modalState, setModalState] = useState({ isOpen: false, message: "", action: null });
+    const [modalState, setModalState] = useState({ isOpen: false, message: "", action: null, title: undefined, confirmText: "Yes, I'm sure" });
     const [confirmPassword, setConfirmPassword] = useState('');
-    const token = sessionStorage.getItem("token");
+    const token = getToken();
     const navigate = useNavigate();
+    // the recovery key made at sign-up, shown here once (see lib/session.js)
+    const [pendingRecoveryKey, setPendingRecoveryKey] = useState(getPendingRecoveryKey);
 
     useEffect(() => () => clearTimeout(doneTimer.current), []);
 
@@ -76,28 +81,32 @@ export default function UserDetails() {
         setIsLoading(true);
         setSaveState('saving');
         try {
-            const response = await authFetch(`${host}/api/auth/change-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': token
-                },
-                body: JSON.stringify({
-                    currentPassword: updatedPassword.currentPassword,
-                    newPassword: updatedPassword.newPassword
-                })
+            // the vault key is re-wrapped, not changed. In a locked tab the current password opens it for this one step.
+            let vaultKey = await getVaultKey();
+            if (!vaultKey) {
+                const opened = await unlock(host, token, updatedPassword.currentPassword);
+                if (!opened.ok) {
+                    setSaveState('idle');
+                    toast.error(opened.error);
+                    return;
+                }
+                vaultKey = opened.vaultKey;
+            }
+            const result = await changePassword(host, token, {
+                currentPassword: updatedPassword.currentPassword,
+                newPassword: updatedPassword.newPassword,
+                vaultKey
             });
-            const json = await response.json();
-            if (json.success) {
+            if (result.ok) {
                 // the button shows the success, so no toast
                 // the old token stops working with the old password, so swap in the fresh one
-                sessionStorage.setItem('token', json.authToken);
+                saveSignIn({ token: result.token, userId: getUserId() });
                 setUpdatedPassword({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
                 setSaveState('done');
                 doneTimer.current = setTimeout(() => setSaveState('idle'), 2400);
             } else {
                 setSaveState('idle');
-                toast.error(json.error || "Failed to update master password");
+                toast.error(result.error);
             }
         } catch {
             setSaveState('idle');
@@ -113,7 +122,15 @@ export default function UserDetails() {
     };
 
     const openConfirmModal = (actionType) => {
-        if (actionType === 'passwords') {
+        if (actionType === 'recovery') {
+            setModalState({
+                isOpen: true,
+                title: 'New recovery key',
+                confirmText: 'Make a new key',
+                message: "Making a new recovery key replaces the current one, which will stop working. You will see the new key once. Enter your master password to continue.",
+                action: (password) => handleNewRecoveryKey(password)
+            });
+        } else if (actionType === 'passwords') {
             setModalState({
                 isOpen: true,
                 message: "Are you sure you want to delete ALL stored passwords? This cannot be undone.",
@@ -128,6 +145,21 @@ export default function UserDetails() {
         }
     };
 
+    const handleNewRecoveryKey = async (password) => {
+        try {
+            const result = await regenerateRecoveryKey(host, token, password);
+            if (result.ok) {
+                closeModal();
+                holdRecoveryKey(result.recoveryKey); // kept in this tab until it has been saved, so a reload does not lose it
+                setPendingRecoveryKey(result.recoveryKey);
+            } else {
+                toast.error(result.error);
+            }
+        } catch {
+            toast.error("An error occurred. Check backend connection.");
+        }
+    };
+
     const handleDeleteAllPasswords = async (password) => {
         try {
             const response = await authFetch(`${host}/api/passwords`, {
@@ -136,7 +168,7 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: password })
+                body: JSON.stringify({ currentAuthKey: await reauthKey(host, token, password) })
             });
             const json = await response.json();
             if (json.success) {
@@ -158,12 +190,12 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: password })
+                body: JSON.stringify({ currentAuthKey: await reauthKey(host, token, password) })
             });
             const json = await response.json();
             if (json.success) {
                 toast.success(json.message || "Account deleted successfully");
-                sessionStorage.removeItem('token');
+                signOut();
                 closeModal();
                 navigate("/home");
             } else {
@@ -388,7 +420,29 @@ export default function UserDetails() {
                             </form>
                         </div>
                     </Reveal>
-                    <Reveal index={3} className="lg:col-span-5">
+                    <div className="lg:col-span-5 space-y-6">
+                    <Reveal index={3}>
+                        <div className="bg-[#e1eef5]/70 rounded-2xl border border-white/80 p-6 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl">
+                            <div className="flex items-center gap-2.5 mb-2">
+                                <div className="w-8 h-8 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] text-[#112838] flex items-center justify-center shadow-xs">
+                                    <ShieldAlert className="w-4 h-4" />
+                                </div>
+                                <h2 className="text-base font-bold text-[#0c1820]">Recovery key</h2>
+                            </div>
+                            <p className="text-xs text-[#3a5566] mb-4 leading-relaxed">
+                                If you forget your master password, your recovery key is the only way back into your vault. It is shown once, so if you did not save it you can make a new one at any time. The old key then stops working.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => openConfirmModal('recovery')}
+                                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-semibold text-[#112838] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
+                            >
+                                <KeyRound className="w-3.5 h-3.5" />
+                                <span>Make a new recovery key</span>
+                            </button>
+                        </div>
+                    </Reveal>
+                    <Reveal index={4}>
                         <div className="bg-[#e1eef5]/70 rounded-2xl border border-rose-300/80 p-6 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl">
                             <div className="flex items-center gap-2.5 mb-2 text-rose-600">
                                 <div className="w-8 h-8 rounded-xl bg-rose-100 border border-rose-200/80 flex items-center justify-center shadow-xs">
@@ -423,6 +477,7 @@ export default function UserDetails() {
                             </div>
                         </div>
                     </Reveal>
+                    </div>
                 </div>
             </div>
 
@@ -432,7 +487,8 @@ export default function UserDetails() {
                 onClose={closeModal}
                 onConfirm={() => modalState.action(confirmPassword)}
                 message={modalState.message}
-                confirmText="Yes, I'm sure"
+                title={modalState.title}
+                confirmText={modalState.confirmText || "Yes, I'm sure"}
             >
                 <input
                     type="password"
@@ -443,6 +499,13 @@ export default function UserDetails() {
                     className="mt-4 w-full px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] shadow-xs transition-all"
                 />
             </ConfirmationModal>
+            {/* after the dialog above, so it is on top of it (and of its fading backdrop) */}
+            {pendingRecoveryKey && (
+                <RecoveryKey
+                    recoveryKey={pendingRecoveryKey}
+                    onContinue={() => { clearPendingRecoveryKey(); setPendingRecoveryKey(null); }}
+                />
+            )}
         </div>
     );
 }

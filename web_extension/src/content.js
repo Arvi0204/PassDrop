@@ -37,6 +37,12 @@ const STYLE = `
   p { margin: 0; padding: 2px 10px 10px; color: #3a5566; font-size: 13px; }
 `;
 
+// what the menu says when the service worker has no logins to give: signed out, or signed in but locked
+const HINTS = {
+  auth: 'Sign in from the PassDrop toolbar icon to fill your logins here.',
+  locked: 'Unlock PassDrop from the toolbar icon to fill your logins here.'
+};
+
 let current = null; // the menu on screen: { host, anchor, root, close }
 let filling = false; // filling focuses the fields, which must not open the menu again
 const ask = async (message) => {
@@ -95,7 +101,7 @@ function showSiteIcon(avatar, url) {
   img.src = url;
 }
 
-function showMenu(anchor, logins) {
+function showMenu(anchor, logins, hint) {
   const host = document.createElement('div');
   const root = host.attachShadow({ mode: 'closed' }); // the page cannot reach into this
   const style = document.createElement('style');
@@ -115,7 +121,7 @@ function showMenu(anchor, logins) {
 
   if (!logins) {
     const note = document.createElement('p');
-    note.textContent = 'Sign in from the PassDrop toolbar icon to fill your logins here.';
+    note.textContent = hint;
     menu.append(note);
   } else {
     const rows = document.createElement('div');
@@ -228,17 +234,17 @@ async function onField(event) {
   const reply = await logins();
   if (asking === target) asking = null;
   if (mine !== ticket || !reply) return;
-  known = reply.ok ? reply.logins.length > 0 : reply.code === 'auth';
+  known = reply.ok ? reply.logins.length > 0 : reply.code in HINTS;
   if (!known) return;
   quiet(target);
-  showMenu(target, reply.ok ? reply.logins : null);
+  showMenu(target, reply.ok ? reply.logins : null, HINTS[reply.code]);
 }
 
 // learn at load whether this page's login form has anything to offer, so the first click is already quiet
 (async () => {
   if (findLoginFields(document).status !== 'ok') return;
   const reply = await logins();
-  known = !!reply && (reply.ok ? reply.logins.length > 0 : reply.code === 'auth');
+  known = !!reply && (reply.ok ? reply.logins.length > 0 : reply.code in HINTS);
 })();
 
 const insideMenu = (event) => !!current && event.composedPath().includes(current.host);

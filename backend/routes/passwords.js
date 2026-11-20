@@ -5,95 +5,56 @@ const requirePassword = require('../middleware/requirePassword');
 const { ObjectId } = require('mongodb');
 const { body, validationResult } = require('express-validator');
 const connectToDb = require('../db');
-const { encrypt, decrypt } = require('../utils/encryption');
+const { isBlob } = require('../utils/vaultFields');
 
-// Helper to get the passwords collection
+// Every login is one encrypted blob made in the browser. The server cannot read it: it stores the blob next to the owner
+// and the times, and hands it back. (Titles, addresses, usernames, passwords and notes are all inside the blob.)
+
 const getPasswordsCollection = async () => {
     const db = await connectToDb();
     return db.collection('passwords');
 };
 
-// Helper to safely decrypt a stored password record
-const toDecryptedItem = (item) => {
-    try {
-        return {
-            ...item,
-            password: item.iv && item.password
-                ? decrypt({ iv: item.iv, encryptedData: item.password })
-                : item.password
-        };
-    } catch (err) {
-        console.error(`Failed to decrypt password for item ${item._id}:`, err.message);
-        return { ...item, password: '' };
-    }
-};
+// The owner id is internal
+const toClient = ({ user, ...item }) => item;
 
-// Internal fields (the encryption IV and the owner id) are not part of the API
-const toClient = ({ iv, user, ...item }) => item;
-
-// ==========================================
-// Handlers for both RESTful and legacy paths
-// ==========================================
+const blobValidation = [body('blob', 'Something went wrong saving this login. Reload the page and try again.').custom(isBlob)];
 
 // GET all passwords
-const handleGetAll = async (req, res) => {
+router.get('/', fetchUser, async (req, res) => {
     try {
         const collection = await getPasswordsCollection();
         const records = await collection
             .find({ user: new ObjectId(req.user.id) })
             .sort({ createdAt: -1 })
             .toArray();
-
-        const decryptedRecords = records.map(toDecryptedItem).map(toClient);
-        return res.json(decryptedRecords);
+        return res.json(records.map(toClient));
     } catch (error) {
         console.error('Error fetching passwords:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-};
+});
 
 // CREATE new password item
-const handleCreate = async (req, res) => {
+router.post('/', fetchUser, blobValidation, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { url = '', username = '', password, title, notes, isFavorite } = req.body;
-
     try {
         const collection = await getPasswordsCollection();
-        const { iv, encryptedData } = encrypt(password);
-
-        const newDoc = {
-            url,
-            username,
-            password: encryptedData,
-            iv: iv.toString('hex'),
-            title: title || '',
-            notes: notes || '',
-            isFavorite: Boolean(isFavorite),
-            user: new ObjectId(req.user.id),
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-
+        const newDoc = { blob: req.body.blob, user: new ObjectId(req.user.id), createdAt: new Date(), updatedAt: new Date() };
         const result = await collection.insertOne(newDoc);
-
-        // Return the created item with PLAINTEXT password so frontend state stays consistent
-        return res.status(201).json(toClient({
-            ...newDoc,
-            _id: result.insertedId,
-            password // Keep plaintext in response for immediate client use
-        }));
+        return res.status(201).json(toClient({ ...newDoc, _id: result.insertedId }));
     } catch (error) {
         console.error('Error saving password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-};
+});
 
-// UPDATE existing password item
-const handleUpdate = async (req, res) => {
+// UPDATE existing password item (replaces the blob)
+router.put('/:id', fetchUser, blobValidation, async (req, res) => {
     const { id } = req.params;
 
     if (!ObjectId.isValid(id)) {
@@ -104,8 +65,6 @@ const handleUpdate = async (req, res) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({ success: false, errors: errors.array() });
     }
-
-    const { url, username, password, title, notes, isFavorite } = req.body;
 
     try {
         const collection = await getPasswordsCollection();
@@ -119,43 +78,20 @@ const handleUpdate = async (req, res) => {
             return res.status(403).json({ success: false, error: 'Not authorized to modify this entry' });
         }
 
-        const updates = { updatedAt: new Date() };
-        if (url !== undefined) updates.url = url;
-        if (username !== undefined) updates.username = username;
-        if (title !== undefined) updates.title = title;
-        if (notes !== undefined) updates.notes = notes;
-        if (isFavorite !== undefined) updates.isFavorite = Boolean(isFavorite);
-
-        if (password) {
-            const { iv, encryptedData } = encrypt(password);
-            updates.iv = iv.toString('hex');
-            updates.password = encryptedData;
-        }
-
-        const updatedDoc = await collection.findOneAndUpdate(
+        const updated = await collection.findOneAndUpdate(
             { _id: new ObjectId(id) },
-            { $set: updates },
+            { $set: { blob: req.body.blob, updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
-
-        // In MongoDB Node driver v6, findOneAndUpdate returns document directly (or inside .value depending on version)
-        const docToReturn = updatedDoc?.value || updatedDoc;
-        const decryptedDoc = toDecryptedItem(docToReturn);
-
-        // If password was updated with new plaintext, reflect it directly
-        if (password) {
-            decryptedDoc.password = password;
-        }
-
-        return res.json(toClient(decryptedDoc));
+        return res.json(toClient(updated?.value || updated));
     } catch (error) {
         console.error('Error updating password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-};
+});
 
 // DELETE single password item
-const handleDelete = async (req, res) => {
+router.delete('/:id', fetchUser, async (req, res) => {
     const { id } = req.params;
 
     if (!ObjectId.isValid(id)) {
@@ -175,15 +111,15 @@ const handleDelete = async (req, res) => {
         }
 
         await collection.deleteOne({ _id: new ObjectId(id) });
-        return res.json({ success: true, message: 'Password deleted successfully', deletedPass: toClient({ ...existing, password: undefined }) });
+        return res.json({ success: true, message: 'Password deleted successfully', deletedPass: { _id: existing._id } });
     } catch (error) {
         console.error('Error deleting password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-};
+});
 
-// DELETE all passwords for the user
-const handleDeleteAll = async (req, res) => {
+// DELETE all passwords for the user (asks for the master password again)
+router.delete('/', fetchUser, requirePassword, async (req, res) => {
     try {
         const collection = await getPasswordsCollection();
         const result = await collection.deleteMany({ user: new ObjectId(req.user.id) });
@@ -197,42 +133,6 @@ const handleDeleteAll = async (req, res) => {
         console.error('Error deleting all passwords:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
-};
-
-// ==========================================
-// RESTful Routes
-// ==========================================
-
-// Item fields must be plain strings of a sane size (objects would otherwise be stored as-is)
-const fieldValidation = [
-    body(['url', 'username', 'title']).optional({ values: 'null' }).isString().isLength({ max: 2048 }),
-    body('notes').optional({ values: 'null' }).isString().isLength({ max: 10000 }),
-    body('isFavorite').optional({ values: 'null' }).isBoolean(),
-];
-
-const createValidation = [
-    body('password', 'Password cannot be blank').isString().notEmpty().isLength({ max: 1024 }),
-    ...fieldValidation
-];
-
-const updateValidation = [
-    body('password').optional({ values: 'null' }).isString().isLength({ max: 1024 }),
-    ...fieldValidation
-];
-
-// GET all credentials for logged-in user
-router.get('/', fetchUser, handleGetAll);
-
-// CREATE new credential
-router.post('/', fetchUser, createValidation, handleCreate);
-
-// UPDATE credential by ID
-router.put('/:id', fetchUser, updateValidation, handleUpdate);
-
-// DELETE single credential by ID
-router.delete('/:id', fetchUser, handleDelete);
-
-// DELETE all credentials for logged-in user
-router.delete('/', fetchUser, requirePassword, handleDeleteAll);
+});
 
 module.exports = router;

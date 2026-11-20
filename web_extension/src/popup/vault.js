@@ -44,9 +44,10 @@ const link = (href, ...children) => h('a', { class: 'linkrow', href, target: '_b
 
 /**
  * The signed-in popup: a home screen (search, this site's login, everything else) and a detail
- * screen for one login. `onSignedOut()` after sign out; `onExpired()` when the server ends the sign-in.
+ * screen for one login. `onSignedOut()` after sign out; `onExpired()` when the server ends the sign-in;
+ * `onLocked()` if the vault key is gone (the popup then asks for the master password).
  */
-export function renderVault({ session, onSignedOut, onExpired }) {
+export function renderVault({ session, onSignedOut: signedOut, onExpired: expired, onLocked: locked }) {
   const state = {
     items: [], syncedAt: 0, hasData: false, loading: true, syncing: false, offline: false,
     error: '', query: '', chosen: 0, pageUrl: '', view: 'home', detailId: null
@@ -54,6 +55,12 @@ export function renderVault({ session, onSignedOut, onExpired }) {
   const root = h('div', { class: 'screen' });
   const generator = createGenerator();
   let menuOpen = false;
+  const timers = [];
+  // leaving this screen also stops its timers, so a screen that is gone never syncs again
+  const leave = (next) => () => { timers.forEach(clearInterval); next(); };
+  const onSignedOut = leave(signedOut);
+  const onExpired = leave(expired);
+  const onLocked = leave(locked);
 
   // ---------------------------------------------------------------- sync
   const syncText = h('span', null, '');
@@ -91,6 +98,9 @@ export function renderVault({ session, onSignedOut, onExpired }) {
       if (changed) redraw();
     } else if (reply.code === 'auth') {
       onExpired();
+      return;
+    } else if (reply.code === 'locked') {
+      onLocked();
       return;
     } else {
       state.offline = true;
@@ -291,6 +301,9 @@ export function renderVault({ session, onSignedOut, onExpired }) {
     } else if (reply.code === 'auth') {
       onExpired();
       return;
+    } else if (reply.code === 'locked') {
+      onLocked();
+      return;
     } else {
       state.loading = false;
       state.offline = true;
@@ -300,8 +313,7 @@ export function renderVault({ session, onSignedOut, onExpired }) {
     sync();
   })();
 
-  setInterval(paintSync, 1000);
-  setInterval(sync, RESYNC_EVERY_MS);
+  timers.push(setInterval(paintSync, 1000), setInterval(sync, RESYNC_EVERY_MS));
 
   showHome();
   return root;

@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createApi, ApiError } from '../src/api.js';
 
-// A fake server that answers the way backend/routes does.
+// A fake server that answers the way backend/routes does. The proofs and blobs are opaque strings here:
+// the real cryptography is tested in background.test.js.
 const jwt = (exp) =>
   `x.${Buffer.from(JSON.stringify({ user: { id: '1' }, exp })).toString('base64url')}.y`;
 const FUTURE = Math.floor(Date.now() / 1000) + 7 * 86400;
+const KDF = { name: 'PBKDF2-SHA256', iterations: 1000, salt: 'c2FsdA==' };
+const WRAPPED = 'v1.aXY=.Y3Q=';
 
 let server;
 let api;
@@ -24,21 +27,27 @@ before(async () => {
       };
       const body = raw ? JSON.parse(raw) : {};
 
+      if (req.url.startsWith('/api/auth/prelogin')) {
+        return new URL(req.url, 'http://x').searchParams.get('email') === 'none'
+          ? send(200, { success: true })
+          : send(200, { success: true, kdf: KDF });
+      }
       if (req.url === '/api/auth/login') {
-        if (body.password === 'wrong') {
+        if (body.authKey === 'wrong') {
           return send(400, { success: false, errors: [{ msg: 'Please login with valid credentials' }] });
         }
-        if (body.password === 'old-server') return send(200, { success: true, authToken: jwt(FUTURE) });
-        if (body.password === 'broken') return send(200, { success: true });
-        return send(200, { success: true, authToken: jwt(FUTURE), expiresAt: FUTURE * 1000 });
+        if (body.authKey === 'old-server') return send(200, { success: true, authToken: jwt(FUTURE), userId: 'u1', wrappedVaultKey: WRAPPED });
+        if (body.authKey === 'broken') return send(200, { success: true });
+        if (body.authKey === 'no-key') return send(200, { success: true, authToken: jwt(FUTURE), userId: 'u1' });
+        return send(200, { success: true, authToken: jwt(FUTURE), expiresAt: FUTURE * 1000, userId: 'u1', kdf: KDF, wrappedVaultKey: WRAPPED });
       }
       if (req.url === '/api/auth/me') {
         return req.headers['auth-token'] === 'good'
-          ? send(200, { username: 'u', email: 'u@x.com' })
+          ? send(200, { _id: 'u1', username: 'u', email: 'u@x.com', kdf: KDF, wrappedVaultKey: WRAPPED })
           : send(401, { success: false, error: 'Please authenticate using a valid token' });
       }
       if (req.url === '/api/passwords') {
-        if (req.headers['auth-token'] === 'good') return send(200, [{ _id: '1', url: 'a.com', username: 'u', password: 'p' }]);
+        if (req.headers['auth-token'] === 'good') return send(200, [{ _id: '1', blob: 'v1.x.y', createdAt: 'c', updatedAt: 'u' }]);
         if (req.headers['auth-token'] === 'shape') return send(200, { not: 'an array' });
         if (req.headers['auth-token'] === 'boom') return send(500, { success: false, error: 'Internal Server Error' });
         if (req.headers['auth-token'] === 'html') return send(502, '<html>bad gateway</html>');
@@ -54,11 +63,19 @@ before(async () => {
 
 after(() => server.close());
 
-test('login returns the token and the expiry the server sent', async () => {
+test('prelogin asks for the key settings of an email', async () => {
+  assert.deepEqual(await api.prelogin('a+b@x.com'), KDF);
+  assert.equal(seen.at(-1).url, '/api/auth/prelogin?email=a%2Bb%40x.com');
+  await assert.rejects(api.prelogin('none'), (e) => e.kind === 'server');
+});
+
+test('login sends only the derived proof, and returns the token, expiry, user id and wrapped key', async () => {
   const result = await api.login('a@x.com', 'right');
   assert.equal(result.expiresAt, FUTURE * 1000);
   assert.ok(result.token);
-  assert.deepEqual(seen.at(-1).body, { email: 'a@x.com', password: 'right' });
+  assert.equal(result.userId, 'u1');
+  assert.equal(result.wrappedVaultKey, WRAPPED);
+  assert.deepEqual(seen.at(-1).body, { email: 'a@x.com', authKey: 'right' });
 });
 
 test('login falls back to the expiry inside the token for older servers', async () => {
@@ -75,13 +92,20 @@ test('wrong credentials surface the server message from errors[]', async () => {
   });
 });
 
-test('a success reply with no token is rejected', async () => {
+test('a success reply with no token, or no wrapped vault key, is rejected', async () => {
   await assert.rejects(api.login('a@x.com', 'broken'), (e) => e.kind === 'server');
+  await assert.rejects(api.login('a@x.com', 'no-key'), (e) => e.kind === 'server');
 });
 
-test('vault is fetched with the auth-token header and returned as an array', async () => {
+test('me carries what unlocking needs: the key settings and the wrapped vault key', async () => {
+  const me = await api.getMe('good');
+  assert.deepEqual([me._id, me.kdf, me.wrappedVaultKey], ['u1', KDF, WRAPPED]);
+});
+
+test('vault is fetched with the auth-token header and returned as an array of encrypted blobs', async () => {
   const vault = await api.getVault('good');
   assert.equal(vault.length, 1);
+  assert.equal(vault[0].blob, 'v1.x.y');
   assert.equal(seen.at(-1).token, 'good');
   assert.equal(seen.at(-1).url, '/api/passwords');
 });
