@@ -12,10 +12,8 @@ const request = require('supertest');
 const { MongoMemoryServer } = require('mongodb-memory-server-core');
 
 process.env.NODE_ENV = 'test';
-// fresh random keys on every run, so no key is written down anywhere and a test can never depend on a particular one
-// (the test database is thrown away at the end, so nothing encrypted needs to be readable next time)
+// a fresh random secret on every run, so none is written down anywhere and a test can never depend on a particular one
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
-process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex');
 process.env.MONGODB_URI = 'mongodb://never-connects.invalid/'; // set first, so dotenv cannot bring in the one from backend/.env
 
 const connectToDb = require('../db');
@@ -88,4 +86,7 @@ const registrationBody = (overrides = {}) => ({
     wrappedVaultKey: sealed(), ...overrides
 });
 
-module.exports = { app, request: () => request(app), collection, all, reset, seedUser, login, signedInUser, registrationBody, random, sealed };
+/** An encrypted item as the browser would store it (the server cannot tell it from a real one). */
+const blob = () => `v1.${random(12)}.${random(80)}`;
+
+module.exports = { app, request: () => request(app), collection, all, reset, seedUser, login, signedInUser, registrationBody, blob, random, sealed };

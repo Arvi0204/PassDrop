@@ -1,10 +1,8 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Fail at start-up rather than on the first request
-if (!/^[0-9a-f]{64}$/i.test(process.env.ENCRYPTION_KEY || '')) {
-    throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
-}
+// The server holds no key that can read a vault: logins are encrypted in the browser. The only secret left is the one
+// that signs sign-in tokens.
 if ((process.env.JWT_SECRET || '').length < 32) {
     console.warn('JWT_SECRET is shorter than 32 characters; use a long random value');
 }

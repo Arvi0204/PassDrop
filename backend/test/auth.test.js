@@ -261,10 +261,11 @@ describe('delete account', () => {
     });
 
     test('deletes the account and all its logins, and nobody else', async () => {
+        const { blob } = require('../test-helpers/testApp');
         const user = await signedInUser({ email: 'a@example.com' });
         const other = await signedInUser({ email: 'b@example.com' });
         for (const who of [user, user, other]) {
-            await request().post('/api/passwords').set('auth-token', who.token).send({ password: 'secret', title: 't' });
+            await request().post('/api/passwords').set('auth-token', who.token).send({ blob: blob() });
         }
         assert.equal((await all('passwords')).length, 3);
 

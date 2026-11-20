@@ -1,5 +1,5 @@
-// Checks for the values a client sends that the server stores but cannot read: derived keys, key-derivation settings
-// and wrapped keys. The server cannot judge their content, only their shape and size.
+// Checks for the values a client sends that the server stores but cannot read: derived keys, key-derivation settings,
+// wrapped keys and encrypted items. The server cannot judge their content, only their shape and size.
 
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const SEALED = /^v1\.[A-Za-z0-9+/]+={0,2}\.[A-Za-z0-9+/]+={0,2}$/; // v1.<iv>.<ciphertext>, as vaultCrypto.js writes them
@@ -18,4 +18,7 @@ const isKdf = (v) =>
 
 const isWrappedKey = (v) => typeof v === 'string' && v.length <= 512 && SEALED.test(v);
 
-module.exports = { KDF_MIN_ITERATIONS, isBase64Of, isKdf, isWrappedKey };
+const MAX_BLOB = 32768;
+const isBlob = (v) => typeof v === 'string' && v.length <= MAX_BLOB && SEALED.test(v);
+
+module.exports = { KDF_MIN_ITERATIONS, isBase64Of, isKdf, isWrappedKey, isBlob, MAX_BLOB };
