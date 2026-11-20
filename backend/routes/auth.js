@@ -321,4 +321,30 @@ router.post('/recovery/reset', [
     }
 });
 
+// ========================================================
+// ROUTE 7: Replace the recovery key (POST /api/auth/recovery/rotate)
+// Signed in, and the master password proven again. The browser has made a new recovery key and sends only its proof and
+// the vault key wrapped by it; the old recovery key stops working. Like GitHub's recovery codes or Proton's recovery
+// phrase, this can be done whenever, so a key that was never saved (or was lost) is never the end of the story.
+// ========================================================
+router.post('/recovery/rotate', fetchUser, requirePassword, [
+    authKeyField('recoveryAuthKey'),
+    wrappedField('recoveryWrappedKey')
+], async (req, res) => {
+    const errors = validationResult(req).array();
+    if (errors.length !== 0) return res.status(400).json({ success: false, errors });
+    try {
+        const db = await connectToDb();
+        const { recoveryAuthKey, recoveryWrappedKey } = req.body;
+        await db.collection('users').updateOne(
+            { _id: new ObjectId(req.user.id) },
+            { $set: { recoveryAuthHash: await bcrypt.hash(recoveryAuthKey, BCRYPT_COST), recoveryWrappedKey, recoveryUpdatedAt: new Date() } }
+        );
+        return res.json({ success: true });
+    } catch (err) {
+        console.error('Recovery rotate error:', err.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
 module.exports = router;

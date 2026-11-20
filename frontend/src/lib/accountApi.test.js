@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { changePassword, recover, reauthKey, signIn, signUp, unlock } from './accountApi';
+import { changePassword, recover, reauthKey, regenerateRecoveryKey, signIn, signUp, unlock } from './accountApi';
 import {
     decryptItem, deriveKeys, deriveRecoveryKeys, encryptItem, normalizeRecoveryKey, unwrapVaultKey
 } from './vaultCrypto';
@@ -46,6 +46,11 @@ function fakeServer() {
             if (body.currentAuthKey !== user.authKey) return ok({ success: false, error: 'Current master password is incorrect' }, 403);
             Object.assign(user, { authKey: body.newAuthKey, kdf: body.newKdf, wrappedVaultKey: body.newWrappedVaultKey });
             return ok({ success: true, authToken: 'tok-3' });
+        }
+        if (path === '/api/auth/recovery/rotate') {
+            if (body.currentAuthKey !== user.authKey) return ok({ success: false, error: 'Current master password is incorrect' }, 403);
+            Object.assign(user, { recoveryAuthKey: body.recoveryAuthKey, recoveryWrappedKey: body.recoveryWrappedKey });
+            return ok({ success: true });
         }
         if (path === '/api/auth/recovery/unlock' || path === '/api/auth/recovery/reset') {
             const target = find(body.email);
@@ -191,5 +196,49 @@ describe('recover', () => {
         expect(await recover(HOST, { email: account.email, recoveryKey: wrong, newPassword: 'x' })).toEqual(message);
         expect(await recover(HOST, { email: account.email, recoveryKey: 'ABCD', newPassword: 'x' })).toEqual(message);
         expect(await recover(HOST, { email: 'nobody@example.com', recoveryKey: created.recoveryKey, newPassword: 'x' })).toEqual(message);
+    });
+});
+
+describe('regenerateRecoveryKey', () => {
+    it('makes a new key that recovers the account, the old one no longer does, and neither password nor key is sent', async () => {
+        const first = await signUp(HOST, account);
+        const old = users['t@example.com'].recoveryAuthKey;
+        requests.length = 0;
+        const result = await regenerateRecoveryKey(HOST, 'tok-1', PASSWORD);
+        expect(result.ok).toBe(true);
+        expect(result.recoveryKey).toMatch(/^([0-9A-F]{4}-){7}[0-9A-F]{4}$/);
+        expect(result.recoveryKey).not.toBe(first.recoveryKey);
+        for (const secret of [PASSWORD, result.recoveryKey, result.recoveryKey.replaceAll('-', '')]) expect(allText()).not.toContain(secret);
+
+        const stored = users['t@example.com'];
+        expect(stored.recoveryAuthKey).not.toBe(old);
+        // the new key unwraps the same vault key the password does (so the saved logins stay readable after a recovery)
+        const { recoveryAuthKey, recoveryWrapKey } = await deriveRecoveryKeys(result.recoveryKey, stored.kdf);
+        expect(recoveryAuthKey).toBe(stored.recoveryAuthKey);
+        const viaRecovery = await unwrapVaultKey(stored.recoveryWrappedKey, recoveryWrapKey);
+        const blob = await encryptItem(first.vaultKey, { title: 'GitHub' }, 'user-1');
+        expect(await decryptItem(viaRecovery, blob, 'user-1')).toEqual({ title: 'GitHub' });
+        // the old key can no longer recover the account; the new one can
+        expect((await recover(HOST, { email: 't@example.com', recoveryKey: first.recoveryKey, newPassword: 'another-password-9' })).ok).toBe(false);
+        expect((await recover(HOST, { email: 't@example.com', recoveryKey: result.recoveryKey, newPassword: 'another-password-9' })).ok).toBe(true);
+    });
+
+    it('says the master password is wrong, and sends nothing to change the key', async () => {
+        await signUp(HOST, account);
+        const before = { ...users['t@example.com'] };
+        requests.length = 0;
+        expect(await regenerateRecoveryKey(HOST, 'tok-1', 'not the password')).toEqual({ ok: false, error: 'That is not your master password.' });
+        expect(requests.some((r) => r.path.endsWith('/rotate'))).toBe(false);
+        expect(users['t@example.com'].recoveryAuthKey).toBe(before.recoveryAuthKey);
+    });
+
+    it("hands back the server's message when it refuses", async () => {
+        await signUp(HOST, account);
+        fetch.mockImplementationOnce(fetch.getMockImplementation()); // /me
+        const real = fetch.getMockImplementation();
+        fetch.mockImplementation(async (url, options) => (new URL(url).pathname.endsWith('/rotate')
+            ? { ok: false, status: 429, json: async () => ({ success: false, error: 'Too many failed attempts. Try again in a few minutes.' }) }
+            : real(url, options)));
+        expect(await regenerateRecoveryKey(HOST, 'tok-1', PASSWORD)).toEqual({ ok: false, error: 'Too many failed attempts. Try again in a few minutes.' });
     });
 });

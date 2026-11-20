@@ -91,6 +91,28 @@ export async function changePassword(host, token, { currentPassword, newPassword
     return { ok: true, token: json.authToken };
 }
 
+// A new recovery key, whenever the user wants one (like GitHub's recovery codes): the old key stops working. The master
+// password is proven twice over: its derived proof goes to the server, and opening the account's own wrapped vault key
+// with it proves it locally too (so this works in a locked tab as well). The raw recovery key never leaves the browser.
+export async function regenerateRecoveryKey(host, token, password) {
+    const { kdf, wrappedVaultKey } = await me(host, token);
+    const { authKey: currentAuthKey, wrapKey } = await deriveKeys(password, kdf);
+    let vaultKey;
+    try {
+        vaultKey = await unwrapVaultKey(wrappedVaultKey, wrapKey);
+    } catch (error) {
+        if (error instanceof VaultCryptoError) return { ok: false, error: WRONG_PASSWORD };
+        throw error;
+    }
+    const recoveryKey = newRecoveryKey();
+    const { recoveryAuthKey, recoveryWrapKey } = await deriveRecoveryKeys(recoveryKey, kdf); // the account's own salt
+    const { ok, json } = await post(host, '/api/auth/recovery/rotate',
+        { currentAuthKey, recoveryAuthKey, recoveryWrappedKey: await wrapVaultKey(vaultKey, recoveryWrapKey) },
+        { 'auth-token': token });
+    if (!ok || !json.success) return { ok: false, error: errorsOf(json, 'Failed to make a new recovery key')[0] };
+    return { ok: true, recoveryKey };
+}
+
 export async function recover(host, { email, recoveryKey, newPassword }) {
     const fail = { ok: false, error: BAD_RECOVERY };
     const prelogin = await call(`${host}/api/auth/prelogin?email=${encodeURIComponent(email)}`);

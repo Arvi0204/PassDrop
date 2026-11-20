@@ -1,6 +1,6 @@
 const { test, beforeEach, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const { reset, all, request, seedUser, random, sealed } = require('../test-helpers/testApp');
+const { reset, all, request, seedUser, signedInUser, random, sealed } = require('../test-helpers/testApp');
 const { LOCKED_MESSAGE } = require('../utils/passwordGuard');
 
 beforeEach(reset);
@@ -86,5 +86,56 @@ describe('recovery reset', () => {
         for (const overrides of [{ newAuthKey: 'x' }, { newWrappedVaultKey: 'x' }, { newKdf: { ...user.kdf, iterations: 1 } }, { newKdf: { ...user.kdf, salt: random(16) } }]) {
             assert.equal((await reset_(fresh(user, overrides))).status, 400, JSON.stringify(overrides).slice(0, 60));
         }
+    });
+});
+
+describe('replacing the recovery key', () => {
+    const rotate = (user, body) => request().post('/api/auth/recovery/rotate').set('auth-token', user.token).send(body);
+    const fresh = (user, overrides = {}) => ({ currentAuthKey: user.authKey, recoveryAuthKey: random(32), recoveryWrappedKey: sealed(), ...overrides });
+
+    test('needs the token and the master password proof', async () => {
+        const user = await signedInUser();
+        assert.equal((await request().post('/api/auth/recovery/rotate').send(fresh(user))).status, 401);
+        assert.equal((await rotate(user, fresh(user, { currentAuthKey: undefined }))).status, 400);
+        assert.equal((await rotate(user, fresh(user, { currentAuthKey: random(32) }))).status, 403);
+        assert.equal((await all('users'))[0].recoveryAuthHash.length > 0, true);
+        // nothing changed: the original recovery key still works
+        assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey })).status, 200);
+    });
+
+    test('rejects malformed new values and changes nothing', async () => {
+        const user = await signedInUser();
+        const before = (await all('users'))[0];
+        for (const overrides of [{ recoveryAuthKey: 'short' }, { recoveryAuthKey: undefined }, { recoveryWrappedKey: 'plain' }, { recoveryWrappedKey: undefined }]) {
+            assert.equal((await rotate(user, fresh(user, overrides))).status, 400, JSON.stringify(overrides).slice(0, 60));
+        }
+        const after = (await all('users'))[0];
+        assert.equal(after.recoveryAuthHash, before.recoveryAuthHash);
+        assert.equal(after.recoveryWrappedKey, before.recoveryWrappedKey);
+    });
+
+    test('the new recovery key works and the old one stops working, while sign-in and the session are untouched', async () => {
+        const user = await signedInUser();
+        const body = fresh(user);
+        const res = await rotate(user, body);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.success, true);
+
+        const old = await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey });
+        assert.equal(old.status, 400, 'the old recovery key');
+        const next = await unlock({ email: user.email, recoveryAuthKey: body.recoveryAuthKey });
+        assert.equal(next.status, 200);
+        assert.equal(next.body.recoveryWrappedKey, body.recoveryWrappedKey);
+
+        assert.equal((await request().get('/api/auth/me').set('auth-token', user.token)).status, 200, 'the session is still valid');
+        assert.equal((await request().post('/api/auth/login').send({ email: user.email, authKey: user.authKey })).status, 200, 'sign-in is unchanged');
+        const text = JSON.stringify((await all('users'))[0]);
+        assert.ok(!text.includes(body.recoveryAuthKey), 'only a hash of the new proof is stored');
+    });
+
+    test('wrong master password proofs count toward the lockout', async () => {
+        const user = await signedInUser();
+        for (let i = 0; i < 10; i++) assert.equal((await rotate(user, fresh(user, { currentAuthKey: random(32) }))).status, 403);
+        assert.equal((await rotate(user, fresh(user))).status, 429);
     });
 });

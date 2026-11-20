@@ -68,6 +68,44 @@ describe('the recovery key popup on the Account page', () => {
     });
 });
 
+describe('making a new recovery key from the Account page', () => {
+    it('asks for the master password, then shows the new key once in the popup, sending only proofs', async () => {
+        const user = userEvent.setup();
+        show();
+        await user.click(await screen.findByRole('button', { name: /Make a new recovery key/ }));
+        expect(screen.getByText(/replaces the current one/)).toBeTruthy();
+        await user.type(passwordBox(), MASTER);
+        await user.click(screen.getByRole('button', { name: /Make a new key/ }));
+
+        const shown = (await screen.findByTestId('recovery-key')).textContent;
+        expect(shown).toMatch(/^([0-9A-F]{4}-){7}[0-9A-F]{4}$/);
+        const [url, options] = calls('POST').at(-1);
+        expect(url).toBe('http://api.test/api/auth/recovery/rotate');
+        const sent = JSON.parse(options.body);
+        expect(Object.keys(sent).sort()).toEqual(['currentAuthKey', 'recoveryAuthKey', 'recoveryWrappedKey']);
+        expect(sent.currentAuthKey).toBe(await authKeyFor(MASTER));
+        expect(options.body).not.toContain(MASTER);
+        expect(options.body).not.toContain(shown.replaceAll('-', ''));
+        expect(options.body).not.toContain(shown);
+
+        await user.click(screen.getByRole('checkbox', { name: 'I have saved my recovery key' }));
+        await user.click(screen.getByRole('button', { name: /Continue/ }));
+        await waitFor(() => expect(screen.queryByTestId('recovery-key')).toBeNull());
+        expect(getPendingRecoveryKey()).toBeNull();
+    });
+
+    it('says so when the master password is wrong, and makes no new key', async () => {
+        const user = userEvent.setup();
+        show();
+        await user.click(await screen.findByRole('button', { name: /Make a new recovery key/ }));
+        await user.type(passwordBox(), 'not-the-password');
+        await user.click(screen.getByRole('button', { name: /Make a new key/ }));
+        await waitFor(() => expect(toast.error).toHaveBeenCalledWith('That is not your master password.'));
+        expect(screen.queryByTestId('recovery-key')).toBeNull();
+        expect(calls('POST')).toHaveLength(0);
+    });
+});
+
 describe('deleting from the Account page', () => {
     it('Delete All Passwords sends a currentAuthKey derived from the master password that was typed', async () => {
         const user = userEvent.setup();
