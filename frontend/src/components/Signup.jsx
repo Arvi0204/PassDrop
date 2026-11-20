@@ -118,7 +118,7 @@ export default function Signup() {
                         </h2>
 
                         <p className="text-xs text-white/80 leading-relaxed mb-6 font-medium">
-                            Start securing your digital identity today with military-grade encryption and one-time password drops.
+                            Your logins are encrypted in your browser with a key made from your master password, so the server only stores data it cannot read.
                         </p>
 
                         <div className="space-y-3 text-xs text-white/90">
@@ -126,7 +126,7 @@ export default function Signup() {
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <ShieldCheck className="w-3.5 h-3.5" />
                                 </div>
-                                <span>Zero-knowledge client security</span>
+                                <span>Zero-knowledge: only you can read your vault</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">

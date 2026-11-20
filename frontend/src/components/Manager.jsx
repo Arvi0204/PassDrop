@@ -14,6 +14,7 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
+import LockScreen from './LockScreen';
 import { getToken } from '../lib/session';
 import { useTide } from '../context/useTide';
 import { playVaultEntrance } from '../lib/vaultEntrance';
@@ -22,7 +23,7 @@ import { variants, spring, ease, duration } from '../lib/motion';
 
 export default function Manager() {
     const navigate = useNavigate();
-    const { passwordArray, getPasswords, addPass, editPass, deletePass } =
+    const { passwordArray, locked, getPasswords, addPass, editPass, deletePass } =
         useContext(passwordContext);
 
     const [selectedId, setSelectedId] = useState(null);
@@ -64,15 +65,14 @@ export default function Manager() {
         return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance });
     }, [fetched, tide]);
 
-    // Authentication check & initial data fetch
+    // Authentication check & initial data fetch (a locked vault fetches nothing until it is unlocked)
     useEffect(() => {
-        const token = getToken();
-        if (!token) {
+        if (!getToken()) {
             navigate('/login');
-        } else {
+        } else if (!locked) {
             getPasswords().then(() => setFetched(true));
         }
-    }, []);
+    }, [locked]);
 
     // Filter and search credentials
     const filteredItems = useMemo(() => {
@@ -91,12 +91,13 @@ export default function Manager() {
         });
     }, [passwordArray, activeFilter, searchQuery]);
 
-    // Keep active item valid
+    // Keep active item valid (a login that could not be decrypted has nothing to show, so it is never selected)
     useEffect(() => {
-        if (filteredItems.length > 0) {
-            const currentStillExists = filteredItems.some((item) => item._id === selectedId);
+        const selectable = filteredItems.filter((item) => !item.unreadable);
+        if (selectable.length > 0) {
+            const currentStillExists = selectable.some((item) => item._id === selectedId);
             if (!currentStillExists) {
-                setSelectedId(filteredItems[0]._id);
+                setSelectedId(selectable[0]._id);
             }
         } else {
             setSelectedId(null);
@@ -178,6 +179,8 @@ export default function Manager() {
     const favoritesCount = useMemo(() => {
         return passwordArray.filter((i) => i.isFavorite).length;
     }, [passwordArray]);
+
+    if (locked && getToken()) return <LockScreen />;
 
     return (
         <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
@@ -309,16 +312,29 @@ export default function Manager() {
                                                 default: { duration: duration.base, ease: ease.out }
                                             }}
                                         >
-                                            <VaultItemCard
-                                                item={item}
-                                                isSelected={item._id === selectedId}
-                                                onSelect={(clickedItem) => {
-                                                    setSelectedId(clickedItem._id);
-                                                    setMobileView('detail');
-                                                }}
-                                                onCopyUsername={(username) => handleCopy(username, 'Username')}
-                                                onCopyPassword={(password) => handleCopy(password, 'Password')}
-                                            />
+                                            {item.unreadable ? (
+                                                <div className="p-3.5 rounded-xl border bg-[#e1eef5]/65 border-white/70 shadow-xs flex items-center justify-between gap-3">
+                                                    <span className="text-xs text-[#3a5566]">This login could not be decrypted</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteClick(item._id)}
+                                                        className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer shrink-0"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <VaultItemCard
+                                                    item={item}
+                                                    isSelected={item._id === selectedId}
+                                                    onSelect={(clickedItem) => {
+                                                        setSelectedId(clickedItem._id);
+                                                        setMobileView('detail');
+                                                    }}
+                                                    onCopyUsername={(username) => handleCopy(username, 'Username')}
+                                                    onCopyPassword={(password) => handleCopy(password, 'Password')}
+                                                />
+                                            )}
                                         </motion.div>
                                     ))}
                                 </AnimatePresence>

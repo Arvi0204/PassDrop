@@ -1,35 +1,55 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PasswordContext from "./passwordContext";
 import toast from "react-hot-toast";
 import authFetch from "../lib/authFetch";
-import { getToken } from "../lib/session";
+import { getToken, getUserId, getVaultKey, hasVaultKey, subscribe } from "../lib/session";
+import { decryptItem, encryptItem } from "../lib/vaultCrypto";
+
+// What goes inside an encrypted login; the server only ever sees the encrypted blob
+const FIELDS = ['title', 'url', 'username', 'password', 'notes', 'isFavorite'];
+const plainOf = (item) => Object.fromEntries(FIELDS.filter((f) => item[f] !== undefined).map((f) => [f, item[f]]));
+const NO_KEY = 'Your vault is locked';
+
+// A login from the server: decrypted, or { _id, unreadable } when its blob cannot be opened (so one bad item never hides the rest)
+async function openItem(vaultKey, userId, record) {
+    try {
+        const { _id, createdAt, updatedAt } = record;
+        return { ...(await decryptItem(vaultKey, record.blob, userId)), _id, createdAt, updatedAt };
+    } catch {
+        return { _id: record._id, unreadable: true };
+    }
+}
 
 const PasswordState = (props) => {
     const host = import.meta.env.VITE_BACKEND;
     const [passwordArray, setPasswordArray] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    // locked = no vault key in this tab (a reopened tab, or after Lock). Nothing is fetched or shown until it is unlocked.
+    const [locked, setLocked] = useState(!hasVaultKey());
+    useEffect(() => subscribe(() => {
+        const nowLocked = !hasVaultKey();
+        setLocked(nowLocked);
+        if (nowLocked) setPasswordArray([]);
+    }), []);
 
-    // Fetch all credentials from backend
+    const headers = () => ({ 'Content-Type': 'application/json', 'auth-token': getToken() });
+
+    // Fetch all credentials from backend and decrypt them
     const getPasswords = async () => {
-        const token = getToken();
-        if (!token) return;
+        const vaultKey = await getVaultKey();
+        if (!getToken() || !vaultKey) return;
 
         setIsLoading(true);
         try {
-            const response = await authFetch(`${host}/api/passwords`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': token
-                }
-            });
+            const response = await authFetch(`${host}/api/passwords`, { method: 'GET', headers: headers() });
 
             if (!response.ok) {
                 throw new Error('Failed to fetch passwords');
             }
 
             const json = await response.json();
-            setPasswordArray(Array.isArray(json) ? json : []);
+            const userId = getUserId();
+            setPasswordArray(Array.isArray(json) ? await Promise.all(json.map((record) => openItem(vaultKey, userId, record))) : []);
         } catch (error) {
             console.error("Fetch passwords error:", error.message);
             toast.error(error.message);
@@ -45,21 +65,22 @@ const PasswordState = (props) => {
             : { url: urlOrItem, username, password, title, notes, isFavorite };
 
         try {
+            const vaultKey = await getVaultKey();
+            if (!vaultKey) return { success: false, error: NO_KEY };
+            const item = { title: '', url: '', username: '', password: '', notes: '', isFavorite: false, ...plainOf(payload) };
             const response = await authFetch(`${host}/api/passwords`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': getToken()
-                },
-                body: JSON.stringify(payload)
+                headers: headers(),
+                body: JSON.stringify({ blob: await encryptItem(vaultKey, item, getUserId()) })
             });
 
-            const savedItem = await response.json();
-            if (response.ok && savedItem._id) {
+            const saved = await response.json();
+            if (response.ok && saved._id) {
+                const savedItem = await openItem(vaultKey, getUserId(), saved);
                 setPasswordArray(prevArray => [savedItem, ...prevArray]);
                 return { success: true, item: savedItem };
             } else {
-                const errorMsg = savedItem.error || savedItem.errors?.[0]?.msg || 'Failed to save password';
+                const errorMsg = saved.error || saved.errors?.[0]?.msg || 'Failed to save password';
                 toast.error(errorMsg);
                 return { success: false, error: errorMsg };
             }
@@ -83,23 +104,26 @@ const PasswordState = (props) => {
         }
 
         try {
+            const vaultKey = await getVaultKey();
+            const existing = passwordArray.find(pass => pass._id === id);
+            if (!vaultKey || !existing || existing.unreadable) return { success: false, error: NO_KEY };
+            // the whole login is encrypted again, so a partial update (like the favorite star) is merged into what is saved
+            const merged = plainOf({ ...existing, ...plainOf(payload) });
             const response = await authFetch(`${host}/api/passwords/${id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': getToken()
-                },
-                body: JSON.stringify(payload)
+                headers: headers(),
+                body: JSON.stringify({ blob: await encryptItem(vaultKey, merged, getUserId()) })
             });
 
-            const updatedItem = await response.json();
-            if (response.ok && updatedItem._id) {
+            const updated = await response.json();
+            if (response.ok && updated._id) {
+                const updatedItem = await openItem(vaultKey, getUserId(), updated);
                 setPasswordArray(prevArray =>
-                    prevArray.map(pass => (pass._id === id ? { ...pass, ...updatedItem } : pass))
+                    prevArray.map(pass => (pass._id === id ? updatedItem : pass))
                 );
                 return { success: true, item: updatedItem };
             } else {
-                const errorMsg = updatedItem.error || 'Failed to update credential';
+                const errorMsg = updated.error || updated.errors?.[0]?.msg || 'Failed to update credential';
                 toast.error(errorMsg);
                 return { success: false, error: errorMsg };
             }
@@ -115,10 +139,7 @@ const PasswordState = (props) => {
         try {
             const response = await authFetch(`${host}/api/passwords/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': getToken()
-                }
+                headers: headers()
             });
 
             const json = await response.json();
@@ -136,15 +157,13 @@ const PasswordState = (props) => {
         }
     };
 
-    // Delete all credentials
-    const deleteAllPasswords = async () => {
+    // Delete all credentials (the server wants the proof of the master password: see accountApi.reauthKey)
+    const deleteAllPasswords = async (currentAuthKey) => {
         try {
             const response = await authFetch(`${host}/api/passwords`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': getToken()
-                }
+                headers: headers(),
+                body: JSON.stringify({ currentAuthKey })
             });
 
             const json = await response.json();
@@ -167,6 +186,7 @@ const PasswordState = (props) => {
             passwordArray,
             setPasswordArray,
             isLoading,
+            locked,
             getPasswords,
             addPass,
             editPass,

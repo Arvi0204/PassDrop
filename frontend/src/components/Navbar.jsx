@@ -7,6 +7,7 @@ import {
   User,
   Download,
   LogOut,
+  Lock,
   Menu,
   X
 } from "lucide-react";
@@ -16,7 +17,7 @@ import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 import { spring } from "../lib/motion";
 import { useTide } from "../context/useTide";
-import { getToken, signOut } from "../lib/session";
+import { getToken, lock, signOut } from "../lib/session";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
@@ -50,6 +51,12 @@ const Navbar = () => {
     // navigate and drain in the same tick, so the first frame already has the login page under the water
     navigate("/login");
     tide.drain();
+  };
+
+  // Lock keeps the sign-in but forgets the vault key; the vault page then asks for the master password
+  const lockVault = () => {
+    lock();
+    navigate("/");
   };
 
   const navLinks = [
@@ -127,6 +134,15 @@ const Navbar = () => {
             <div className="flex items-center gap-2 sm:gap-3">
               {token ? (
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={lockVault}
+                    type="button"
+                    title="Lock vault"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#112838] hover:text-[#0c1820] bg-white/60 hover:bg-white/90 border border-white/90 shadow-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-[#4a6b82]" />
+                    <span className="hidden sm:inline">Lock</span>
+                  </button>
                   <button
                     onClick={openLogoutDialog}
                     type="button"

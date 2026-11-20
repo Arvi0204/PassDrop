@@ -8,8 +8,8 @@ const Home = () => {
 
     const features = [
         {
-            title: 'AES-256 GCM Vault',
-            description: 'Zero-knowledge client-side encryption. Passwords and credentials are fully shielded before reaching the database.',
+            title: 'AES-256-GCM Vault',
+            description: 'Your logins are encrypted in your browser with AES-256-GCM, using a key derived from your master password with PBKDF2. The server only stores encrypted data it cannot read.',
             icon: KeyRound,
             accent: 'text-[#112838] bg-[#d0e4ee] border-[#b8d6e5]'
         },
@@ -39,7 +39,7 @@ const Home = () => {
                     <Reveal index={0}>
                         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/90 bg-white/80 text-[#0e293a] text-xs font-semibold mb-8 shadow-xs">
                             <span className="w-2 h-2 rounded-full bg-[#112838] animate-pulse" />
-                            <span>Zero-knowledge · AES-256 encrypted · Secure by design</span>
+                            <span>Zero-knowledge · AES-256-GCM · Encrypted in your browser</span>
                         </div>
                     </Reveal>
 
@@ -56,7 +56,11 @@ const Home = () => {
                     <Reveal index={2}>
                         <p className="text-base sm:text-lg text-[#1e3b4d] max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
                             PassDrop securely stores, generates, and autofills your digital identities.
-                            Experience clean Nordic frosted glass privacy engineered for zero-knowledge safety.
+                            Everything is encrypted in your browser before it is saved, so only you can read it.
+                        </p>
+                        <p className="text-sm text-[#3a5566] max-w-2xl mx-auto -mt-6 mb-10 leading-relaxed">
+                            That also means we cannot reset your master password for you. If you forget it and lose your
+                            recovery key, nobody, including PassDrop, can recover your vault.
                         </p>
                     </Reveal>
 

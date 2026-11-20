@@ -101,7 +101,7 @@ export default function Login() {
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <ShieldCheck className="w-3.5 h-3.5" />
                                 </div>
-                                <span>AES-256 client-level encryption</span>
+                                <span>AES-256-GCM encryption in your browser</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
