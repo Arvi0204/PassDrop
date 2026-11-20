@@ -1,5 +1,6 @@
 // Every call to the PassDrop API lives here. Contract: backend/routes/auth.js and passwords.js.
 //  - the token goes in an `auth-token` header (the raw JWT, no "Bearer")
+//  - the server only ever sees keys derived from the password, never the password (src/background.js does the crypto)
 //  - failures come back as { success: false, errors: [{ msg }] } or { success: false, error }
 
 export class ApiError extends Error {
@@ -56,14 +57,26 @@ export function createApi(baseUrl) {
     return json;
   }
 
-  /** POST /api/auth/login -> { token, expiresAt } */
-  async function login(email, password) {
-    const json = await request('/api/auth/login', { method: 'POST', body: { email, password } });
-    if (!json?.authToken) throw new ApiError('Unexpected reply from the server.', 'server');
-    return { token: json.authToken, expiresAt: json.expiresAt || expiryFromToken(json.authToken) };
+  /** GET /api/auth/prelogin -> the key-derivation settings ({ name, iterations, salt }) for this email */
+  async function prelogin(email) {
+    const json = await request(`/api/auth/prelogin?email=${encodeURIComponent(email)}`);
+    if (!json?.kdf) throw new ApiError('Unexpected reply from the server.', 'server');
+    return json.kdf;
   }
 
-  /** GET /api/auth/me -> the signed-in user ({ username, email, ... }) */
+  /** POST /api/auth/login with the proof derived from the password (never the password) -> { token, expiresAt, userId, wrappedVaultKey } */
+  async function login(email, authKey) {
+    const json = await request('/api/auth/login', { method: 'POST', body: { email, authKey } });
+    if (!json?.authToken || !json.wrappedVaultKey) throw new ApiError('Unexpected reply from the server.', 'server');
+    return {
+      token: json.authToken,
+      expiresAt: json.expiresAt || expiryFromToken(json.authToken),
+      userId: String(json.userId),
+      wrappedVaultKey: json.wrappedVaultKey
+    };
+  }
+
+  /** GET /api/auth/me -> the signed-in user ({ _id, email, kdf, wrappedVaultKey, ... }) */
   function getMe(token) {
     return request('/api/auth/me', { token });
   }
@@ -75,5 +88,5 @@ export function createApi(baseUrl) {
     return json;
   }
 
-  return { login, getMe, getVault };
+  return { prelogin, login, getMe, getVault };
 }

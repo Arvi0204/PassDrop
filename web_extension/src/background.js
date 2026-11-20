@@ -2,12 +2,15 @@ import { ApiError } from './api.js';
 import { api } from './client.js';
 import { entriesForPage } from './match.js';
 import { titleOf } from './popup/format.js';
-import { getSession, saveSession, clearSession, getCachedVault, setCachedVault } from './storage.js';
+import { getSession, saveSession, clearSession, saveVaultKey, getCachedVault, setCachedVault } from './storage.js';
+import { KDF_MIN_ITERATIONS, deriveKeys, unwrapVaultKey, exportVaultKey } from '../../frontend/src/lib/vaultCrypto.js';
 
-// The service worker is the only place that talks to the server or touches the token.
+// The service worker is the only place that talks to the server or touches the token, the vault key or a
+// password. It derives the keys here: the server only ever gets a proof derived from the master password, and
+// the vault key it sends back is unwrapped here and kept in storage.session (see storage.js).
 // The popup asks it for things with chrome.runtime.sendMessage (pages never can):
 //   { type: 'session' }                    -> { ok, session: { email, expiresAt } | null }
-//   { type: 'login', email, password }     -> { ok, session }
+//   { type: 'login', email, password }     -> { ok, session }           derives keys, signs in
 //   { type: 'logout' }                     -> { ok }
 //   { type: 'vault' }                      -> { ok, vault, syncedAt }   what we have now
 //   { type: 'sync' }                       -> { ok, vault, syncedAt }   fetch the latest
@@ -16,6 +19,11 @@ import { getSession, saveSession, clearSession, getCachedVault, setCachedVault }
 //   { type: 'logins' }                     -> { ok, logins: [{ id, title, username }] }   no passwords
 //   { type: 'credentials', id }            -> { ok, username, password }                  one login, after a click
 // A failure is { ok: false, code: 'auth' | 'network' | 'server', error }.
+
+// A server that asked for fewer iterations would make the master password cheap to guess from what it receives.
+// Only the tests' bundler sets TEST_KDF_MIN_ITERATIONS (a define; it has no VITE_ prefix, so no .env file can set it).
+const MIN_ITERATIONS = Number(import.meta.env.TEST_KDF_MIN_ITERATIONS) || KDF_MIN_ITERATIONS;
+const WRONG_PASSWORD = 'That is not your master password.';
 
 const SYNC_ALARM = 'sync';
 const SYNC_EVERY_MINUTES = 5;
@@ -27,6 +35,22 @@ const fromExtensionPage = (sender) =>
 const fromTopFrame = (sender) => sender.id === chrome.runtime.id && !!sender.tab && sender.frameId === 0 && !!sender.url;
 
 const publicSession = (session) => (session ? { email: session.email, expiresAt: session.expiresAt } : null);
+
+function checkedKdf(kdf) {
+  if (!kdf || kdf.name !== 'PBKDF2-SHA256' || !(kdf.iterations >= MIN_ITERATIONS) || typeof kdf.salt !== 'string') {
+    throw new ApiError('The server sent unsafe key settings. Not signing in.', 'server');
+  }
+  return kdf;
+}
+
+/** The vault key (base64) from what the server stored: the key wrapped by the master password. */
+async function unwrapWith(wrapKey, wrappedVaultKey) {
+  try {
+    return await exportVaultKey(await unwrapVaultKey(wrappedVaultKey, wrapKey));
+  } catch {
+    throw new ApiError(WRONG_PASSWORD, 'auth');
+  }
+}
 
 let syncing = null; // one fetch at a time, even if the popup, a page and the alarm all ask
 
@@ -63,10 +87,15 @@ async function handle(message, sender) {
 
     case 'login': {
       if (!fromExtensionPage(sender)) break;
-      const { token, expiresAt } = await api.login(String(message.email || '').trim(), String(message.password || ''));
-      const me = await api.getMe(token).catch(() => null);
-      const session = { token, expiresAt, email: me?.email || String(message.email).trim() };
+      const email = String(message.email || '').trim().toLowerCase();
+      const { authKey, wrapKey } = await deriveKeys(String(message.password || ''), checkedKdf(await api.prelogin(email)));
+      const { token, expiresAt, userId, wrappedVaultKey } = await api.login(email, authKey);
+      const key = await unwrapWith(wrapKey, wrappedVaultKey);
+      // everything worked: only now replace what was stored, so a wrong password stores nothing
+      const session = { token, expiresAt, email, userId };
+      await clearSession();
       await saveSession(session);
+      await saveVaultKey(key);
       return { ok: true, session: publicSession(session) };
     }
 

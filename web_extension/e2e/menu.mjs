@@ -1,6 +1,9 @@
 // Runs the built content script (dist/content.js) in real Chrome pages and drives it with real, trusted
-// mouse and key events through the DevTools protocol. Only the service worker is stood in for:
-// chrome.runtime.sendMessage answers the way src/background.js does.
+// mouse and key events through the DevTools protocol. The service worker is the real src/background.js, bundled
+// and run here in Node with a fake `chrome` (storage in memory), talking to a stub PassDrop API. The stub speaks
+// prelogin, a sign-in proof instead of a password and a wrapped vault key, made with the web app's own
+// vaultCrypto (1000 iterations, so it is fast), and hands the logins out as plain items. The page reaches the
+// worker through a DevTools binding that stands in for chrome.runtime.sendMessage.
 //
 //   npm run test:browser          builds the content script first, then runs this
 //   CHROME_PATH=/path/to/chrome node e2e/menu.mjs
@@ -13,6 +16,8 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
+import { newKdf, deriveKeys, newVaultKey, wrapVaultKey } from '../../frontend/src/lib/vaultCrypto.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const code = readFileSync(join(root, 'dist/content.js'), 'utf8');
@@ -41,6 +46,68 @@ const web = createServer((req, res) => {
 await new Promise((r) => web.listen(0, r));
 const origin = `http://localhost:${web.address().port}`;
 
+// ---- the stub API and the real service worker
+const USER = 'u1';
+const PASSWORD = 'correct horse battery staple';
+const kdf = newKdf(1000);
+const keys = await deriveKeys(PASSWORD, kdf);
+const vaultKey = await newVaultKey();
+const wrappedVaultKey = await wrapVaultKey(vaultKey, keys.wrapKey);
+const DEFAULT_LOGINS = [{ id: 'a', title: 'Local dev', username: 'alice' }];
+let items = [];
+// the logins are saved for this page's address (host and port), with the password the checks expect
+const setLogins = (logins) => {
+  items = logins.map((l) => ({
+    _id: l.id, title: l.title, url: `localhost:${web.address().port}`, username: l.username, password: 's3cret!'
+  }));
+};
+const api = createServer((req, res) => {
+  let raw = '';
+  req.on('data', (c) => (raw += c));
+  req.on('end', () => {
+    const send = (status, body) => res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
+    const { pathname } = new URL(req.url, 'http://x');
+    const body = raw ? JSON.parse(raw) : {};
+    if (pathname === '/api/auth/prelogin') return send(200, { success: true, kdf });
+    if (pathname === '/api/auth/login') {
+      return body.authKey === keys.authKey
+        ? send(200, { success: true, authToken: 'tok', expiresAt: Date.now() + 36e5, userId: USER, kdf, wrappedVaultKey })
+        : send(400, { success: false, errors: [{ msg: 'Please login with valid credentials' }] });
+    }
+    if (req.headers['auth-token'] !== 'tok') return send(401, { success: false, error: 'Please authenticate using a valid token' });
+    if (pathname === '/api/passwords') return send(200, items);
+    send(404, { success: false, error: 'not found' });
+  });
+});
+await new Promise((r) => api.listen(0, r));
+
+const EXT = 'chrome-extension://ext/';
+const area = (data) => ({
+  get: async (key) => (key in data ? { [key]: data[key] } : {}),
+  set: async (values) => Object.assign(data, values),
+  remove: async (keys) => { for (const key of [].concat(keys)) delete data[key]; }
+});
+const localData = {};
+const sessionData = {}; // chrome.storage.session: the vault key and the cached vault
+let listener;
+globalThis.chrome = {
+  runtime: { id: 'ext', getURL: (path = '') => `${EXT}${path}`, onMessage: { addListener: (fn) => { listener = fn; } } },
+  storage: { local: area(localData), session: area(sessionData) },
+  alarms: { get: async () => ({}), create() {}, onAlarm: { addListener() {} } }
+};
+const worker = await build({
+  entryPoints: [join(root, 'src/background.js')], bundle: true, write: false, format: 'esm', logLevel: 'silent',
+  define: {
+    'import.meta.env.VITE_BACKEND': JSON.stringify(`http://127.0.0.1:${api.address().port}`),
+    'import.meta.env.VITE_WEB_APP_URL': '"http://app.test"',
+    'import.meta.env.TEST_KDF_MIN_ITERATIONS': '"1000"'
+  }
+});
+await import(`data:text/javascript;base64,${Buffer.from(worker.outputFiles[0].text).toString('base64')}`);
+const toWorker = (message, sender) => new Promise((resolve) => listener(message, sender, resolve));
+const popup = { id: 'ext', url: `${EXT}popup.html` };
+let pageUrl = '';
+
 const port = 9600 + Math.floor(Math.random() * 300);
 const proc = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'passdrop-e2e-'))}`,
@@ -55,7 +122,11 @@ for (let i = 0; i < 60 && !page; i++) {
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => (ws.onopen = r));
 let id = 0; const waiting = new Map();
-ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && waiting.has(d.id)) { waiting.get(d.id)(d); waiting.delete(d.id); } };
+ws.onmessage = (m) => {
+  const d = JSON.parse(m.data);
+  if (d.id && waiting.has(d.id)) { waiting.get(d.id)(d); waiting.delete(d.id); }
+  if (d.method === 'Runtime.bindingCalled' && d.params.name === '__bridge') answerPage(d.params.payload);
+};
 const send = (method, params = {}) => new Promise((res) => { const i = ++id; waiting.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
 const evaluate = async (expression) => {
   const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
@@ -63,26 +134,47 @@ const evaluate = async (expression) => {
   return r.result.result.value;
 };
 await send('Page.enable');
+await send('Runtime.enable');
+await send('Runtime.addBinding', { name: '__bridge' });
+
+// a message from the page script goes to the real worker, as a top-frame content script at the page's address
+async function answerPage(payload) {
+  const { id: callId, m } = JSON.parse(payload);
+  const reply = await toWorker(m, { id: 'ext', tab: { id: 1 }, frameId: 0, url: pageUrl });
+  await send('Runtime.evaluate', { expression: `window.__reply(${callId}, ${JSON.stringify(JSON.stringify(reply))})` });
+}
 await send('Emulation.setDeviceMetricsOverride', { width: 900, height: 700, deviceScaleFactor: 1, mobile: false });
 
-// What Chrome gives a content script, plus a stand-in service worker that answers like background.js does.
+// What Chrome gives a content script: chrome.runtime.sendMessage, answered by the real worker through the binding.
 // attachShadow is wrapped only so the TEST can hold the (still closed) root; the page cannot read it.
 const STUB = `
-  window.__sent = []; window.__logins = [{ id: 'a', title: 'Local dev', username: 'alice' }]; window.__auth = true;
+  window.__sent = []; const pending = new Map(); let calls = 0;
+  window.__reply = (id, json) => { pending.get(id)?.(JSON.parse(json)); pending.delete(id); };
   const attach = Element.prototype.attachShadow;
   Element.prototype.attachShadow = function (init) { return (window.__root = attach.call(this, init)); };
-  globalThis.chrome = { runtime: { id: 'ext', sendMessage: async (m) => {
+  globalThis.chrome = { runtime: { id: 'ext', sendMessage: (m) => new Promise((resolve) => {
     window.__sent.push(m);
-    if (!window.__auth) return { ok: false, code: 'auth', error: 'Please sign in.' };
-    if (m.type === 'logins') return { ok: true, logins: window.__logins };
-    if (m.type === 'credentials') return window.__logins.some((l) => l.id === m.id)
-      ? { ok: true, username: 'alice', password: 's3cret!' } : { ok: false, code: 'server', error: 'no' };
-    return { ok: false, code: 'server', error: 'Request not allowed.' };
-  } } };`;
-async function open(kase, prelude = '') {
-  await send('Page.navigate', { url: `${origin}/test-forms.html?case=${kase}` });
+    pending.set(++calls, resolve);
+    window.__bridge(JSON.stringify({ id: calls, m }));
+  }) } };`;
+
+async function load(kase) {
+  pageUrl = `${origin}/test-forms.html?case=${kase}`;
+  await send('Page.navigate', { url: pageUrl });
   await sleep(1000);
-  await evaluate(`${STUB}\n${prelude}\n${code}`); // injected the way Chrome does at document_idle
+  await evaluate(`${STUB}\n${code}`); // injected the way Chrome does at document_idle
+}
+
+const signIn = async () => {
+  const reply = await toWorker({ type: 'login', email: 'me@x.com', password: PASSWORD }, popup);
+  if (!reply.ok) throw new Error(`sign-in failed: ${reply.error}`);
+};
+// the logins the stub server holds, signed in unless told otherwise
+async function open(kase, { logins = DEFAULT_LOGINS, signedIn = true } = {}) {
+  setLogins(logins);
+  if (signedIn) await signIn();
+  else await toWorker({ type: 'logout' }, popup);
+  await load(kase);
 }
 
 const results = [];
@@ -151,7 +243,7 @@ await key('Enter', 13, String.fromCharCode(13));
 v = await values();
 check('plain: Enter on the row fills the login (a keyboard pick is allowed)', filled(v), JSON.stringify(v));
 
-await open('plain', `window.__logins = [{ id: 'a', title: 'Personal', username: 'alice' }, { id: 'b', title: 'Work', username: 'alice.w' }];`);
+await open('plain', { logins: [{ id: 'a', title: 'Personal', username: 'alice' }, { id: 'b', title: 'Work', username: 'alice.w' }] });
 await realClick(field('username'));
 check('plain: two logins are two rows', (await rows()).length === 2, JSON.stringify(await rows()));
 
@@ -265,7 +357,7 @@ await open('plain');
 await sleep(300);
 await realClick(field('username'));
 check('browser list: the field is marked autocomplete=off once PassDrop has something to offer', (await evaluate(`document.getElementById('username').getAttribute('autocomplete')`)) === 'off');
-await open('plain', 'window.__logins = [];');
+await open('plain', { logins: [] });
 await realClick(field('username'));
 check('browser list: left alone on a page with no saved login', (await evaluate(`document.getElementById('username').getAttribute('autocomplete')`)) === null);
 await open('twostep');
@@ -297,7 +389,7 @@ await realClick(field('username'));
 b = JSON.parse(await evaluate(box));
 check('placement: with no room below, it goes above the field and stays inside the window', b.menuBottom <= b.fieldTop && b.left >= 0 && b.right <= b.vw, JSON.stringify(b));
 
-await open('plain', 'window.__auth = false;');
+await open('plain', { signedIn: false });
 await realClick(field('username'));
 check('signed out: a hint to sign in, and no rows', (await menuOpen()) && (await rows()).length === 0 && /Sign in/.test(await menuText()));
 
@@ -308,7 +400,16 @@ await realClick(row());
 v = await values();
 check('refused: nothing is filled when the service worker says no', v.username === '' && v.password === '', JSON.stringify(v));
 
+// ---- the master password: sign in and a wrong password (the real worker with real keys)
+await toWorker({ type: 'logout' }, popup);
+let reply = await toWorker({ type: 'login', email: 'me@x.com', password: 'not it' }, popup);
+check('sign-in: a wrong master password is refused and stores nothing', !reply.ok && !Object.keys(localData).length && !Object.keys(sessionData).length, JSON.stringify(reply));
+reply = await toWorker({ type: 'login', email: 'me@x.com', password: PASSWORD }, popup);
+check('sign-in: the right password signs in', reply.ok && reply.session.email === 'me@x.com', JSON.stringify(reply));
+check('sign-in: the token is in storage.local and the vault key in storage.session, the password in neither',
+  !!localData.session?.token && !!sessionData.vaultKey && !JSON.stringify([localData, sessionData]).includes(PASSWORD));
+
 const failed = results.filter((x) => !x).length;
 console.log(`\n${results.length - failed}/${results.length} passed`);
-ws.close(); proc.kill(); web.close();
+ws.close(); proc.kill(); web.close(); api.close();
 process.exit(failed ? 1 : 0);
