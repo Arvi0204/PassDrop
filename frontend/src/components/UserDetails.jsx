@@ -9,6 +9,8 @@ import PasswordStrength from './Vault/PasswordStrength';
 import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion, AnimatePresence } from 'framer-motion';
+import { changePassword, reauthKey, unlock } from '../lib/accountApi';
+import { getToken, getUserId, getVaultKey, saveSignIn, signOut } from '../lib/session';
 
 export default function UserDetails() {
     const [user, setUser] = useState({
@@ -28,7 +30,7 @@ export default function UserDetails() {
     const { controls: confirmShake, shake } = useShake();
     const [modalState, setModalState] = useState({ isOpen: false, message: "", action: null });
     const [confirmPassword, setConfirmPassword] = useState('');
-    const token = sessionStorage.getItem("token");
+    const token = getToken();
     const navigate = useNavigate();
 
     useEffect(() => () => clearTimeout(doneTimer.current), []);
@@ -76,28 +78,32 @@ export default function UserDetails() {
         setIsLoading(true);
         setSaveState('saving');
         try {
-            const response = await authFetch(`${host}/api/auth/change-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'auth-token': token
-                },
-                body: JSON.stringify({
-                    currentPassword: updatedPassword.currentPassword,
-                    newPassword: updatedPassword.newPassword
-                })
+            // the vault key is re-wrapped, not changed. In a locked tab the current password opens it for this one step.
+            let vaultKey = await getVaultKey();
+            if (!vaultKey) {
+                const opened = await unlock(host, token, updatedPassword.currentPassword);
+                if (!opened.ok) {
+                    setSaveState('idle');
+                    toast.error(opened.error);
+                    return;
+                }
+                vaultKey = opened.vaultKey;
+            }
+            const result = await changePassword(host, token, {
+                currentPassword: updatedPassword.currentPassword,
+                newPassword: updatedPassword.newPassword,
+                vaultKey
             });
-            const json = await response.json();
-            if (json.success) {
+            if (result.ok) {
                 // the button shows the success, so no toast
                 // the old token stops working with the old password, so swap in the fresh one
-                sessionStorage.setItem('token', json.authToken);
+                saveSignIn({ token: result.token, userId: getUserId() });
                 setUpdatedPassword({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
                 setSaveState('done');
                 doneTimer.current = setTimeout(() => setSaveState('idle'), 2400);
             } else {
                 setSaveState('idle');
-                toast.error(json.error || "Failed to update master password");
+                toast.error(result.error);
             }
         } catch {
             setSaveState('idle');
@@ -136,7 +142,7 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: password })
+                body: JSON.stringify({ currentAuthKey: await reauthKey(host, token, password) })
             });
             const json = await response.json();
             if (json.success) {
@@ -158,12 +164,12 @@ export default function UserDetails() {
                     'Content-Type': 'application/json',
                     'auth-token': token
                 },
-                body: JSON.stringify({ currentPassword: password })
+                body: JSON.stringify({ currentAuthKey: await reauthKey(host, token, password) })
             });
             const json = await response.json();
             if (json.success) {
                 toast.success(json.message || "Account deleted successfully");
-                sessionStorage.removeItem('token');
+                signOut();
                 closeModal();
                 navigate("/home");
             } else {

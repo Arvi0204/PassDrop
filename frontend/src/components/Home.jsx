@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { KeyRound, Sparkles, Download, ArrowRight } from 'lucide-react';
 import Reveal from './common/Reveal';
+import { getToken } from '../lib/session';
 
 const Home = () => {
-    const token = sessionStorage.getItem('token');
+    const token = getToken();
 
     const features = [
         {

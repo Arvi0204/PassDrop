@@ -14,6 +14,7 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
+import { getToken } from '../lib/session';
 import { useTide } from '../context/useTide';
 import { playVaultEntrance } from '../lib/vaultEntrance';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -65,7 +66,7 @@ export default function Manager() {
 
     // Authentication check & initial data fetch
     useEffect(() => {
-        const token = sessionStorage.getItem('token');
+        const token = getToken();
         if (!token) {
             navigate('/login');
         } else {

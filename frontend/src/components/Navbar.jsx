@@ -16,6 +16,7 @@ import Generator from "./Generator";
 import ConfirmationModal from "./ConfirmationModal";
 import { spring } from "../lib/motion";
 import { useTide } from "../context/useTide";
+import { getToken, signOut } from "../lib/session";
 
 const Navbar = () => {
   const { setPasswordArray } = useContext(passwordContext);
@@ -27,7 +28,7 @@ const Navbar = () => {
   const [isGeneratorModalOpen, setIsGeneratorModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const token = sessionStorage.getItem("token");
+  const token = getToken();
 
   // Logout is the vault being drained, like pulling the plug on a full tub: the water fades
   // in behind the confirmation dialog, and the moment the user confirms the level falls to
@@ -45,7 +46,7 @@ const Navbar = () => {
   const confirmLogout = () => {
     setIsLogoutModalOpen(false);
     setPasswordArray([]);
-    sessionStorage.removeItem("token");
+    signOut(); // the token and the vault key
     // navigate and drain in the same tick, so the first frame already has the login page under the water
     navigate("/login");
     tide.drain();

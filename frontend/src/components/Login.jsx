@@ -5,6 +5,8 @@ import { useNavigate, Link } from "react-router-dom";
 import PassDropLogo from './common/PassDropLogo';
 import IconSwap from './common/IconSwap';
 import { useTide } from '../context/useTide';
+import { signIn } from '../lib/accountApi';
+import { saveSignIn, saveVaultKey } from '../lib/session';
 
 export default function Login() {
     const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -34,18 +36,11 @@ export default function Login() {
         tide.begin();
 
         try {
-            const response = await fetch(`${host}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(credentials),
-            });
+            const result = await signIn(host, credentials);
 
-            const json = await response.json();
-
-            if (json.success) {
-                sessionStorage.setItem('token', json.authToken);
+            if (result.ok) {
+                saveSignIn({ token: result.token, userId: result.userId });
+                await saveVaultKey(result.vaultKey);
                 succeeded.current = true;
                 tide.leave(cardRef.current);
                 await tide.complete();
@@ -54,9 +49,8 @@ export default function Login() {
                 // the vault releases the water once its data is ready (see Manager.jsx)
             } else {
                 drained = failTide();
-                const errors = json.errors || [{ msg: json.error || "Login failed. Check your credentials." }];
-                errors.forEach(error => {
-                    toast.error(error.msg);
+                result.errors.forEach(msg => {
+                    toast.error(msg);
                 });
             }
         } catch (error) {
@@ -113,7 +107,7 @@ export default function Login() {
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <KeyRound className="w-3.5 h-3.5" />
                                 </div>
-                                <span>Zero-knowledge master password</span>
+                                <span>Your master password never leaves this device</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">

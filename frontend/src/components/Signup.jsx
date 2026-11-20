@@ -7,6 +7,8 @@ import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion } from 'framer-motion';
 import { useTide } from '../context/useTide';
+import { signUp } from '../lib/accountApi';
+import { saveSignIn, saveVaultKey } from '../lib/session';
 
 export default function Signup() {
     const [form, setForm] = useState({
@@ -53,21 +55,15 @@ export default function Signup() {
         tide.begin();
 
         try {
-            const response = await fetch(`${host}/api/auth/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: form.username,
-                    email: form.email,
-                    password: form.password
-                })
+            const result = await signUp(host, {
+                username: form.username,
+                email: form.email,
+                password: form.password
             });
 
-            const json = await response.json();
-            if (json.success) {
-                sessionStorage.setItem('token', json.authToken);
+            if (result.ok) {
+                saveSignIn({ token: result.token, userId: result.userId });
+                await saveVaultKey(result.vaultKey);
                 succeeded.current = true;
                 tide.leave(cardRef.current);
                 await tide.complete();
@@ -77,9 +73,8 @@ export default function Signup() {
                 // the vault releases the water once its data is ready (see Manager.jsx)
             } else {
                 drained = failTide();
-                const errors = json.errors || [{ msg: json.error || 'Failed to create account' }];
-                errors.forEach(error => {
-                    toast.error(error.msg);
+                result.errors.forEach(msg => {
+                    toast.error(msg);
                 });
             }
         } catch (error) {

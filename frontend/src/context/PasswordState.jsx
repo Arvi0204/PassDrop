@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PasswordContext from "./passwordContext";
 import toast from "react-hot-toast";
 import authFetch from "../lib/authFetch";
+import { getToken } from "../lib/session";
 
 const PasswordState = (props) => {
     const host = import.meta.env.VITE_BACKEND;
@@ -10,7 +11,7 @@ const PasswordState = (props) => {
 
     // Fetch all credentials from backend
     const getPasswords = async () => {
-        const token = sessionStorage.getItem('token');
+        const token = getToken();
         if (!token) return;
 
         setIsLoading(true);
@@ -48,7 +49,7 @@ const PasswordState = (props) => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'auth-token': sessionStorage.getItem('token')
+                    'auth-token': getToken()
                 },
                 body: JSON.stringify(payload)
             });
@@ -86,7 +87,7 @@ const PasswordState = (props) => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'auth-token': sessionStorage.getItem('token')
+                    'auth-token': getToken()
                 },
                 body: JSON.stringify(payload)
             });
@@ -116,7 +117,7 @@ const PasswordState = (props) => {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    'auth-token': sessionStorage.getItem('token')
+                    'auth-token': getToken()
                 }
             });
 
@@ -142,7 +143,7 @@ const PasswordState = (props) => {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    'auth-token': sessionStorage.getItem('token')
+                    'auth-token': getToken()
                 }
             });
 
