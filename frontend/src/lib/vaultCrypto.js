@@ -18,12 +18,25 @@ const enc = new TextEncoder();
 const dec = new TextDecoder();
 
 export class VaultCryptoError extends Error {
-    // code: 'wrong-key' (the key does not open this data), 'bad-blob' (not a blob at all), 'bad-recovery-key'
+    // code: 'wrong-key' (the key does not open this data), 'bad-blob' (not a blob at all), 'bad-recovery-key', 'bad-kdf'
     constructor(code, message) {
         super(message || code);
         this.name = 'VaultCryptoError';
         this.code = code;
     }
+}
+
+export const KDF_MAX_ITERATIONS = 10000000; // the server refuses more on sign-up as well
+
+// The key settings come from the server, so they are checked before they are used: a tampered database or a hostile
+// server must not be able to make this browser derive keys with a handful of rounds (cheap to guess against) or with
+// billions (a frozen tab). `minIterations` is a parameter so that tests can use fast settings.
+export function checkKdf(kdf, minIterations = KDF_MIN_ITERATIONS) {
+    const ok = Boolean(kdf) && kdf.name === 'PBKDF2-SHA256' && Number.isInteger(kdf.iterations)
+        && kdf.iterations >= minIterations && kdf.iterations <= KDF_MAX_ITERATIONS
+        && typeof kdf.salt === 'string' && /^[A-Za-z0-9+/]{22}==$/.test(kdf.salt); // 16 bytes in base64
+    if (!ok) throw new VaultCryptoError('bad-kdf', 'The server sent unsafe key settings');
+    return kdf;
 }
 
 const toB64 = (bytes) => {

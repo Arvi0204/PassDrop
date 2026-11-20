@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { changePassword, recover, reauthKey, regenerateRecoveryKey, signIn, signUp, unlock } from './accountApi';
+import { UNSAFE_KDF, changePassword, recover, reauthKey, regenerateRecoveryKey, signIn, signUp, unlock } from './accountApi';
 import {
     decryptItem, deriveKeys, deriveRecoveryKeys, encryptItem, normalizeRecoveryKey, unwrapVaultKey
 } from './vaultCrypto';
@@ -240,5 +240,54 @@ describe('regenerateRecoveryKey', () => {
             ? { ok: false, status: 429, json: async () => ({ success: false, error: 'Too many failed attempts. Try again in a few minutes.' }) }
             : real(url, options)));
         expect(await regenerateRecoveryKey(HOST, 'tok-1', PASSWORD)).toEqual({ ok: false, error: 'Too many failed attempts. Try again in a few minutes.' });
+    });
+});
+
+describe('key settings from the server', () => {
+    // 999 rounds is below the 1000 that tests allow (vite.config.js), as 599999 is below the real minimum
+    const tamper = (kdf) => { users['t@example.com'].kdf = { ...users['t@example.com'].kdf, ...kdf }; };
+    const sentOnly = (...paths) => expect(requests.map((r) => r.path)).toEqual(paths);
+
+    it('signIn refuses settings with too few rounds, and sends no proof', async () => {
+        await signUp(HOST, account);
+        requests.length = 0;
+        tamper({ iterations: 999 });
+        expect(await signIn(HOST, { email: 't@example.com', password: PASSWORD })).toEqual({ ok: false, errors: [UNSAFE_KDF] });
+        sentOnly('/api/auth/prelogin'); // nothing derived from the password left the browser
+    });
+
+    it('signIn refuses a ridiculous number of rounds instead of freezing, and a wrong algorithm', async () => {
+        await signUp(HOST, account);
+        for (const bad of [{ iterations: 2_000_000_000 }, { name: 'MD5' }]) {
+            tamper(bad);
+            requests.length = 0;
+            expect(await signIn(HOST, { email: 't@example.com', password: PASSWORD })).toEqual({ ok: false, errors: [UNSAFE_KDF] });
+            sentOnly('/api/auth/prelogin');
+            tamper({ iterations: 1000, name: 'PBKDF2-SHA256' });
+        }
+    });
+
+    it('unlock, change password and a new recovery key refuse unsafe settings from /me', async () => {
+        await signUp(HOST, account);
+        tamper({ iterations: 999 });
+        requests.length = 0;
+        expect(await unlock(HOST, 'tok-1', PASSWORD)).toEqual({ ok: false, error: UNSAFE_KDF });
+        expect(await changePassword(HOST, 'tok-1', { currentPassword: PASSWORD, newPassword: 'another-password-9', vaultKey: null })).toEqual({ ok: false, error: UNSAFE_KDF });
+        expect(await regenerateRecoveryKey(HOST, 'tok-1', PASSWORD)).toEqual({ ok: false, error: UNSAFE_KDF });
+        expect(requests.map((r) => r.path)).toEqual(['/api/auth/me', '/api/auth/me', '/api/auth/me']); // nothing else was sent
+    });
+
+    it('recover refuses unsafe settings, and says so instead of blaming the recovery key', async () => {
+        const made = await signUp(HOST, account);
+        tamper({ iterations: 999 });
+        requests.length = 0;
+        expect(await recover(HOST, { email: 't@example.com', recoveryKey: made.recoveryKey, newPassword: 'another-password-9' })).toEqual({ ok: false, error: UNSAFE_KDF });
+        sentOnly('/api/auth/prelogin');
+    });
+
+    it('reauthKey throws rather than deriving from unsafe settings', async () => {
+        await signUp(HOST, account);
+        tamper({ iterations: 999 });
+        await expect(reauthKey(HOST, 'tok-1', PASSWORD)).rejects.toMatchObject({ code: 'bad-kdf' });
     });
 });

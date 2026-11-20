@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import {
-    KDF_MIN_ITERATIONS, newKdf, deriveKeys, newVaultKey, exportVaultKey, importVaultKey, wrapVaultKey, unwrapVaultKey,
+    KDF_MIN_ITERATIONS, KDF_MAX_ITERATIONS, checkKdf, newKdf, deriveKeys, newVaultKey, exportVaultKey, importVaultKey, wrapVaultKey, unwrapVaultKey,
     encryptItem, decryptItem, newRecoveryKey, normalizeRecoveryKey, deriveRecoveryKeys, VaultCryptoError
 } from './vaultCrypto';
 
@@ -9,6 +9,40 @@ const kdf = { name: 'PBKDF2-SHA256', iterations: 1000, salt: 'AAAAAAAAAAAAAAAAAA
 const otherKdf = { ...kdf, salt: 'AQEBAQEBAQEBAQEBAQEBAQ==' };
 const authOf = async (password, k = kdf) => (await deriveKeys(password, k)).authKey;
 const rejects = async (promise) => promise.then(() => null, (e) => e);
+
+describe('checkKdf', () => {
+    const good = { name: 'PBKDF2-SHA256', iterations: KDF_MIN_ITERATIONS, salt: 'AAAAAAAAAAAAAAAAAAAAAA==' };
+    const code = (kdf, min) => { try { checkKdf(kdf, min); return null; } catch (e) { return e.code; } };
+
+    it('accepts the settings sign-up makes, and the largest allowed number of rounds', () => {
+        expect(checkKdf(newKdf())).toMatchObject({ name: 'PBKDF2-SHA256', iterations: KDF_MIN_ITERATIONS });
+        expect(code({ ...good, iterations: KDF_MAX_ITERATIONS })).toBeNull();
+    });
+
+    it('refuses too few rounds, too many, and ones that are not whole numbers', () => {
+        expect(code({ ...good, iterations: KDF_MIN_ITERATIONS - 1 })).toBe('bad-kdf');
+        expect(code({ ...good, iterations: 1 })).toBe('bad-kdf');
+        expect(code({ ...good, iterations: KDF_MAX_ITERATIONS + 1 })).toBe('bad-kdf');
+        expect(code({ ...good, iterations: 1e12 })).toBe('bad-kdf');
+        expect(code({ ...good, iterations: 600000.5 })).toBe('bad-kdf');
+        expect(code({ ...good, iterations: '600000' })).toBe('bad-kdf');
+    });
+
+    it('refuses another algorithm, a bad salt, and anything that is not settings at all', () => {
+        expect(code({ ...good, name: 'MD5' })).toBe('bad-kdf');
+        expect(code({ ...good, salt: 'AAAAAAAAAAAAAAAAAAAAA=' })).toBe('bad-kdf'); // 15 bytes
+        expect(code({ ...good, salt: '!!!!!!!!!!!!!!!!!!!!!!==' })).toBe('bad-kdf');
+        expect(code({ ...good, salt: undefined })).toBe('bad-kdf');
+        for (const nothing of [null, undefined, 'PBKDF2', 42, {}]) expect(code(nothing)).toBe('bad-kdf');
+    });
+
+    it('takes the minimum as a parameter, so tests can use fast settings', () => {
+        const fast = { ...good, iterations: 1000 };
+        expect(code(fast)).toBe('bad-kdf');
+        expect(code(fast, 1000)).toBeNull();
+        expect(code({ ...fast, iterations: 999 }, 1000)).toBe('bad-kdf');
+    });
+});
 
 describe('deriveKeys', () => {
     it('derives the same keys for the same password and salt, different keys otherwise', async () => {

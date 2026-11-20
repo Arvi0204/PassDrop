@@ -4,7 +4,7 @@ import { entriesForPage } from './match.js';
 import { titleOf } from './popup/format.js';
 import { getSession, saveSession, clearSession, getVaultKey, saveVaultKey, getCachedVault, setCachedVault } from './storage.js';
 import {
-  KDF_MIN_ITERATIONS, deriveKeys, unwrapVaultKey, exportVaultKey, importVaultKey, decryptItem
+  KDF_MIN_ITERATIONS, checkKdf, deriveKeys, unwrapVaultKey, exportVaultKey, importVaultKey, decryptItem
 } from '../../frontend/src/lib/vaultCrypto.js';
 
 // The service worker is the only place that talks to the server or touches the token, the vault key or a
@@ -41,10 +41,11 @@ const fromTopFrame = (sender) => sender.id === chrome.runtime.id && !!sender.tab
 const publicSession = (session) => (session ? { email: session.email, expiresAt: session.expiresAt } : null);
 
 function checkedKdf(kdf) {
-  if (!kdf || kdf.name !== 'PBKDF2-SHA256' || !(kdf.iterations >= MIN_ITERATIONS) || typeof kdf.salt !== 'string') {
+  try {
+    return checkKdf(kdf, MIN_ITERATIONS); // too few rounds, too many (a frozen worker), the wrong algorithm, a bad salt
+  } catch {
     throw new ApiError('The server sent unsafe key settings. Not signing in.', 'server');
   }
-  return kdf;
 }
 
 /** The vault key (base64) from what the server stored: the key wrapped by the master password. */

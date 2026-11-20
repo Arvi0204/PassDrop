@@ -250,6 +250,18 @@ test('key settings with too few iterations are refused before any proof is sent'
   nothingStored();
 });
 
+test('key settings with a ridiculous number of rounds, or another algorithm, are refused too', async () => {
+  for (const bad of [{ iterations: 2_000_000_000 }, { name: 'MD5' }, { salt: 'short' }]) {
+    signedOut();
+    calls.length = 0; // one request log per setting
+    server.kdf = { ...kdf, ...bad };
+    const reply = await ask({ type: 'login', email: 'me@x.com', password: PASSWORD }, popup);
+    assert.equal(reply.ok, false, JSON.stringify(bad));
+    assert.deepEqual(calls.map((c) => c.pathname), ['/api/auth/prelogin']);
+    nothingStored();
+  }
+});
+
 test('sync decrypts the blobs and caches plaintext; one corrupt or foreign blob is skipped', async () => {
   server.blobs = [
     await blobFor(VAULT[0], 'gh'),

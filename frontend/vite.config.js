@@ -9,5 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./test-setup.js'],
     css: false,
+    // the tests use 1000-round key settings so they run fast; real builds never see this (see accountApi.js)
+    env: { TEST_KDF_MIN_ITERATIONS: '1000' },
   },
 });
