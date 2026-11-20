@@ -14,7 +14,9 @@ body:json {
   {
     "username": "tester",
     "email": "tester@example.com",
-    "password": "MasterPassword123!"
+    "authKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    "kdf": { "name": "PBKDF2-SHA256", "iterations": 600000, "salt": "AAECAwQFBgcICQoLDA0ODw==" },
+    "wrappedVaultKey": "v1.AAECAwQFBgcICQoL.QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3"
   }
 }
 

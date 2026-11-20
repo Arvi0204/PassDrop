@@ -41,29 +41,51 @@ const collection = async (name) => (await connectToDb()).collection(name);
 /** Every stored document of a collection, to check what the app really saved. */
 const all = async (name) => (await collection(name)).find().toArray();
 
-/** An empty database, for the start of each test. */
-const reset = async () => (await connectToDb()).dropDatabase();
+/** An empty database, for the start of each test (dropping it drops its indexes, so they are made again). */
+const reset = async () => {
+    const db = await connectToDb();
+    await db.dropDatabase();
+    await connectToDb.ensureIndexes(db);
+};
 
 // Hashing at the real cost (12) takes a few hundred milliseconds. A hash made cheaper still checks the same
 // way (the cost is stored in the hash), so test users are created with a cheap one; the register test uses the real route.
 const CHEAP = 4;
+const random = (bytes) => crypto.randomBytes(bytes).toString('base64');
+const sealed = () => `v1.${random(12)}.${random(48)}`; // looks like a wrapped key; the server cannot tell it is not one
 
-async function seedUser({ email = 'user@example.com', username = 'user', password = 'correct-horse-battery' } = {}) {
-    const { insertedId } = await (await collection('users')).insertOne({
-        username, email, password: await bcrypt.hash(password, CHEAP), tokenVersion: 0, createdAt: new Date(), lastLogin: new Date()
-    });
-    return { id: insertedId, email, password };
+/**
+ * A v2 user, as the browser would have created them. The server only ever stores derived proofs, so the tests make up
+ * random ones: the returned authKey is what the browser would send to sign in or re-authenticate. Nothing here is a
+ * real password.
+ */
+async function seedUser({ email = 'user@example.com', username = 'user' } = {}) {
+    const authKey = random(32);
+    const kdf = { name: 'PBKDF2-SHA256', iterations: 600000, salt: random(16) };
+    const doc = {
+        username, email, authHash: await bcrypt.hash(authKey, CHEAP), kdf, wrappedVaultKey: sealed(),
+        v: 2, tokenVersion: 0, createdAt: new Date(), lastLogin: new Date()
+    };
+    const { insertedId } = await (await collection('users')).insertOne(doc);
+    return { id: insertedId, email, authKey, kdf, wrappedVaultKey: doc.wrappedVaultKey };
 }
 
-async function login({ email, password }) {
-    const res = await request(app).post('/api/auth/login').send({ email, password });
+async function login({ email, authKey }) {
+    const res = await request(app).post('/api/auth/login').send({ email, authKey });
     return res.body.authToken;
 }
 
-/** A user who is signed in: { id, email, password, token } */
+/** A user who is signed in: { id, email, authKey, ..., token } */
 async function signedInUser(options) {
     const user = await seedUser(options);
     return { ...user, token: await login(user) };
 }
 
-module.exports = { app, request: () => request(app), collection, all, reset, seedUser, login, signedInUser };
+/** What the browser sends to register, with random stand-ins for the derived keys. */
+const registrationBody = (overrides = {}) => ({
+    username: 'Ada', email: 'ada@example.com', authKey: random(32),
+    kdf: { name: 'PBKDF2-SHA256', iterations: 600000, salt: random(16) },
+    wrappedVaultKey: sealed(), ...overrides
+});
+
+module.exports = { app, request: () => request(app), collection, all, reset, seedUser, login, signedInUser, registrationBody, random, sealed };

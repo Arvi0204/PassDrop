@@ -1,6 +1,6 @@
 const { test, beforeEach, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const { reset, all, request, signedInUser } = require('../test-helpers/testApp');
+const { reset, all, request, signedInUser, random } = require('../test-helpers/testApp');
 
 beforeEach(reset);
 
@@ -9,7 +9,7 @@ const as = (user) => ({
     list: () => request().get('/api/passwords').set('auth-token', user.token),
     update: (id, body) => request().put(`/api/passwords/${id}`).set('auth-token', user.token).send(body),
     remove: (id) => request().delete(`/api/passwords/${id}`).set('auth-token', user.token),
-    removeAll: (currentPassword) => request().delete('/api/passwords').set('auth-token', user.token).send({ currentPassword })
+    removeAll: (currentAuthKey) => request().delete('/api/passwords').set('auth-token', user.token).send({ currentAuthKey })
 });
 
 describe('every vault route needs a token', () => {
@@ -166,7 +166,7 @@ describe('delete all', () => {
         const missing = await as(user).removeAll(undefined);
         assert.equal(missing.status, 400);
         assert.equal(missing.body.error, 'Enter your current master password');
-        const wrong = await as(user).removeAll('wrong-password');
+        const wrong = await as(user).removeAll(random(32));
         assert.equal(wrong.status, 403);
         assert.equal((await all('passwords')).length, 1, 'nothing was deleted');
     });
@@ -177,7 +177,7 @@ describe('delete all', () => {
         await as(me).create({ password: 'a', title: '1' });
         await as(me).create({ password: 'b', title: '2' });
         await as(other).create({ password: 'c', title: '3' });
-        const res = await as(me).removeAll(me.password);
+        const res = await as(me).removeAll(me.authKey);
         assert.equal(res.status, 200);
         assert.equal(res.body.deletedCount, 2);
         assert.equal((await all('passwords')).length, 1);
