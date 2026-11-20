@@ -1,6 +1,6 @@
 # PassDrop API
 
-The Express API behind the PassDrop web app and browser extension. It signs people in and stores their logins in MongoDB.
+The Express API behind the PassDrop web app and browser extension. It signs people in and stores their logins in MongoDB, **as encrypted data it cannot read**: the browser encrypts every login before sending it (see [Security behaviour](#security-behaviour)).
 
 For setting up the whole project, start with the [root README](../README.md). This page covers the API itself.
 
@@ -32,12 +32,11 @@ Settings come from `backend/.env`. In production they are the Vercel project's e
 |---|---|---|
 | `MONGODB_URI` | yes | MongoDB connection string. |
 | `JWT_SECRET` | yes | Signs sign-in tokens. 32 or more random characters; the API warns if it is shorter. |
-| `ENCRYPTION_KEY` | yes | Encrypts stored logins. Exactly 64 hex characters; the API refuses to start otherwise. |
 | `PORT` | no | Default `3000`. |
 | `DB_NAME` | no | Default `PassDrop`. |
 | `JWT_EXPIRES_IN` | no | Default `7d`. |
 
-Generate a secret with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+There is no encryption key to configure: the server never holds one. Generate the `JWT_SECRET` with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
 CORS is enabled only outside production (`NODE_ENV=production` turns it off), because in production the web app and the API share one address.
 
@@ -47,27 +46,33 @@ Sign in with `POST /api/auth/login` (or register) to get a token, then send it o
 
 ## Endpoints
 
-All paths start with `/api`. "Token" means the `auth-token` header is required. "Re-auth" means the body must also contain `currentPassword`, the account's current master password.
+All paths start with `/api`. "Token" means the `auth-token` header is required. "Re-auth" means the body must also contain `currentAuthKey`, a proof the browser derives from the account's current master password. The server never receives a master password, a recovery key or a vault key, only keys derived from them, which it checks against a bcrypt hash.
 
 ### Account (`/api/auth`)
 
 | Method and path | Needs | Body | What it does |
 |---|---|---|---|
-| `POST /register` | | `username` (3+ characters), `email`, `password` (8+ characters) | Creates an account. Returns `201` with `{ success, authToken, expiresAt }`. |
-| `POST /login` | | `email`, `password` | Returns `{ success, authToken, expiresAt }`. |
-| `GET /me` | Token | | The signed-in user's details. |
-| `POST /change-password` | Token, re-auth | `currentPassword`, `newPassword` (8+ characters, different from the old one) | Changes the master password, ends every other session, and returns a new token. |
-| `DELETE /me` | Token, re-auth | `currentPassword` | Deletes the account and all its logins. |
+| `GET /prelogin?email=` | | | The key-derivation settings (`kdf`: algorithm, iterations, salt) the browser needs before it can compute its proof. An unknown email gets a believable, stable fake, so this cannot be used to find accounts. |
+| `POST /register` | | `username` (3+ characters), `email`, `authKey`, `kdf`, `wrappedVaultKey`, `recoveryWrappedKey`, `recoveryAuthKey` | Creates an account. Returns `201` with `{ success, authToken, expiresAt, userId }`. |
+| `POST /login` | | `email`, `authKey` | Returns `{ success, authToken, expiresAt, userId, kdf, wrappedVaultKey }`. |
+| `GET /me` | Token | | `{ _id, username, email, createdAt, lastLogin, kdf, wrappedVaultKey }`: what a signed-in browser needs to unlock the vault again. |
+| `POST /change-password` | Token, re-auth | `currentAuthKey`, `newAuthKey`, `newKdf`, `newWrappedVaultKey` | Changes the master password (the vault key is re-wrapped, not re-encrypted), ends every other session, and returns a new token. The salt in `newKdf` must stay the account's own. |
+| `DELETE /me` | Token, re-auth | `currentAuthKey` | Deletes the account and all its logins. |
+| `POST /recovery/unlock` | | `email`, `recoveryAuthKey` | Proves the recovery key and returns `{ kdf, recoveryWrappedKey }`. |
+| `POST /recovery/rotate` | Token, re-auth | `currentAuthKey`, `recoveryAuthKey`, `recoveryWrappedKey` | Replaces the recovery key (the browser made a new one and sends only its proof and the vault key wrapped by it). The old recovery key stops working; sign-in and sessions are untouched. |
+| `POST /recovery/reset` | | `email`, `recoveryAuthKey`, `newAuthKey`, `newKdf`, `newWrappedVaultKey` | Sets a new master password with the recovery key. Returns the same as `/login`. |
+
+Each `...AuthKey` is base64 of 32 bytes and each wrapped key is a string like `v1.<iv>.<ciphertext>`; `kdf` is `{ name: "PBKDF2-SHA256", iterations (600000 or more), salt }`. The server checks their shape and size, nothing else: it cannot tell a real key from a random one.
 
 ### Logins (`/api/passwords`)
 
 | Method and path | Needs | Body | What it does |
 |---|---|---|---|
-| `GET /` | Token | | All of the user's logins, decrypted. |
-| `POST /` | Token | `password` (required, up to 1024 characters); optional `title`, `username`, `url` (up to 2048 each), `notes` (up to 10000), `isFavorite` | Creates a login. |
-| `PUT /:id` | Token | any of the fields above | Updates a login. |
+| `GET /` | Token | | The user's logins as `[{ _id, blob, createdAt, updatedAt }]`, newest first. |
+| `POST /` | Token | `blob` | Stores a login. The blob is one encrypted string (`v1.<iv>.<ciphertext>`, up to 32768 characters); title, address, username, password and notes are all inside it. |
+| `PUT /:id` | Token | `blob` | Replaces a login's blob. |
 | `DELETE /:id` | Token | | Deletes one login. |
-| `DELETE /` | Token, re-auth | `currentPassword` | Deletes all of the user's logins. |
+| `DELETE /` | Token, re-auth | `currentAuthKey` | Deletes all of the user's logins. |
 
 ## Responses and errors
 
@@ -75,26 +80,26 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 
 | Status | Meaning |
 |---|---|
-| `400` | Invalid input, a failed sign-in, or a missing `currentPassword`. |
+| `400` | Invalid input, a failed sign-in, or a missing `currentAuthKey`. |
 | `401` | A missing token, or one that no longer works. |
-| `403` | The `currentPassword` on a re-auth was wrong. |
-| `429` | The account is locked after too many wrong master passwords. |
+| `403` | The `currentAuthKey` on a re-auth was wrong. |
+| `429` | The account is locked after too many wrong proofs. |
 | `500` | Something broke on the server. |
 
 ## Security behaviour
 
-- Master passwords are hashed with bcrypt.
-- **Lockout:** 10 wrong master passwords in a row lock the account for 15 minutes. The count covers sign-in and every re-auth. An unknown email takes as long to answer as a wrong password, so it does not show which emails have accounts.
+- **The server cannot read a vault.** The browser derives two keys from the master password; one is the sign-in proof (`authKey`), which the server stores only as a bcrypt hash. The logins are encrypted in the browser with a random vault key that the server holds only in wrapped (encrypted) form. A second copy, wrapped by the recovery key, lets an account be recovered. The cryptography lives in [`frontend/src/lib/vaultCrypto.js`](../frontend/src/lib/vaultCrypto.js).
+- **Lockout:** 10 wrong proofs in a row lock the account for 15 minutes. The count covers sign-in, every re-auth and account recovery. An unknown email takes as long to answer as a wrong password, so it does not show which emails have accounts.
 - **Sessions can be ended:** changing the master password raises the account's `tokenVersion`, which invalidates every older token, including a stolen one.
-- **Re-auth:** changing the master password, deleting the account and deleting all logins need the master password again, so a stolen token alone cannot do them.
-- **Encryption at rest:** logins are encrypted with AES-256 using `ENCRYPTION_KEY` before they are stored, and decrypted when sent to the signed-in user. The server holds the key, so it can read the logins; this is not zero-knowledge. Client-side encryption is on the [roadmap](../README.md#status-and-roadmap).
+- **Re-auth:** changing the master password, deleting the account and deleting all logins need the master password again (as a derived `currentAuthKey`), so a stolen token alone cannot do them. A stolen token also cannot read anything: it only returns encrypted data.
+- **Indexes:** one account per email (this also settles two simultaneous sign-ups) and a quick lookup of one user's logins, created when the API first connects.
 
 ## Code layout
 
 - `server.js`, `db.js`: the Express app and the MongoDB connection.
 - `routes/`: `auth.js` and `passwords.js`.
 - `middleware/`: `fetchUser` (checks the token and its `tokenVersion`) and `requirePassword` (asks for the master password again).
-- `utils/`: `encryption` (AES-256) and `passwordGuard` (checks a master password and counts failures for the lockout).
+- `utils/`: `passwordGuard` (checks a proof and counts failures for the lockout), `kdf` (the fake key settings for unknown emails) and `vaultFields` (checks the shape and size of the keys and blobs the browser sends).
 - `bruno/`: the API request collection.
 - `test/`: the automated tests. `test-helpers/`: the helper that boots the app against a throwaway MongoDB for them.
 
@@ -104,10 +109,11 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 npm test --workspace=backend
 ```
 
-49 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+61 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
 - **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
-- **Logins:** every route needs a token, creating a login stores it encrypted and returns it decrypted without internal fields, listing shows only your own, updating and deleting other people's logins is refused, field limits, and deleting all.
-- **The server and encryption:** malformed and oversized bodies, no framework header, and the encrypt and decrypt round trip.
+- **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the shared lockout, and a stable fake for unknown emails.
+- **Logins:** every route needs a token, a login is stored as exactly one blob with no readable field (even if the client also sends plaintext), listing shows only your own, updating and deleting other people's logins is refused, size and format limits, and deleting all.
+- **The server:** malformed and oversized bodies, no framework header, and that nothing reads an encryption key any more.
 
 **The tests use a real MongoDB.** Each test file starts its own throwaway MongoDB with [mongodb-memory-server-core](https://github.com/typegoose/mongodb-memory-server) and throws it away afterwards, so the API's real queries are what get tested, and nothing is mocked. `test-helpers/testApp.js` sets the tests' own secrets and a placeholder database address before the app loads, so not even a `.env` file pointing at your real database is used, and it refuses to carry on unless the throwaway database is on this computer.
 
