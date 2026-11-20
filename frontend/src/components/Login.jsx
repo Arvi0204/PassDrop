@@ -164,6 +164,9 @@ export default function Login() {
                                     >
                                         Master Password
                                     </label>
+                                    <Link to="/recover" className="text-[11px] font-semibold text-[#0284c7] hover:underline">
+                                        Forgot it?
+                                    </Link>
                                 </div>
                                 <div className="relative">
                                     <input

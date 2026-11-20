@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { changePassword, reauthKey, signIn, signUp, unlock } from './accountApi';
-import { decryptItem, deriveKeys, encryptItem, unwrapVaultKey } from './vaultCrypto';
+import { changePassword, recover, reauthKey, signIn, signUp, unlock } from './accountApi';
+import {
+    decryptItem, deriveKeys, deriveRecoveryKeys, encryptItem, normalizeRecoveryKey, unwrapVaultKey
+} from './vaultCrypto';
 
 // Test speed: the real key derivation uses 600000 rounds. signUp is the only call that makes its own kdf, so it gets a
 // 1000-round one here; every other call uses whatever kdf the (fake) server hands back.
@@ -45,6 +47,13 @@ function fakeServer() {
             Object.assign(user, { authKey: body.newAuthKey, kdf: body.newKdf, wrappedVaultKey: body.newWrappedVaultKey });
             return ok({ success: true, authToken: 'tok-3' });
         }
+        if (path === '/api/auth/recovery/unlock' || path === '/api/auth/recovery/reset') {
+            const target = find(body.email);
+            if (!target || target.recoveryAuthKey !== body.recoveryAuthKey) return bad('Check the email and recovery key.');
+            if (path.endsWith('unlock')) return ok({ success: true, kdf: target.kdf, recoveryWrappedKey: target.recoveryWrappedKey });
+            Object.assign(target, { authKey: body.newAuthKey, kdf: body.newKdf, wrappedVaultKey: body.newWrappedVaultKey });
+            return ok({ success: true, authToken: 'tok-4', userId: target.id, kdf: target.kdf, wrappedVaultKey: target.wrappedVaultKey });
+        }
         throw new Error(`unexpected ${path}`);
     }));
 }
@@ -54,23 +63,29 @@ const allText = () => requests.map((r) => r.text).join('\n');
 beforeEach(fakeServer);
 
 describe('signUp', () => {
-    it('sends authKey, kdf and wrappedVaultKey, and never the password', async () => {
+    it('sends authKey, kdf, both wrapped keys and recoveryAuthKey, and never the password or the raw recovery key', async () => {
         const result = await signUp(HOST, account);
         expect(result.ok).toBe(true);
         const sent = JSON.parse(requests[0].text);
-        expect(Object.keys(sent).sort()).toEqual(['authKey', 'email', 'kdf', 'username', 'wrappedVaultKey']);
+        expect(Object.keys(sent).sort()).toEqual(['authKey', 'email', 'kdf', 'recoveryAuthKey', 'recoveryWrappedKey', 'username', 'wrappedVaultKey']);
         expect(sent.kdf.iterations).toBe(1000);
-        expect(allText()).not.toContain(PASSWORD);
+        for (const secret of [PASSWORD, result.recoveryKey, result.recoveryKey.replaceAll('-', '')]) {
+            expect(allText()).not.toContain(secret);
+        }
     });
 
-    it('returns a vault key that the password unwraps from what was sent, and that decrypts what it encrypts', async () => {
+    it('returns a recovery key that unwraps recoveryWrappedKey, and a vault key that decrypts what it encrypts', async () => {
         const result = await signUp(HOST, account);
         const stored = users['t@example.com'];
+        const { recoveryWrapKey } = await deriveRecoveryKeys(result.recoveryKey, stored.kdf);
+        const viaRecovery = await unwrapVaultKey(stored.recoveryWrappedKey, recoveryWrapKey);
         const { wrapKey } = await deriveKeys(PASSWORD, stored.kdf);
         const viaPassword = await unwrapVaultKey(stored.wrappedVaultKey, wrapKey);
         const blob = await encryptItem(result.vaultKey, { title: 'GitHub' }, 'user-1');
+        expect(await decryptItem(viaRecovery, blob, 'user-1')).toEqual({ title: 'GitHub' });
         expect(await decryptItem(viaPassword, blob, 'user-1')).toEqual({ title: 'GitHub' });
         expect(result).toMatchObject({ token: 'tok-1', userId: 'user-1' });
+        expect(result.recoveryKey).toMatch(/^([0-9A-F]{4}-){7}[0-9A-F]{4}$/);
     });
 
     it("hands back the server's messages when sign-up is refused", async () => {
@@ -149,5 +164,32 @@ describe('changePassword', () => {
         const result = await changePassword(HOST, 'tok', { currentPassword: 'nope', newPassword: 'new one', vaultKey: created.vaultKey });
         expect(result).toEqual({ ok: false, error: 'Current master password is incorrect' });
         expect(users['t@example.com'].wrappedVaultKey).toBe(wrapped);
+    });
+});
+
+describe('recover', () => {
+    it('works with a lowercase, spaced recovery key: sets a new password, same salt, same vault key', async () => {
+        const created = await signUp(HOST, account);
+        const blob = await encryptItem(created.vaultKey, { title: 'x' }, 'user-1');
+        const salt = users['t@example.com'].kdf.salt;
+        const typed = created.recoveryKey.toLowerCase().replaceAll('-', ' ');
+        requests.length = 0;
+
+        const result = await recover(HOST, { email: account.email, recoveryKey: typed, newPassword: 'fresh start pass' });
+        expect(result).toMatchObject({ ok: true, token: 'tok-4', userId: 'user-1' });
+        expect(await decryptItem(result.vaultKey, blob, 'user-1')).toEqual({ title: 'x' });
+        expect(JSON.parse(requests.at(-1).text).newKdf.salt).toBe(salt);
+        expect(allText()).not.toContain('fresh start pass');
+        expect(allText()).not.toContain(normalizeRecoveryKey(typed).replaceAll('-', ''));
+        expect((await signIn(HOST, { email: account.email, password: 'fresh start pass' })).ok).toBe(true);
+    });
+
+    it('a wrong key, a malformed key and an unknown email all say to check the email and recovery key', async () => {
+        const created = await signUp(HOST, account);
+        const wrong = created.recoveryKey.replace(/^./, (c) => (c === '0' ? '1' : '0'));
+        const message = { ok: false, error: 'Check the email and recovery key.' };
+        expect(await recover(HOST, { email: account.email, recoveryKey: wrong, newPassword: 'x' })).toEqual(message);
+        expect(await recover(HOST, { email: account.email, recoveryKey: 'ABCD', newPassword: 'x' })).toEqual(message);
+        expect(await recover(HOST, { email: 'nobody@example.com', recoveryKey: created.recoveryKey, newPassword: 'x' })).toEqual(message);
     });
 });

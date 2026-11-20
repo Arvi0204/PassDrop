@@ -54,18 +54,20 @@ const sealed = () => `v1.${random(12)}.${random(48)}`; // looks like a wrapped k
 
 /**
  * A v2 user, as the browser would have created them. The server only ever stores derived proofs, so the tests make up
- * random ones: the returned authKey is what the browser would send to sign in or re-authenticate. Nothing here is a
- * real password.
+ * random ones: the returned authKey is what the browser would send to sign in or re-authenticate, and recoveryAuthKey
+ * what it would send to recover. Nothing here is a real password.
  */
 async function seedUser({ email = 'user@example.com', username = 'user' } = {}) {
     const authKey = random(32);
+    const recoveryAuthKey = random(32);
     const kdf = { name: 'PBKDF2-SHA256', iterations: 600000, salt: random(16) };
     const doc = {
         username, email, authHash: await bcrypt.hash(authKey, CHEAP), kdf, wrappedVaultKey: sealed(),
+        recoveryWrappedKey: sealed(), recoveryAuthHash: await bcrypt.hash(recoveryAuthKey, CHEAP),
         v: 2, tokenVersion: 0, createdAt: new Date(), lastLogin: new Date()
     };
     const { insertedId } = await (await collection('users')).insertOne(doc);
-    return { id: insertedId, email, authKey, kdf, wrappedVaultKey: doc.wrappedVaultKey };
+    return { id: insertedId, email, authKey, recoveryAuthKey, kdf, wrappedVaultKey: doc.wrappedVaultKey, recoveryWrappedKey: doc.recoveryWrappedKey };
 }
 
 async function login({ email, authKey }) {
@@ -83,7 +85,7 @@ async function signedInUser(options) {
 const registrationBody = (overrides = {}) => ({
     username: 'Ada', email: 'ada@example.com', authKey: random(32),
     kdf: { name: 'PBKDF2-SHA256', iterations: 600000, salt: random(16) },
-    wrappedVaultKey: sealed(), ...overrides
+    wrappedVaultKey: sealed(), recoveryWrappedKey: sealed(), recoveryAuthKey: random(32), ...overrides
 });
 
 /** An encrypted item as the browser would store it (the server cannot tell it from a real one). */

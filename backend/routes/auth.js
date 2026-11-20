@@ -36,7 +36,7 @@ const signInPayload = (user, authToken) => ({
     wrappedVaultKey: user.wrappedVaultKey
 });
 
-// The server never receives a master password, only a key derived from it (see frontend/src/lib/vaultCrypto.js).
+// The server never receives a master password or recovery key, only keys derived from them (see frontend/src/lib/vaultCrypto.js).
 const KEY_PROBLEM = 'Something went wrong preparing your password. Reload the page and try again.';
 const authKeyField = (name) => body(name, KEY_PROBLEM).custom((v) => isBase64Of(v, 32));
 const kdfField = (name) => body(name, KEY_PROBLEM).custom(isKdf);
@@ -44,6 +44,7 @@ const wrappedField = (name) => body(name, KEY_PROBLEM).custom(isWrappedKey);
 const emailField = body('email', 'Enter a valid email').trim().isEmail();
 
 const BAD_CREDENTIALS = 'Please login with valid credentials';
+const BAD_RECOVERY = 'Check the email and recovery key.';
 
 const normalizeEmail = (email) => email.toLowerCase().trim();
 
@@ -74,7 +75,9 @@ router.post('/register', [
     emailField,
     authKeyField('authKey'),
     kdfField('kdf'),
-    wrappedField('wrappedVaultKey')
+    wrappedField('wrappedVaultKey'),
+    wrappedField('recoveryWrappedKey'),
+    authKeyField('recoveryAuthKey')
 ], async (req, res) => {
     const errors = validationResult(req).array();
     if (errors.length !== 0) {
@@ -88,8 +91,11 @@ router.post('/register', [
         const email = normalizeEmail(req.body.email);
         if (await db.collection('users').findOne({ email })) return duplicate();
 
-        const authHash = await bcrypt.hash(req.body.authKey, BCRYPT_COST);
-        const { kdf, wrappedVaultKey } = req.body;
+        const [authHash, recoveryAuthHash] = await Promise.all([
+            bcrypt.hash(req.body.authKey, BCRYPT_COST),
+            bcrypt.hash(req.body.recoveryAuthKey, BCRYPT_COST)
+        ]);
+        const { kdf, wrappedVaultKey, recoveryWrappedKey } = req.body;
 
         let newUser;
         try {
@@ -99,6 +105,8 @@ router.post('/register', [
                 authHash,
                 kdf: { name: kdf.name, iterations: kdf.iterations, salt: kdf.salt },
                 wrappedVaultKey,
+                recoveryWrappedKey,
+                recoveryAuthHash,
                 v: 2,
                 tokenVersion: 0,
                 createdAt: new Date(),
@@ -171,7 +179,8 @@ router.get('/me', fetchUser, async (req, res) => {
 
 // ========================================================
 // ROUTE 4: Change Master Password (POST /api/auth/change-password)
-// The vault key is not re-encrypted, only re-wrapped, so this is cheap. The account's salt must stay the same.
+// The vault key is not re-encrypted, only re-wrapped, so this is cheap. The account's salt must stay the same: the
+// recovery key is derived with it, and would stop working if it changed.
 // ========================================================
 router.post('/change-password', fetchUser, requirePassword, [
     authKeyField('newAuthKey'),
@@ -245,6 +254,69 @@ router.delete('/me', fetchUser, requirePassword, async (req, res) => {
         });
     } catch (error) {
         console.error('Delete user error:', error.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
+// ========================================================
+// ROUTE 6: Recover an account with the recovery key
+//   POST /api/auth/recovery/unlock  proves the recovery key and returns the vault key wrapped for it
+//   POST /api/auth/recovery/reset   proves it again and sets a new master password (re-wrapping the vault key)
+// Both count wrong proofs toward the same 15-minute lockout as sign-in.
+// ========================================================
+const checkRecovery = async (db, req, res) => {
+    const user = await db.collection('users').findOne({ email: normalizeEmail(req.body.email) });
+    const result = await checkPassword(db, user, req.body.recoveryAuthKey, 'recoveryAuthHash');
+    if (result === 'locked') {
+        res.status(429).json({ success: false, errors: [{ msg: LOCKED_MESSAGE }] });
+        return null;
+    }
+    if (result !== 'ok') {
+        res.status(400).json({ success: false, errors: [{ msg: BAD_RECOVERY }] });
+        return null;
+    }
+    return user;
+};
+
+router.post('/recovery/unlock', [emailField, authKeyField('recoveryAuthKey')], async (req, res) => {
+    const errors = validationResult(req).array();
+    if (errors.length !== 0) return res.status(400).json({ success: false, errors });
+    try {
+        const db = await connectToDb();
+        const user = await checkRecovery(db, req, res);
+        if (!user) return;
+        return res.json({ success: true, kdf: user.kdf, recoveryWrappedKey: user.recoveryWrappedKey });
+    } catch (err) {
+        console.error('Recovery unlock error:', err.message);
+        return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+});
+
+router.post('/recovery/reset', [
+    emailField,
+    authKeyField('recoveryAuthKey'),
+    authKeyField('newAuthKey'),
+    kdfField('newKdf'),
+    wrappedField('newWrappedVaultKey')
+], async (req, res) => {
+    const errors = validationResult(req).array();
+    if (errors.length !== 0) return res.status(400).json({ success: false, errors });
+    try {
+        const db = await connectToDb();
+        const user = await checkRecovery(db, req, res);
+        if (!user) return;
+        const { newAuthKey, newKdf, newWrappedVaultKey } = req.body;
+        if (newKdf.salt !== user.kdf.salt) return res.status(400).json({ success: false, errors: [{ msg: KEY_PROBLEM }] });
+
+        const kdf = { name: newKdf.name, iterations: newKdf.iterations, salt: newKdf.salt };
+        const updated = await db.collection('users').findOneAndUpdate(
+            { _id: user._id },
+            { $set: { authHash: await bcrypt.hash(newAuthKey, BCRYPT_COST), kdf, wrappedVaultKey: newWrappedVaultKey, updatedAt: new Date(), lastLogin: new Date() }, $inc: { tokenVersion: 1 } },
+            { returnDocument: 'after' }
+        );
+        return res.json(signInPayload(updated, signToken(updated._id, updated.tokenVersion)));
+    } catch (err) {
+        console.error('Recovery reset error:', err.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
 });

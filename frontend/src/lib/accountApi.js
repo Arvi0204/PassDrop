@@ -1,10 +1,14 @@
-// Account calls that involve keys: each one derives what the server needs from the master password in the browser, so
-// only derived proofs and wrapped keys are ever sent (never the password or the vault key). Results are `{ ok: true, ... }` or `{ ok: false, error(s) }`; a network failure throws, so callers can show
+// Account calls that involve keys: each one derives what the server needs from the master password (or recovery key) in
+// the browser, so only derived proofs and wrapped keys are ever sent (never the password, the recovery key or the vault
+// key). Results are `{ ok: true, ... }` or `{ ok: false, error(s) }`; a network failure throws, so callers can show
 // their own "cannot connect" message. Nothing is stored here: callers save the session (see session.js).
 import authFetch from './authFetch';
-import { VaultCryptoError, deriveKeys, newKdf, newVaultKey, unwrapVaultKey, wrapVaultKey } from './vaultCrypto';
+import {
+    VaultCryptoError, deriveKeys, deriveRecoveryKeys, newKdf, newRecoveryKey, newVaultKey, unwrapVaultKey, wrapVaultKey
+} from './vaultCrypto';
 
 export const WRONG_PASSWORD = 'That is not your master password.';
+export const BAD_RECOVERY = 'Check the email and recovery key.';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -30,11 +34,15 @@ export async function signUp(host, { username, email, password }) {
     const kdf = newKdf();
     const { authKey, wrapKey } = await deriveKeys(password, kdf);
     const vaultKey = await newVaultKey();
+    const recoveryKey = newRecoveryKey();
+    const { recoveryAuthKey, recoveryWrapKey } = await deriveRecoveryKeys(recoveryKey, kdf); // same salt as the password
     const { ok, json } = await post(host, '/api/auth/register', {
-        username, email, authKey, kdf, wrappedVaultKey: await wrapVaultKey(vaultKey, wrapKey)
+        username, email, authKey, kdf, recoveryAuthKey,
+        wrappedVaultKey: await wrapVaultKey(vaultKey, wrapKey),
+        recoveryWrappedKey: await wrapVaultKey(vaultKey, recoveryWrapKey)
     });
     if (!ok || !json.success) return { ok: false, errors: errorsOf(json, 'Failed to create account') };
-    return { ok: true, token: json.authToken, userId: json.userId, vaultKey };
+    return { ok: true, token: json.authToken, userId: json.userId, vaultKey, recoveryKey };
 }
 
 export async function signIn(host, { email, password }) {
@@ -70,7 +78,7 @@ export async function reauthKey(host, token, password) {
     return (await deriveKeys(password, kdf)).authKey;
 }
 
-// The salt stays the same; only the keys change. The vault key itself is not
+// The salt stays the same (the recovery key is derived with it); only the keys change. The vault key itself is not
 // re-encrypted, only re-wrapped, so the saved logins are untouched.
 export async function changePassword(host, token, { currentPassword, newPassword, vaultKey }) {
     const { kdf } = await me(host, token);
@@ -81,4 +89,35 @@ export async function changePassword(host, token, { currentPassword, newPassword
         { 'auth-token': token });
     if (!ok || !json.success) return { ok: false, error: errorsOf(json, 'Failed to update master password')[0] };
     return { ok: true, token: json.authToken };
+}
+
+export async function recover(host, { email, recoveryKey, newPassword }) {
+    const fail = { ok: false, error: BAD_RECOVERY };
+    const prelogin = await call(`${host}/api/auth/prelogin?email=${encodeURIComponent(email)}`);
+    if (!prelogin.ok || !prelogin.json.success) return { ok: false, error: errorsOf(prelogin.json, BAD_RECOVERY)[0] };
+
+    let keys;
+    try {
+        keys = await deriveRecoveryKeys(recoveryKey, prelogin.json.kdf);
+    } catch (error) {
+        if (error instanceof VaultCryptoError) return fail; // not 32 hex digits
+        throw error;
+    }
+    const { recoveryAuthKey, recoveryWrapKey } = keys;
+    const unlocked = await post(host, '/api/auth/recovery/unlock', { email, recoveryAuthKey });
+    if (!unlocked.ok || !unlocked.json.success) return { ok: false, error: errorsOf(unlocked.json, BAD_RECOVERY)[0] };
+
+    let vaultKey;
+    try {
+        vaultKey = await unwrapVaultKey(unlocked.json.recoveryWrappedKey, recoveryWrapKey);
+    } catch (error) {
+        if (error instanceof VaultCryptoError) return fail;
+        throw error;
+    }
+    const kdf = unlocked.json.kdf;
+    const { authKey: newAuthKey, wrapKey } = await deriveKeys(newPassword, kdf);
+    const reset = await post(host, '/api/auth/recovery/reset',
+        { email, recoveryAuthKey, newAuthKey, newKdf: kdf, newWrappedVaultKey: await wrapVaultKey(vaultKey, wrapKey) });
+    if (!reset.ok || !reset.json.success) return { ok: false, error: errorsOf(reset.json, BAD_RECOVERY)[0] };
+    return { ok: true, token: reset.json.authToken, userId: reset.json.userId, vaultKey };
 }

@@ -8,6 +8,7 @@ import PasswordState from './context/PasswordState'
 import { TideProvider } from './context/TideContext'
 import Login from './components/Login'
 import Signup from './components/Signup'
+import Recover from './components/Recover'
 import Manager from './components/Manager'
 import { Toaster } from 'react-hot-toast';
 import Home from './components/Home'
@@ -49,6 +50,7 @@ function App() {
               <Route exact path="/home" element={<Home />} />
               <Route exact path="/login" element={<Login />} />
               <Route exact path="/signup" element={<Signup />} />
+              <Route exact path="/recover" element={<Recover />} />
               <Route exact path="/" element={<Manager />} />
               <Route exact path="/user" element={<UserDetails />} />
               <Route exact path="/extension" element={<ExtensionInstructions />} />

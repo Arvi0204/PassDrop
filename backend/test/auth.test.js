@@ -9,7 +9,7 @@ const messages = (body) => (body.errors || []).map((e) => e.msg);
 const register = (body) => request().post('/api/auth/register').send(body);
 
 describe('register', () => {
-    test('stores a hash of the proof (not the proof), the key settings, the wrapped vault key, and no password', async () => {
+    test('stores a hash of the proof (not the proof), the key settings, both wrapped keys, and no password', async () => {
         const body = registrationBody({ email: 'Ada@Example.com' });
         const res = await register(body);
         assert.equal(res.status, 201);
@@ -22,11 +22,13 @@ describe('register', () => {
         assert.equal(stored.email, 'ada@example.com'); // stored in lower case
         assert.equal(stored.v, 2);
         assert.match(stored.authHash, /^\$2[aby]\$12\$/); // bcrypt at cost 12
+        assert.match(stored.recoveryAuthHash, /^\$2[aby]\$12\$/);
         assert.equal(stored.password, undefined, 'there is no password field at all');
         assert.deepEqual(stored.kdf, body.kdf);
         assert.equal(stored.wrappedVaultKey, body.wrappedVaultKey);
+        assert.equal(stored.recoveryWrappedKey, body.recoveryWrappedKey);
         const text = JSON.stringify(stored);
-        assert.ok(!text.includes(body.authKey), 'the proof itself is not stored');
+        assert.ok(!text.includes(body.authKey) && !text.includes(body.recoveryAuthKey), 'the proofs themselves are not stored');
     });
 
     test('rejects weak or malformed input and stores nothing', async () => {
@@ -40,9 +42,11 @@ describe('register', () => {
             { authKey: random(32).slice(0, -1) }, // 43 characters
             { authKey: random(33) },
             { authKey: 'not base64 !!' },
+            { recoveryAuthKey: undefined },
             { wrappedVaultKey: undefined },
             { wrappedVaultKey: 'plain text' },
             { wrappedVaultKey: 'v1.AAAA.' + 'A'.repeat(600) },
+            { recoveryWrappedKey: { a: 1 } },
             { username: 'ab' },
             { email: 'nope' }
         ];
@@ -94,6 +98,7 @@ describe('login', () => {
         assert.equal(res.body.userId, String(user.id));
         assert.deepEqual(res.body.kdf, user.kdf);
         assert.equal(res.body.wrappedVaultKey, user.wrappedVaultKey);
+        assert.equal(res.body.recoveryWrappedKey, undefined, 'the recovery copy stays on the server until recovery is proven');
     });
 
     test('a wrong proof and an unknown email get the same answer, so emails cannot be probed', async () => {
@@ -220,7 +225,7 @@ describe('change master password', () => {
         assert.match(same.body.error, /must be different/);
     });
 
-    test('refuses new settings with a different salt', async () => {
+    test('refuses new settings with a different salt, because the recovery key is derived with the salt', async () => {
         const user = await signedInUser();
         const res = await change(user, fresh(user, { newKdf: { ...user.kdf, salt: random(16) } }));
         assert.equal(res.status, 400);
@@ -228,7 +233,7 @@ describe('change master password', () => {
         assert.deepEqual((await all('users'))[0].kdf, user.kdf);
     });
 
-    test('swaps the proof, settings and wrapped key, signs out every other session, keeps this one', async () => {
+    test('swaps the proof, settings and wrapped key, signs out every other session, keeps this one, leaves the recovery copy', async () => {
         const user = await signedInUser();
         const otherSession = await login(user); // a second device, or a stolen token
         const body = fresh(user, { newKdf: { ...user.kdf, iterations: 700000 } });
@@ -247,6 +252,7 @@ describe('change master password', () => {
         const newLogin = await request().post('/api/auth/login').send({ email: user.email, authKey: body.newAuthKey });
         assert.equal(newLogin.status, 200);
         assert.equal(newLogin.body.wrappedVaultKey, body.newWrappedVaultKey);
+        assert.equal((await all('users'))[0].recoveryWrappedKey, user.recoveryWrappedKey);
     });
 });
 

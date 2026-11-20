@@ -48,4 +48,9 @@ describe('Login', () => {
         expect(localStorage.getItem('passdrop.userId')).toBe('user-1');
         expect(await getVaultKey()).not.toBeNull();
     });
+
+    it('links to the recovery page', () => {
+        render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Login /></MemoryRouter>);
+        expect(screen.getByRole('link', { name: /Forgot it/ }).getAttribute('href')).toBe('/recover');
+    });
 });
