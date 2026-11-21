@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import LockScreen from './LockScreen';
 import { useTide } from '../context/useTide';
-import { CHECKING_CAP, POOL_LEVEL, frostMask, patchRadius, warm } from '../lib/frost';
+import { CHECKING_CAP, frostMask, patchRadius, poolLevel, warm } from '../lib/frost';
 import '../styles/frost.css';
 
 const FREEZE_MS = 1100;
@@ -33,7 +33,7 @@ export default function FrozenVault({ unlocked, onGone }) {
     const cardRef = useRef(null);
     const [cardShown, setCardShown] = useState(false);
     // progress (cur) glides toward its target (tgt); busy means a scripted tween owns it
-    const eng = useRef({ cur: 1, tgt: 0, tweenId: 0, busy: false, stallUntil: 0, keys: 0, begun: false, thawing: false, timers: [] });
+    const eng = useRef({ cur: 1, tgt: 0, tweenId: 0, busy: false, stallUntil: 0, keys: 0, level: 0, begun: false, thawing: false, timers: [] });
 
     const geometry = () => {
         const size = { w: window.innerWidth, h: window.innerHeight };
@@ -106,9 +106,11 @@ export default function FrozenVault({ unlocked, onGone }) {
         if (e.begun && !e.thawing) tideRef.current.abort();
     }, []);
 
-    const startWater = () => {
-        const e = eng.current;
-        if (!e.begun) { e.begun = true; tideRef.current.begin(); }
+    // the water stands a little higher after every key, up to a cap, and never goes back down
+    const raiseWater = () => {
+        const e = eng.current, level = poolLevel(e.tgt);
+        e.begun = true;
+        if (level > e.level) { e.level = level; tideRef.current.rise(level); }
     };
 
     // a bead gathers on the rim of the clear patch and runs down in short lurches to the water
@@ -118,7 +120,7 @@ export default function FrozenVault({ unlocked, onGone }) {
         const { center, size } = geometry();
         const r = patchRadius(eng.current.cur, center, size) * 0.92, a = Math.PI * (0.1 + Math.random() * 0.8);
         const x = Math.max(16, Math.min(size.w - 16, center.x + Math.cos(a) * r * 1.5)), y = Math.max(80, center.y - Math.sin(a) * r * 0.55 + 10);
-        const end = size.h - POOL_LEVEL * (size.h + 46) + 14;
+        const end = size.h - Math.max(eng.current.level, 0.04) * (size.h + 46) + 14; // where the water stands now
         if (y > end - 24) return;
         const el = document.createElement('i'), d = end - y, s = 0.7 + Math.random() * 0.5, at = (dy, sy = s) => `translate(${x}px,${y + dy}px) scale(${s},${sy})`;
         el.className = 'frost-bead';
@@ -135,20 +137,20 @@ export default function FrozenVault({ unlocked, onGone }) {
         const e = eng.current, added = length - e.keys;
         e.keys = length;
         if (added <= 0 || e.thawing) return; // deleting takes nothing back
-        startWater();
         e.tgt = warm(e.tgt, added);
+        raiseWater();
         if (!animates()) { e.cur = e.tgt; draw(); return; }
         for (let i = 0; i < added; i += 1) e.timers.push(setTimeout(spawnBead, 120 + Math.random() * 500));
     };
     const onChecking = () => {
         const e = eng.current;
-        startWater();
         e.tgt = Math.max(e.tgt, CHECKING_CAP); // the check takes a moment: the patch opens a little further
+        raiseWater();
         if (!animates()) { e.cur = e.tgt; draw(); }
     };
     const onWrong = () => { eng.current.stallUntil = performance.now() + WRONG_PAUSE_MS; };
     // the entrance is queued before the vault key is stored, so the page behind is hidden until it surfaces
-    const onBeforeUnlock = () => { startWater(); tideRef.current.queueEntrance(); };
+    const onBeforeUnlock = () => { raiseWater(); tideRef.current.queueEntrance(); };
 
     // unlocked: the water floods and the frost clears; then the page surfaces
     useEffect(() => {

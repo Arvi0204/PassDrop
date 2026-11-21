@@ -3,13 +3,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import FrozenVault from './FrozenVault';
+import { POOL_MAX } from '../lib/frost';
 import PasswordState from '../context/PasswordState';
 import { saveSignIn } from '../lib/session';
 import { deriveKeys, newVaultKey, wrapVaultKey } from '../lib/vaultCrypto';
 
 // the water needs a real browser; these tests check when the vault asks for it
 const tide = vi.hoisted(() => ({
-    begin: vi.fn(), complete: vi.fn(async () => {}), cancel: vi.fn(), abort: vi.fn(), release: vi.fn(),
+    rise: vi.fn(), complete: vi.fn(async () => {}), cancel: vi.fn(), abort: vi.fn(), release: vi.fn(),
     queueEntrance: vi.fn(), peekEntrance: vi.fn(() => false)
 }));
 vi.mock('../context/useTide', () => ({ useTide: () => tide }));
@@ -40,9 +41,26 @@ describe('FrozenVault', () => {
         const user = userEvent.setup();
         show();
         expect(screen.getByText('Vault frozen')).toBeTruthy();
-        expect(tide.begin).not.toHaveBeenCalled();
+        expect(tide.rise).not.toHaveBeenCalled();
         await user.type(screen.getByLabelText('Master Password'), 'abc');
-        expect(tide.begin).toHaveBeenCalledTimes(1); // once, however many keys
+        expect(tide.rise).toHaveBeenCalledTimes(3);
+    });
+
+    it('the water climbs with every key, stops at its cap, and typing or deleting never lowers it', async () => {
+        const user = userEvent.setup();
+        show();
+        const input = screen.getByLabelText('Master Password');
+        await user.type(input, 'abcdefghijklmnopqrst'); // more keys than it takes to reach the cap
+        const levels = tide.rise.mock.calls.map(([level]) => level);
+        expect(levels[0]).toBeGreaterThan(0);
+        expect(levels[0]).toBeLessThan(0.1); // one key is a small step, not a third of the screen
+        expect(levels).toEqual([...levels].sort((a, b) => a - b)); // only ever up
+        expect(Math.max(...levels)).toBeLessThanOrEqual(POOL_MAX);
+        expect(levels.at(-1)).toBe(POOL_MAX);
+        const calls = tide.rise.mock.calls.length;
+        await user.clear(input);
+        await user.type(input, 'a');
+        expect(tide.rise.mock.calls.length).toBe(calls); // nothing higher to raise it to
     });
 
     it('a wrong password leaves the water up (it must not read as signing out) and queues no entrance', async () => {

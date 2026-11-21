@@ -17,6 +17,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * Water-level transition used by the auth screens.
  *
  *   tide.begin()           water rises to ~36% behind the form while the server checks credentials
+ *   tide.rise(level)       water glides to `level` (0..1 of the screen); call it again to raise it further
  *   tide.complete()        success: floods to the top (resolves when full)
  *   tide.cancel()          failure: water recedes (~1s), resolves when empty
  *   tide.abort()           instantly resets (e.g. the user left the page mid-request)
@@ -89,6 +90,14 @@ export function TideProvider({ children }) {
                 fadeAnim.current?.cancel();
                 fadeAnim.current = null;
                 move(0.36, 650, 'cubic-bezier(.2,.7,.3,1)');
+            },
+
+            // the locked vault raises the water a little with each key, so it climbs instead of jumping
+            rise(level) {
+                run.current += 1;
+                fadeAnim.current?.cancel();
+                fadeAnim.current = null;
+                move(level, 700, 'cubic-bezier(.3,.6,.4,1)');
             },
 
             async complete() {
