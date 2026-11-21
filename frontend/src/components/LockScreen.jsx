@@ -7,7 +7,9 @@ import { getToken, saveVaultKey, signOut } from '../lib/session';
 
 // Signed in but locked: a reopened tab has the sign-in (localStorage) but not the vault key (sessionStorage). The master
 // password opens the vault again; nothing is stored unless it is right.
-export default function LockScreen({ onUnlocked }) {
+// The optional callbacks let the frost animation around it follow along: typing, the check starting, a wrong password,
+// and the right one (called just before the vault key is stored).
+export default function LockScreen({ onUnlocked, onTyping, onChecking, onWrong, onBeforeUnlock }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -18,16 +20,20 @@ export default function LockScreen({ onUnlocked }) {
         e.preventDefault();
         setIsLoading(true);
         setError('');
+        onChecking?.();
         try {
             const result = await unlock(host, getToken(), password);
             if (result.ok) {
+                onBeforeUnlock?.();
                 await saveVaultKey(result.vaultKey);
                 onUnlocked?.();
             } else {
                 setError(result.error);
+                onWrong?.();
             }
         } catch {
             setError('Cannot connect to the server. Try again.');
+            onWrong?.();
         } finally {
             setIsLoading(false);
         }
@@ -64,7 +70,7 @@ export default function LockScreen({ onUnlocked }) {
                             autoFocus
                             required
                             value={password}
-                            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                            onChange={(e) => { setPassword(e.target.value); setError(''); onTyping?.(e.target.value.length); }}
                             placeholder="Enter master password"
                             className="w-full px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] placeholder-[#5c7788] focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all shadow-xs"
                         />

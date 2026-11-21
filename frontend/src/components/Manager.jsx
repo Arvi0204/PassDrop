@@ -14,7 +14,8 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
-import LockScreen from './LockScreen';
+import FrozenVault from './FrozenVault';
+import FrozenRows from './Vault/FrozenRows';
 import { getToken } from '../lib/session';
 import { useTide } from '../context/useTide';
 import { playVaultEntrance } from '../lib/vaultEntrance';
@@ -54,16 +55,32 @@ export default function Manager() {
         if (fetched) animateEnter.current = true;
     }, [fetched]);
 
+    // Frozen = signed in but no vault key. The frost stays up (covered) until the thaw has finished, even though the
+    // vault is already unlocked underneath by then.
+    const frozen = locked && Boolean(getToken());
+    const [covered, setCovered] = useState(frozen);
+    useEffect(() => {
+        if (frozen) setCovered(true);
+    }, [frozen]);
+    useEffect(() => {
+        if (locked) setFetched(false); // a vault that is locked again fetches and surfaces afresh
+    }, [locked]);
+    // nothing behind the frost can be reached from the keyboard
+    useEffect(() => {
+        if (covered) rootRef.current?.setAttribute('inert', '');
+        else rootRef.current?.removeAttribute('inert');
+    }, [covered]);
+
     // hide the targets before the first paint so nothing flashes under the water
     useLayoutEffect(() => {
         if (tide.peekEntrance()) rootRef.current?.classList.add('entrance-pending');
-    }, [tide]);
+    }, [tide, locked]);
 
     useEffect(() => {
-        if (!fetched || !tide.peekEntrance()) return undefined;
+        if (!fetched || covered || !tide.peekEntrance()) return undefined;
         tide.release(); // clear the water as the vault surfaces
         return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance });
-    }, [fetched, tide]);
+    }, [fetched, covered, tide]);
 
     // Authentication check & initial data fetch (a locked vault fetches nothing until it is unlocked)
     useEffect(() => {
@@ -180,9 +197,10 @@ export default function Manager() {
         return passwordArray.filter((i) => i.isFavorite).length;
     }, [passwordArray]);
 
-    if (locked && getToken()) return <LockScreen />;
-
     return (
+        <>
+        {/* outside the page's own container, which is inert while the frost is up */}
+        {covered && <FrozenVault unlocked={!frozen} onGone={() => setCovered(false)} />}
         <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
             <div role="status" aria-live="polite" className="sr-only">
                 <span key={announcement.id}>{announcement.text}</span>
@@ -265,7 +283,7 @@ export default function Manager() {
                             <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
-                        {filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
+                        {frozen ? <FrozenRows /> : filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
                             <motion.div
                                 key={searchQuery ? 'no-match' : 'empty'}
                                 data-entrance
@@ -400,5 +418,6 @@ export default function Manager() {
                 confirmText="Yes, Delete"
             />
         </div>
+        </>
     );
 }
