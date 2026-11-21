@@ -41,10 +41,10 @@ function render(replies) {
   return { document: window.document, sent, did, submit };
 }
 
-test('it asks for the master password only, and says when the vault locks', () => {
+test('it asks for the master password only, and says the passwords are encrypted', () => {
   const { document } = render([]);
   assert.deepEqual([...document.querySelectorAll('input')].map((i) => i.id), ['password']);
-  assert.match(document.body.textContent, /Your vault locks when the browser is closed\./);
+  assert.match(document.body.textContent, /Your passwords are encrypted. Enter your master password to unlock them\./);
   assert.match(document.body.textContent, /me@x\.com/);
 });
 

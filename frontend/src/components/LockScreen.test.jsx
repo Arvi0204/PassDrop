@@ -24,9 +24,9 @@ const show = (onUnlocked) =>
     render(<MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><LockScreen onUnlocked={onUnlocked} /></MemoryRouter>);
 
 describe('LockScreen', () => {
-    it('says the vault locks when its tab is closed and asks only for the master password', () => {
+    it('explains the vault is encrypted and asks only for the master password', () => {
         show();
-        expect(screen.getByText('Your vault locks whenever its tab is closed.')).toBeTruthy();
+        expect(screen.getByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeTruthy();
         expect(document.querySelectorAll('input')).toHaveLength(1);
         expect(document.querySelector('input').type).toBe('password');
     });

@@ -39,10 +39,10 @@ export function renderUnlock({ session, onUnlocked, onSignedOut, onExpired }) {
   );
 
   return card(
-    h('h1', { class: 'text-lg font-bold text-[#0c1820]' }, 'Vault locked'),
+    h('h1', { class: 'text-lg font-bold text-[#0c1820]' }, 'Vault frozen'),
     h('p', { class: 'text-xs text-[#3a5566] mt-0.5 mb-4 break-all' }, `Signed in as ${session.email}`),
     form,
-    h('p', { class: 'mt-3 text-center text-xs text-[#3a5566]' }, 'Your vault locks when the browser is closed.'),
+    h('p', { class: 'mt-3 text-center text-xs text-[#3a5566]' }, 'Your passwords are encrypted. Enter your master password to unlock them.'),
     h('p', { class: 'mt-4 pt-3 border-t border-white/60 text-center text-xs text-[#3a5566]' },
       h('button', {
         type: 'button',

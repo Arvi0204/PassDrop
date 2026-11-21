@@ -44,9 +44,9 @@ export default function LockScreen({ onUnlocked }) {
                 <div className="w-11 h-11 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] text-[#112838] flex items-center justify-center shadow-xs mb-4">
                     <Lock className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold text-[#0c1820]">Vault locked</h3>
+                <h3 className="text-2xl font-bold text-[#0c1820]">Vault frozen</h3>
                 <p className="text-xs sm:text-sm text-[#3a5566] mt-1.5">
-                    Your vault locks whenever its tab is closed.
+                    Your passwords are encrypted. Enter your master password to unlock them.
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-4">

@@ -200,7 +200,7 @@ async function run() {
     check('a reload of the same tab stays unlocked', true);
 
     const tab2 = await Tab.open(`${base}/`);
-    await tab2.waitText('Your vault locks whenever its tab is closed.');
+    await tab2.waitText('Your passwords are encrypted. Enter your master password to unlock them.');
     check('a new tab shows the lock screen with the lock text', true);
     check('a locked tab shows no login', !(await tab2.text()).includes(LOGIN_TITLE));
     await tab2.fill('#lock-password', 'not-the-password');

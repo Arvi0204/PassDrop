@@ -43,7 +43,7 @@ const show = () =>
 describe('the vault page', () => {
     it('in a new tab (signed in, no vault key) shows the lock screen and fetches nothing', async () => {
         show();
-        expect(screen.getByText('Your vault locks whenever its tab is closed.')).toBeTruthy();
+        expect(screen.getByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeTruthy();
         expect(screen.queryByText('GitHub')).toBeNull();
         await new Promise((resolve) => setTimeout(resolve, 20));
         expect(passwordsFetched).toBe(0);
@@ -61,7 +61,7 @@ describe('the vault page', () => {
         await user.type(screen.getByLabelText('Master Password'), 'the-master-pw');
         await user.click(screen.getByRole('button', { name: /Unlock Vault/ }));
         expect((await screen.findAllByText('GitHub')).length).toBeGreaterThan(0);
-        expect(screen.queryByText('Your vault locks whenever its tab is closed.')).toBeNull();
+        expect(screen.queryByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeNull();
         expect(passwordsFetched).toBe(1);
     });
 
@@ -69,7 +69,7 @@ describe('the vault page', () => {
         await saveVaultKey(vaultKey);
         show();
         expect((await screen.findAllByText('GitHub')).length).toBeGreaterThan(0);
-        expect(screen.queryByText('Your vault locks whenever its tab is closed.')).toBeNull();
+        expect(screen.queryByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeNull();
     });
 
     it('shows an item that cannot be decrypted as a plain row, and still lists the others', async () => {
