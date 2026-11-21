@@ -53,7 +53,7 @@ One setting, `VITE_BACKEND`: the address of the API.
 Behaviour worth knowing:
 
 - Everything you save is encrypted in the browser before it is sent; the server never sees a title, address, username, password or note. If a saved login cannot be decrypted it shows as "This login could not be decrypted" and the rest still load.
-- The vault locks when its tab is closed. Reopening PassDrop in a new tab shows a lock screen that asks for the master password (you stay signed in; only the key to the vault is gone). There is also a Lock button next to Logout.
+- The vault locks when you close its tab. Reopening PassDrop in a new tab shows a "Vault frozen" screen under frost that asks for the master password (you stay signed in; only the key to the vault is gone). The frost clears as you type and then lifts when the password is right. There is also a Lock button next to Logout.
 - Passwords are revealed through a waterline that drains away, instead of a plain swap.
 - Feedback appears next to what you did, rather than as toasts, and Escape closes any open dialog.
 - If your session stops working (it expired, or the master password was changed elsewhere), you are sent to the login page.
