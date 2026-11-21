@@ -49,6 +49,15 @@ describe('session', () => {
         expect(hasPendingRecoveryKey()).toBe(false);
     });
 
+    it('does not offer the held recovery key to a different account that signs in afterwards', () => {
+        saveSignIn({ token: 't1', userId: 'a' });
+        setPendingRecoveryKey('1A2B-3C4D');
+        saveSignIn({ token: 't2', userId: 'b' }); // e.g. another tab signed in as someone else
+        expect([hasPendingRecoveryKey(), getPendingRecoveryKey()]).toEqual([false, null]);
+        saveSignIn({ token: 't3', userId: 'a' });
+        expect(getPendingRecoveryKey()).toBe('1A2B-3C4D'); // still there for the account that made it
+    });
+
     it('tells listeners when the recovery key appears or goes', () => {
         const listener = vi.fn();
         const stop = subscribe(listener);

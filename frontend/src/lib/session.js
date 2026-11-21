@@ -6,6 +6,7 @@ const TOKEN = 'passdrop.token';
 const USER_ID = 'passdrop.userId';
 const VAULT_KEY = 'passdrop.vaultKey';
 const PENDING_RECOVERY_KEY = 'passdrop.pendingRecoveryKey';
+const PENDING_RECOVERY_USER = 'passdrop.pendingRecoveryUser'; // whose it is
 
 // components that show the lock state (the vault context) listen here
 const listeners = new Set();
@@ -42,15 +43,19 @@ export async function saveVaultKey(key) {
 }
 
 // The recovery key made at sign-up, held (in this tab only) until the Account page has shown it once. It is never sent
-// anywhere; signing out or showing it removes it.
-export const getPendingRecoveryKey = () => sessionStorage.getItem(PENDING_RECOVERY_KEY);
-export const hasPendingRecoveryKey = () => sessionStorage.getItem(PENDING_RECOVERY_KEY) !== null;
+// anywhere; signing out or showing it removes it. It belongs to the account that made it: if another account has signed
+// in by the time the Account page opens (say, from a second tab), the key is not offered to that account.
+const heldFor = () => sessionStorage.getItem(PENDING_RECOVERY_USER) === (getUserId() ?? '');
+export const getPendingRecoveryKey = () => (heldFor() ? sessionStorage.getItem(PENDING_RECOVERY_KEY) : null);
+export const hasPendingRecoveryKey = () => getPendingRecoveryKey() !== null;
 export function setPendingRecoveryKey(key) {
     sessionStorage.setItem(PENDING_RECOVERY_KEY, key);
+    sessionStorage.setItem(PENDING_RECOVERY_USER, getUserId() ?? '');
     changed();
 }
 export function clearPendingRecoveryKey() {
     sessionStorage.removeItem(PENDING_RECOVERY_KEY);
+    sessionStorage.removeItem(PENDING_RECOVERY_USER);
     changed();
 }
 
@@ -65,5 +70,6 @@ export function signOut() {
     localStorage.removeItem(USER_ID);
     sessionStorage.removeItem(VAULT_KEY);
     sessionStorage.removeItem(PENDING_RECOVERY_KEY);
+    sessionStorage.removeItem(PENDING_RECOVERY_USER);
     changed();
 }
