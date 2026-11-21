@@ -59,8 +59,9 @@ export default function Manager() {
     // vault is already unlocked underneath by then.
     const frozen = locked && Boolean(getToken());
     const [covered, setCovered] = useState(frozen);
+    const afterUnlock = useRef(false); // the light sweep is for arriving from sign-in, not for unlocking
     useEffect(() => {
-        if (frozen) setCovered(true);
+        if (frozen) { setCovered(true); afterUnlock.current = true; }
     }, [frozen]);
     useEffect(() => {
         if (locked) setFetched(false); // a vault that is locked again fetches and surfaces afresh
@@ -79,7 +80,7 @@ export default function Manager() {
     useEffect(() => {
         if (!fetched || covered || !tide.peekEntrance()) return undefined;
         tide.release(); // clear the water as the vault surfaces
-        return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance });
+        return playVaultEntrance(rootRef.current, { onDone: tide.finishEntrance, sweep: !afterUnlock.current });
     }, [fetched, covered, tide]);
 
     // Authentication check & initial data fetch (a locked vault fetches nothing until it is unlocked)
