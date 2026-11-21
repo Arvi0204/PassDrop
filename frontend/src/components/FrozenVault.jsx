@@ -1,11 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import LockScreen from './LockScreen';
-import { useTide } from '../context/useTide';
-import { CHECKING_CAP, frostMask, patchRadius, poolLevel, warm } from '../lib/frost';
+import { CHECKING_CAP, frostMask, warm } from '../lib/frost';
 import '../styles/frost.css';
 
 const FREEZE_MS = 1100;
-const THAW_MS = 1100;
+const THAW_MS = 1500;
 const GLIDE_S = 0.45; // how quickly the frost follows its target
 const WRONG_PAUSE_MS = 1200;
 
@@ -16,24 +15,21 @@ const easeOut = (k) => 1 - (1 - k) ** 3;
 const easeInOut = (k) => k * k * (3 - 2 * k);
 
 /**
- * The vault while it is frozen: frost over the page, with the lock card on top.
+ * The vault while it is frozen: frost over the page, with the lock card on top. Freeze and thaw only, no water.
  *
  *   mounted        frost grows in from the edges, then the card appears
  *   typing         a clear patch opens around the password field and widens with every key (never shrinks);
- *                  the tide's water rises on the first key and beads run down into it
- *   wrong password the frost pauses for a moment; the water stays where it is (water going down reads as signing out)
- *   unlocked       the water floods, the frost clears, then onGone() lets the page surface (Manager releases the water)
+ *                  beads run down from the card's edges and dry out
+ *   wrong password the frost pauses for a moment
+ *   unlocked       the patch widens over the whole window, the logins show through, then onGone() removes the frost
  */
 export default function FrozenVault({ unlocked, onGone }) {
-    const tide = useTide();
-    const tideRef = useRef(tide);
-    tideRef.current = tide;
     const paneRef = useRef(null);
     const beadsRef = useRef(null);
     const cardRef = useRef(null);
     const [cardShown, setCardShown] = useState(false);
     // progress (cur) glides toward its target (tgt); busy means a scripted tween owns it
-    const eng = useRef({ cur: 1, tgt: 0, tweenId: 0, busy: false, stallUntil: 0, keys: 0, level: 0, begun: false, thawing: false, timers: [] });
+    const eng = useRef({ cur: 1, tgt: 0, tweenId: 0, busy: false, stallUntil: 0, keys: 0, thawing: false, timers: [] });
 
     const geometry = () => {
         const size = { w: window.innerWidth, h: window.innerHeight };
@@ -98,37 +94,30 @@ export default function FrozenVault({ unlocked, onGone }) {
         return () => cancelAnimationFrame(raf);
     }, []);
 
-    // forgets pending beads and, if the user leaves while the water is up, clears it
+    // forgets pending beads when the user leaves
     useEffect(() => () => {
         const e = eng.current;
         e.timers.forEach(clearTimeout);
         beadsRef.current?.replaceChildren();
-        if (e.begun && !e.thawing) tideRef.current.abort();
     }, []);
 
-    // the water stands a little higher after every key, up to a cap, and never goes back down
-    const raiseWater = () => {
-        const e = eng.current, level = poolLevel(e.tgt);
-        e.begun = true;
-        if (level > e.level) { e.level = level; tideRef.current.rise(level); }
-    };
-
-    // a bead gathers on the rim of the clear patch and runs down in short lurches to the water
+    // a bead gathers on the card's lower edge or sides and runs down in short lurches, thinning out as it dries
     const spawnBead = () => {
-        const host = beadsRef.current;
-        if (!host || host.children.length > 7) return;
-        const { center, size } = geometry();
-        const r = patchRadius(eng.current.cur, center, size) * 0.92, a = Math.PI * (0.1 + Math.random() * 0.8);
-        const x = Math.max(16, Math.min(size.w - 16, center.x + Math.cos(a) * r * 1.5)), y = Math.max(80, center.y - Math.sin(a) * r * 0.55 + 10);
-        const end = size.h - Math.max(eng.current.level, 0.04) * (size.h + 46) + 14; // where the water stands now
-        if (y > end - 24) return;
-        const el = document.createElement('i'), d = end - y, s = 0.7 + Math.random() * 0.5, at = (dy, sy = s) => `translate(${x}px,${y + dy}px) scale(${s},${sy})`;
+        const host = beadsRef.current, box = cardRef.current?.querySelector('.rounded-3xl')?.getBoundingClientRect();
+        if (!host || !box || host.children.length > 7) return;
+        const side = Math.random(), size = { w: window.innerWidth, h: window.innerHeight };
+        const along = () => box.top + box.height * (0.35 + Math.random() * 0.55);
+        const x = side < 0.55 ? box.left + 14 + Math.random() * (box.width - 28) : side < 0.78 ? box.left + 1 : box.right - 8;
+        const y = side < 0.55 ? box.bottom - 2 : along();
+        const end = Math.min(size.h - 20, y + 90 + Math.random() * 90), d = end - y;
+        if (d < 24) return;
+        const el = document.createElement('i'), s = 0.7 + Math.random() * 0.5, at = (dy, sy = s) => `translate(${x}px,${y + dy}px) scale(${s},${sy})`;
         el.className = 'frost-bead';
         host.appendChild(el);
         const anim = el.animate([
             { transform: at(0, s * 0.6), opacity: 0 }, { transform: at(0), opacity: 1, offset: 0.12 }, { transform: at(d * 0.1, s * 1.3), offset: 0.2 },
-            { transform: at(d * 0.12), offset: 0.34 }, { transform: at(d * 0.55, s * 1.35), offset: 0.55 }, { transform: at(d * 0.58), offset: 0.66 },
-            { transform: at(d, s * 1.4), opacity: 1 }
+            { transform: at(d * 0.12), offset: 0.34 }, { transform: at(d * 0.55, s * 1.35), opacity: 0.8, offset: 0.55 }, { transform: at(d * 0.58), opacity: 0.7, offset: 0.66 },
+            { transform: at(d, s * 0.85), opacity: 0 }
         ], { duration: 1300 + Math.random() * 700, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
         anim.finished.then(() => el.remove(), () => el.remove());
     };
@@ -138,36 +127,29 @@ export default function FrozenVault({ unlocked, onGone }) {
         e.keys = length;
         if (added <= 0 || e.thawing) return; // deleting takes nothing back
         e.tgt = warm(e.tgt, added);
-        raiseWater();
         if (!animates()) { e.cur = e.tgt; draw(); return; }
         for (let i = 0; i < added; i += 1) e.timers.push(setTimeout(spawnBead, 120 + Math.random() * 500));
     };
     const onChecking = () => {
         const e = eng.current;
         e.tgt = Math.max(e.tgt, CHECKING_CAP); // the check takes a moment: the patch opens a little further
-        raiseWater();
         if (!animates()) { e.cur = e.tgt; draw(); }
     };
     const onWrong = () => { eng.current.stallUntil = performance.now() + WRONG_PAUSE_MS; };
-    // the entrance is queued before the vault key is stored, so the page behind is hidden until it surfaces
-    const onBeforeUnlock = () => { raiseWater(); tideRef.current.queueEntrance(); };
 
-    // unlocked: the water floods and the frost clears; then the page surfaces
+    // unlocked: the card leaves and the patch widens over the whole window; the logins are already under the frost
     useEffect(() => {
         if (!unlocked) return undefined;
         const e = eng.current;
         let alive = true;
         e.thawing = true;
+        e.timers.forEach(clearTimeout);
+        beadsRef.current?.replaceChildren();
         if (animates()) cardRef.current?.animate(
             [{ opacity: 1 }, { opacity: 0, transform: 'translateY(-30px) scale(.96)' }],
             { duration: 560, delay: 120, easing: 'ease', fill: 'forwards' }
         );
-        const flood = tideRef.current.peekEntrance() ? tideRef.current.complete() : Promise.resolve();
-        Promise.all([tween(1.02, THAW_MS, easeInOut), flood]).then(() => {
-            if (!alive) return;
-            if (!tideRef.current.peekEntrance() && e.begun) tideRef.current.release(); // nobody else will clear it
-            onGone?.();
-        });
+        tween(1.02, THAW_MS, easeInOut).then(() => { if (alive) onGone?.(); });
         return () => { alive = false; };
     }, [unlocked]);
 
@@ -178,7 +160,7 @@ export default function FrozenVault({ unlocked, onGone }) {
                 <div ref={beadsRef} className="absolute inset-0 overflow-hidden" />
             </div>
             <div ref={cardRef} className={`fixed inset-x-0 top-16 bottom-0 z-[26] overflow-y-auto ${cardShown ? '' : 'opacity-0'}`}>
-                <LockScreen onTyping={onTyping} onChecking={onChecking} onWrong={onWrong} onBeforeUnlock={onBeforeUnlock} />
+                <LockScreen onTyping={onTyping} onChecking={onChecking} onWrong={onWrong} />
             </div>
         </>
     );

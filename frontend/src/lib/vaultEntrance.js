@@ -2,7 +2,9 @@
 //
 //  - Elements marked [data-entrance] sharpen out of a blur, staggered by their distance from the
 //    top-centre of the screen (so any layout, desktop grid or phone column, gets a natural wave).
-//  - One soft light sweep and a tiny haptic tap mark the moment it settles (after sign-in and sign-up only; `sweep: false` skips them).
+//  - One soft light sweep and a tiny haptic tap mark the moment it settles.
+//
+// Played after sign-in and sign-up only. Unlocking a frozen vault has its own frost animation (components/FrozenVault).
 //
 // Only elements inside the current screen animate; anything off-screen just appears.
 
@@ -19,7 +21,7 @@ const isOnScreen = (el) => {
  * Plays the entrance inside `root`. Returns a cancel function that restores everything.
  * `root` is expected to carry the `entrance-pending` class (hides targets until play starts).
  */
-export function playVaultEntrance(root, { onDone, sweep = true } = {}) {
+export function playVaultEntrance(root, { onDone } = {}) {
     if (!root) return () => {};
 
     const timers = [];
@@ -86,8 +88,8 @@ export function playVaultEntrance(root, { onDone, sweep = true } = {}) {
     // Animations now exist (fill: both holds the hidden state), so the pending class can go.
     root.classList.remove('entrance-pending');
 
-    // One soft light sweep + haptic tap once the cards have settled (not after unlocking: the frost clearing is the moment).
-    if (sweep) later(() => {
+    // One soft light sweep + haptic tap once the cards have settled.
+    later(() => {
         glint = document.createElement('div');
         glint.setAttribute('aria-hidden', 'true');
         Object.assign(glint.style, {

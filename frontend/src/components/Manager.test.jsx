@@ -9,7 +9,7 @@ import { deriveKeys, encryptItem, newVaultKey, wrapVaultKey } from '../lib/vault
 
 vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // the water animation needs a real browser; the vault only asks it whether an entrance is queued
-vi.mock('../context/useTide', () => ({ useTide: () => ({ peekEntrance: () => false, release() {}, finishEntrance() {}, rise() {}, async complete() {}, queueEntrance() {}, abort() {} }) }));
+vi.mock('../context/useTide', () => ({ useTide: () => ({ peekEntrance: () => false, release() {}, finishEntrance() {} }) }));
 
 const KDF = { name: 'PBKDF2-SHA256', iterations: 1000, salt: 'AAAAAAAAAAAAAAAAAAAAAA==' };
 const github = { title: 'GitHub', url: 'github.com', username: 'me', password: 'pw-1', notes: '', isFavorite: false };

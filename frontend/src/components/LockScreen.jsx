@@ -7,9 +7,8 @@ import { getToken, saveVaultKey, signOut } from '../lib/session';
 
 // Signed in but locked: a reopened tab has the sign-in (localStorage) but not the vault key (sessionStorage). The master
 // password opens the vault again; nothing is stored unless it is right.
-// The optional callbacks let the frost animation around it follow along: typing, the check starting, a wrong password,
-// and the right one (called just before the vault key is stored).
-export default function LockScreen({ onUnlocked, onTyping, onChecking, onWrong, onBeforeUnlock }) {
+// The optional callbacks let the frost animation around it follow along: typing, the check starting, and a wrong password.
+export default function LockScreen({ onUnlocked, onTyping, onChecking, onWrong }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +23,6 @@ export default function LockScreen({ onUnlocked, onTyping, onChecking, onWrong, 
         try {
             const result = await unlock(host, getToken(), password);
             if (result.ok) {
-                onBeforeUnlock?.();
                 await saveVaultKey(result.vaultKey);
                 onUnlocked?.();
             } else {

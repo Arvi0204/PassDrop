@@ -4,10 +4,6 @@
 export const KEY_STEP = 0.075;
 export const TYPING_CAP = 0.66; // typing alone never clears more than this; the rest happens on unlock
 export const CHECKING_CAP = 0.78; // while the password is being checked the patch opens a little further
-export const POOL_MAX = 0.3; // the most the water rises from typing alone, as a fraction of the screen
-
-// how high the water stands for a given frost target: it climbs a little with every key and stops at POOL_MAX
-export const poolLevel = (target) => POOL_MAX * Math.max(0, Math.min(1, target / TYPING_CAP));
 
 // the next target after `keys` more characters; never lower than the current one
 export const warm = (target, keys, cap = TYPING_CAP) => Math.max(target, Math.min(cap, target + Math.max(0, keys) * KEY_STEP));
