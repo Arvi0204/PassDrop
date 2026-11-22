@@ -47,6 +47,7 @@ One setting, `VITE_BACKEND`: the address of the API.
 | `/login`, `/signup` | Sign in and create an account. The first time you open Account after signing up, a popup shows your recovery key once (it is held in that tab until then). If it was never saved, "Make a new recovery key" on the same page replaces it whenever you like; the old key then stops working. |
 | `/recover` | Get back into a vault with the recovery key when the master password is forgotten. |
 | `/user` | Account: change the master password (with a strength meter), make a new recovery key, and the danger zone. Each of these asks for the master password again. |
+| `/drop/:id#key` | What the person who got a drop link sees. No account needed. Nothing is fetched until they press Reveal, then the login is decrypted in the browser and held in memory only. |
 | `/extension` | The extension download and the steps to install it. |
 | `/home` | The landing page. |
 
@@ -54,6 +55,7 @@ Behaviour worth knowing:
 
 - Everything you save is encrypted in the browser before it is sent; the server never sees a title, address, username, password or note. If a saved login cannot be decrypted it shows as "This login could not be decrypted" and the rest still load.
 - The vault locks when you close its tab. Reopening PassDrop in a new tab shows a "Vault frozen" screen under frost that asks for the master password (you stay signed in; only the key to the vault is gone). The frost clears as you type and then lifts when the password is right. There is also a Lock button next to Logout.
+- Share (on a login) makes a drop: a link that ends after 1 to 10 views or 10 minutes to 7 days. The key is in the link's `#` part, so the server never has it, and the link is shown only once. You can name a link when you make it (only you see the name, it is encrypted). A login shows its own live links in its panel, each with its name, when it was made, what is left and a Revoke button, and the list follows the server every 10 seconds; a badge on the login and a Shared filter next to Favorites show which logins have links. Deleting a login (or Delete All Passwords) ends its links on the server. A link made in an earlier version, with no login recorded, is listed one by one under Shared, with its own Revoke.
 - Passwords are revealed through a waterline that drains away, instead of a plain swap.
 - Feedback appears next to what you did, rather than as toasts, and Escape closes any open dialog.
 - If your session stops working (it expired, or the master password was changed elsewhere), you are sent to the login page.
