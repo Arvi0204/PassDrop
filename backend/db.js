@@ -10,6 +10,12 @@ let db;
 const ensureIndexes = async (database) => {
     await database.collection('users').createIndex({ email: 1 }, { unique: true });
     await database.collection('passwords').createIndex({ user: 1 });
+    // a drop is deleted by the database shortly after it ends (routes/drops.js also never serves one past its end)
+    await database.collection('drops').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await database.collection('drops').createIndex({ owner: 1 });
+    // a drop's history (no blob) is deleted by the database 30 days after the link ended
+    await database.collection('droplog').createIndex({ purgeAt: 1 }, { expireAfterSeconds: 0 });
+    await database.collection('droplog').createIndex({ owner: 1 });
 };
 
 /**
