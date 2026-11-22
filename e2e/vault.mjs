@@ -4,8 +4,8 @@
 // production does, and drives real headless Chrome with real clicks and typing over the DevTools protocol (the same
 // technique as web_extension/e2e/menu.mjs). The flows are the ones that matter for "the server cannot read anything":
 // sign-up with a recovery key, adding a login, a reload, a brand-new tab (which must be locked), a wrong and a right
-// master password, changing the master password, signing in again, recovering with the recovery key, and finally a scan
-// of the whole database for anything readable.
+// master password, sharing a login as a drop (opened once, then gone; revoked by the sender), changing the master password,
+// signing in again, recovering with the recovery key, and finally a scan of the whole database for anything readable.
 //
 //   npm run test:e2e        (builds the web app first; needs Chrome, or set CHROME_PATH)
 
@@ -212,6 +212,67 @@ async function run() {
     await tab2.waitText(LOGIN_TITLE);
     check('the right master password unlocks the vault and shows the login', true);
 
+    // ---- drops: share a login by a link that ends after one view or a time, and revoke it ----
+    const makeDrop = async (timerChoice) => {
+        await tab2.waitFor(`!document.querySelector('[inert]')`, 'the frost to clear (the page cannot be clicked until it has)');
+        await tab2.click('button[title="Share this login with a link"]');
+        if (timerChoice) { await tab2.click('button', 'After a time'); await tab2.click('button', timerChoice); }
+        await tab2.click('button', 'Create link');
+        await tab2.waitFor(`!!document.querySelector('input[aria-label="Drop link"]')`, 'the drop link');
+        const link = await tab2.eval(`document.querySelector('input[aria-label="Drop link"]').value`);
+        await tab2.click('button', 'Done');
+        await tab2.waitText('You have not copied the link yet'); // the link cannot be shown again, so closing asks first
+        await tab2.click('button', 'Close anyway');
+        return link;
+    };
+    const openLink = async (link) => {
+        const t = await Tab.open(link);
+        await t.waitText('Someone shared a login with you');
+        await t.click('button', 'Reveal login');
+        return t;
+    };
+
+    const dropLink1 = await makeDrop(null); // one view
+    check('sharing a login makes a link with the key after a # (which a browser never sends)', /\/drop\/[\w-]{22}#[\w-]{43}$/.test(dropLink1), dropLink1);
+    const drop1 = await openLink(dropLink1);
+    await drop1.waitText(LOGIN_USER);
+    check('the link shows the shared login to someone who opened it', (await drop1.text()).includes(LOGIN_TITLE));
+    check('...with the password hidden until it is shown', !(await drop1.text()).includes(LOGIN_PASSWORD));
+    await drop1.click('button[aria-label="Show Password"]');
+    await drop1.waitText(LOGIN_PASSWORD);
+    check('...and shown when asked', true);
+    await drop1.cdp('Page.reload'); // the same link again, as someone else with it would open it
+    await drop1.waitText('Someone shared a login with you');
+    await drop1.click('button', 'Reveal login');
+    await drop1.waitText('This drop is gone');
+    check('a one-view drop destroys itself after its view: the second open says gone', !(await drop1.text()).includes(LOGIN_USER));
+    drop1.close();
+
+    const dropLink2 = await makeDrop('1 hour'); // a timer
+    const drop2 = await openLink(dropLink2);
+    await drop2.waitText(LOGIN_USER);
+    check('a timer drop opens', true);
+    drop2.close();
+    // the links live with the login they were made from: in its panel, with a badge and a Shared filter
+    await tab2.waitFor(`document.body.innerText.toLowerCase().includes('shared links (1)')`, 'the login to show its link'); // the heading is styled in capitals
+    check('the login shows its link in its own panel, and the Shared filter counts the login', (await tab2.text()).includes('Shared (1)') && !!(await tab2.eval(`!!document.querySelector('[aria-label="1 shared link"]')`)));
+    await tab2.click('button', 'Revoke');
+    await tab2.click('button', 'Revoke now');
+    await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('shared links')`, 'the revoked link to leave the login');
+    check('the sender revokes it from the login itself and it disappears there', true);
+    // ...and the two links that ended (used up, revoked) move to the login's folded Past links, with how often each was opened
+    await tab2.waitFor(`document.body.innerText.toLowerCase().includes('past links (2)')`, 'the ended links to appear under Past links');
+    await tab2.click('button', 'Past links');
+    const past = (await tab2.text()).toLowerCase();
+    check('the login keeps its ended links under Past links: how each ended, and how often it was opened', past.includes('used up') && past.includes('revoked') && past.split('opened 1 time').length === 3); // each of the two was opened once
+    const drop2again = await openLink(dropLink2);
+    await drop2again.waitText('This drop is gone');
+    check('a revoked drop says gone straight away', !(await drop2again.text()).includes(LOGIN_USER));
+    drop2again.close();
+
+    const dropLink3 = await makeDrop('7 days'); // left alive for the database scan below
+    const dropKey3 = dropLink3.split('#')[1];
+
     // ---- change the master password ----
     await tab.goto('/user');
     await tab.fill('#currentPassword', MASTER);
@@ -272,15 +333,21 @@ async function run() {
     // ---- what the database holds ----
     const client = await MongoClient.connect(mongoUri);
     const db = client.db('e2e');
-    const dump = JSON.stringify({ users: await db.collection('users').find().toArray(), passwords: await db.collection('passwords').find().toArray() });
+    const dump = JSON.stringify({ users: await db.collection('users').find().toArray(), passwords: await db.collection('passwords').find().toArray(), drops: await db.collection('drops').find().toArray(), droplog: await db.collection('droplog').find().toArray() });
     const secrets = { 'the login title': LOGIN_TITLE, 'the login username': LOGIN_USER, 'the login password': LOGIN_PASSWORD, 'the address': 'github.com',
         'the first master password': MASTER, 'the second master password': MASTER2, 'the third master password': MASTER3, 'the first recovery key': firstKey, 'the recovery key': recoveryKey,
-        'the recovery key without hyphens': recoveryKey.replaceAll('-', ''), 'the first recovery key without hyphens': firstKey.replaceAll('-', '') };
+        'the recovery key without hyphens': recoveryKey.replaceAll('-', ''), 'the first recovery key without hyphens': firstKey.replaceAll('-', ''), 'a drop\'s share key': dropKey3 };
     for (const [what, value] of Object.entries(secrets)) check(`the database does not contain ${what}`, !dump.includes(value));
     const user = await db.collection('users').findOne();
     check('the account holds hashes, key settings and wrapped keys, and no password field', !!user.authHash && !!user.recoveryAuthHash && !!user.wrappedVaultKey && !!user.recoveryWrappedKey && user.password === undefined && user.v === 2);
     const items = await db.collection('passwords').find().toArray();
     check('each login is one blob with no readable field', items.length === 1 && Object.keys(items[0]).sort().join() === '_id,blob,createdAt,updatedAt,user');
+    const drops = await db.collection('drops').find().toArray();
+    check('the used-up and the revoked drop are gone from the database; the live one is two blobs and its rule', drops.length === 1 && Object.keys(drops[0]).sort().join() === '_id,blob,createdAt,expiresAt,label,login,mode,owner' && String(drops[0].login) === String(items[0]._id));
+
+    const log = await db.collection('droplog').find().toArray();
+    check('each link has a history row with no blob: its rule, how often it was opened, and (when over) how it ended',
+        log.length === 3 && log.every((row) => row.blob === undefined && row.purgeAt > new Date() && typeof row.opens === 'number') && log.map((row) => row.endedBy ?? 'live').sort().join() === 'live,revoked,used');
 
     // ---- delete everything with the master password ----
     await tab.goto('/user');
@@ -289,6 +356,8 @@ async function run() {
     await tab.click('button', "Yes, I'm sure");
     await tab.waitFor(`(async () => (await fetch('/api/passwords', { headers: { 'auth-token': localStorage.getItem('passdrop.token') } }).then((r) => r.json())).length === 0)()`, 'the vault to be empty');
     check('Delete All Passwords works with the master password', (await db.collection('passwords').countDocuments()) === 0);
+    check('...and ends every link made from those logins, so none outlives its login', (await db.collection('drops').countDocuments()) === 0);
+    check('...and their history', (await db.collection('droplog').countDocuments()) === 0);
     await client.close();
 
     const errors = [...tab.errors, ...tab2.errors];
