@@ -7,6 +7,7 @@ import {
     Eye,
     EyeOff,
     Edit3,
+    Share2,
     Trash2,
     ShieldCheck,
     Calendar,
@@ -26,6 +27,8 @@ export default function VaultDetail({
     item,
     onEdit,
     onDelete,
+    onShare,
+    sharedLinks,
     onToggleFavorite,
     onCopy
 }) {
@@ -120,6 +123,15 @@ export default function VaultDetail({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        type="button"
+                        title="Share this login with a link"
+                        onClick={() => onShare(item)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
+                    >
+                        <Share2 className="w-3.5 h-3.5 text-[#3a5566]" />
+                        Share
+                    </button>
                     <button
                         type="button"
                         onClick={() => onEdit(item)}
@@ -248,6 +260,8 @@ export default function VaultDetail({
                         </div>
                     </div>
                 )}
+
+                {sharedLinks}
             </div>
 
             {/* Footer Metadata */}
