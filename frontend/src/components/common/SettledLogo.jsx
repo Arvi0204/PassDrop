@@ -3,7 +3,7 @@ import { DROP_PATHS, LOGO_COLORS } from '../../lib/logo';
 
 /**
  * The flat logo, arriving: its two drops land one after the other, lit like water, and the shine fades until only the
- * real mark is left (the CSS is in index.css). Shown when a share link has been made. With reduced motion it is just the logo.
+ * real mark is left (the CSS is in index.css). Shown when a drop has been made. With reduced motion it is just the logo.
  */
 export default function SettledLogo({ size = 32 }) {
     const id = React.useId().replace(/:/g, '');

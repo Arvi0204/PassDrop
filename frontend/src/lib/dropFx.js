@@ -1,4 +1,4 @@
-// The drop animation of the Share dialog, drawn on one canvas above it.
+// The drop animation of the Drop dialog, drawn on one canvas above it.
 //   1. the logo's two drops condense in the air above the button and hang there until the link exists
 //   2. the first lets go, the second a beat later; each stretches as it speeds up
 //   3. each lands on the button's edge: it flattens, throws up a crown of beads, sends out two rings, the button dips and

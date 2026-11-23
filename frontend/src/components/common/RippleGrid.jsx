@@ -1,5 +1,5 @@
 // RippleGrid, from React Bits (https://reactbits.dev, DavidHDev/react-bits: Backgrounds/RippleGrid), kept as published.
-// It is a plain WebGL2 grid with no dependency. Here the Share dialog starts a ripple by sending a pointerdown at the
+// It is a plain WebGL2 grid with no dependency. Here the Drop dialog starts a ripple by sending a pointerdown at the
 // spot where a drop lands (clickRipple), so this file needs no change.
 import { useEffect, useRef } from 'react';
 import './RippleGrid.css';

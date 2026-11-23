@@ -54,5 +54,8 @@ export function timeLeft(expiresAt, now = Date.now()) {
 }
 
 /** What is left of a drop, in words: "2 views left" or "ends in 3 h 20 min". */
-export const describeRule = ({ mode, viewsLeft, expiresAt }, now = Date.now()) =>
-    mode === 'views' ? `${viewsLeft} ${viewsLeft === 1 ? 'view' : 'views'} left` : `ends in ${timeLeft(expiresAt, now)}`;
+export const describeRule = ({ mode, viewsLeft, expiresAt }, now = Date.now()) => {
+    if (mode === 'views') return `${viewsLeft} ${viewsLeft === 1 ? 'view' : 'views'} left`;
+    const left = timeLeft(expiresAt, now);
+    return left === 'ended' ? 'ended' : `ends in ${left}`; // the server may still list it for a moment after its time is up
+};

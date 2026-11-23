@@ -218,9 +218,9 @@ async function run() {
     // ---- drops: share a login by a link that ends after one view or a time, and revoke it ----
     const makeDrop = async (timerChoice) => {
         await tab2.waitFor(`!document.querySelector('[inert]')`, 'the frost to clear (the page cannot be clicked until it has)');
-        await tab2.click('button[title="Share this login with a link"]');
+        await tab2.click('button[data-action="drop"]');
         if (timerChoice) { await tab2.click('button', 'After a time'); await tab2.click('button', timerChoice); }
-        await tab2.click('button', 'Create link');
+        await tab2.click('button', 'Create drop');
         await tab2.waitFor(`!!document.querySelector('input[aria-label="Drop link"]')`, 'the drop link');
         const link = await tab2.eval(`document.querySelector('input[aria-label="Drop link"]').value`);
         // copying is the way out: the dialog closes itself 2 seconds later (and has no X until a copy is refused)
@@ -234,7 +234,7 @@ async function run() {
     // the receiver's page looks at what is left first (no view is used), then Reveal opens it
     const openLink = async (link, rule) => {
         const t = await Tab.open(link);
-        await t.waitText('Someone shared a login with you');
+        await t.waitText('Someone dropped a login for you');
         if (rule) await t.waitText(rule);
         await t.click('button', 'Reveal login');
         return t;
@@ -262,22 +262,22 @@ async function run() {
     await drop2.waitText(LOGIN_USER);
     check('a timer drop opens', true);
     drop2.close();
-    // the links live with the login they were made from: in its panel, with a badge and a Shared filter
-    await tab2.waitFor(`document.body.innerText.toLowerCase().includes('shared links (1)')`, 'the login to show its link'); // the heading is styled in capitals
-    check('the login shows its link in its own panel, and the Shared filter counts the login', (await tab2.text()).includes('Shared (1)') && !!(await tab2.eval(`!!document.querySelector('[aria-label="1 shared link"]')`)));
+    // the links live with the login they were made from: in its panel, with a badge and a Dropped filter
+    await tab2.waitFor(`/(^|\\n)drops \\(1\\)/.test(document.body.innerText.toLowerCase())`, 'the login to show its drop'); // the heading is styled in capitals
+    check('the login shows its link in its own panel, and the Dropped filter counts the login', (await tab2.text()).includes('Dropped (1)') && !!(await tab2.eval(`!!document.querySelector('[aria-label="1 drop"]')`)));
     await tab2.eval(`window.__copied = null; const w = navigator.clipboard.writeText.bind(navigator.clipboard); navigator.clipboard.writeText = (t) => { window.__copied = t; return w(t); }; 0`);
     await tab2.click('button', 'Copy link');
     await tab2.waitFor(`window.__copied !== null`, 'the link to be copied again');
     check('a live link is copied again from its login, and it is the same link that was made', (await tab2.eval('window.__copied')) === dropLink2);
     await tab2.click('button', 'Revoke');
     await tab2.click('button', 'Revoke now');
-    await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('shared links')`, 'the revoked link to leave the login');
+    await tab2.waitFor(`!/(^|\\n)drops \\(/.test(document.body.innerText.toLowerCase())`, 'the revoked link to leave the login');
     check('the sender revokes it from the login itself and it disappears there', true);
     // ...and the two links that ended (used up, revoked) move to the login's folded Past links, with how often each was opened
-    await tab2.waitFor(`document.body.innerText.toLowerCase().includes('past links (2)')`, 'the ended links to appear under Past links');
-    await tab2.click('button', 'Past links');
+    await tab2.waitFor(`document.body.innerText.toLowerCase().includes('past drops (2)')`, 'the ended links to appear under Past drops');
+    await tab2.click('button', 'Past drops');
     const past = (await tab2.text()).toLowerCase();
-    check('the login keeps its ended links under Past links: how each ended, and how often it was opened', past.includes('used up') && past.includes('revoked') && past.split('opened 1 time').length === 3); // each of the two was opened once
+    check('the login keeps its ended links under Past drops: how each ended, and how often it was opened', past.includes('used up') && past.includes('revoked') && past.split('opened 1 time').length === 3); // each of the two was opened once
     const drop2again = await Tab.open(dropLink2); // revoked: the page says gone as soon as it has looked
     await drop2again.waitText('This drop is gone');
     check('a revoked drop says gone straight away', !(await drop2again.text()).includes(LOGIN_USER));
@@ -364,10 +364,10 @@ async function run() {
 
     // the sender can clear the past links of a login: they go from the server too, and the live link's record stays
     const hasButton = (text) => tab2.eval(`!![...document.querySelectorAll('button')].find((b) => b.textContent.includes(${JSON.stringify(text)}))`);
-    if (!(await hasButton('Clear past links'))) await tab2.click('button', 'Past links');
-    await tab2.click('button', 'Clear past links');
+    if (!(await hasButton('Clear past drops'))) await tab2.click('button', 'Past drops');
+    await tab2.click('button', 'Clear past drops');
     await tab2.click('button', 'Clear now');
-    await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('past links')`, 'the past links to go');
+    await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('past drops')`, 'the past links to go');
     check('clearing the past links removes them for good, and leaves the live link\'s record', (await db.collection('droplog').countDocuments()) === 1);
 
     // ---- delete everything with the master password ----

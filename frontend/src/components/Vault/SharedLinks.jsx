@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronRight, Copy, Share2, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Copy, Droplet, Trash2 } from 'lucide-react';
 import { clearHistory, revokeDrop } from '../../lib/dropApi';
 import { describeRule, dropLink, fingerprintOf } from '../../lib/drop';
 import { duration, ease } from '../../lib/motion';
@@ -41,7 +41,7 @@ const swap = { initial: { opacity: 0, x: 6 }, animate: { opacity: 1, x: 0 }, exi
  * nothing when the login has neither. A live link can be copied again because its key is kept in its encrypted label (only this
  * vault can read it); one made before that has no key and cannot be.
  */
-export default function SharedLinks({ drops, past = [], onChanged, item, heading = 'Shared links', showTitle = false }) {
+export default function SharedLinks({ drops, past = [], onChanged, item, heading = 'Drops', showTitle = false }) {
     const host = import.meta.env.VITE_BACKEND;
     const [confirming, setConfirming] = useState(null); // the id waiting for "Revoke now"
     const [error, setError] = useState('');
@@ -101,7 +101,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                             {drops.length > 0 && (
                                 <motion.div key="heading" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
                                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                                        <Share2 className="w-3.5 h-3.5 text-[#0284c7]" />
+                                        <Droplet className="w-3.5 h-3.5 text-[#0284c7]" />
                                         <span>{heading} ({drops.length})</span>
                                     </div>
                                 </motion.div>
@@ -113,16 +113,16 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                     <motion.li key={drop.id} custom={i} variants={liveRow} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
                                         <div className="pb-2">
                                             <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f5fafc]/85 border border-white/90 shadow-xs">
-                                                <div className="min-w-0">
+                                                <div className="min-w-0" id={`drop-info-${drop.id}`}>
                                                     {drop.name
                                                         ? <p className="text-sm font-medium text-[#0c1820] truncate">{drop.name}</p>
-                                                        : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
+                                                        : <p className="text-sm italic text-[#5c7788]">Unnamed drop</p>}
                                                     <p className="text-xs text-[#3a5566]">
-                                                        {showTitle && drop.title ? `From ${drop.title} · ` : ''}Shared {when(drop.createdAt)} · {describeRule(drop)}
+                                                        {showTitle && drop.title ? `From ${drop.title} · ` : ''}Dropped {when(drop.createdAt)} · {describeRule(drop)}
                                                     </p>
                                                     {!drop.key && <p className="text-xs text-[#5c7788] mt-0.5">Made before a link could be copied again, so this one cannot be.</p>}
                                                     {drop.fp && currentFp && drop.fp !== currentFp && (
-                                                        <p className="text-xs font-semibold text-amber-700 mt-0.5">This login was edited after you shared this link, so the link shows the old details.</p>
+                                                        <p className="text-xs font-semibold text-amber-700 mt-0.5">This login was edited after you made this drop, so it shows the old details.</p>
                                                     )}
                                                 </div>
                                                 <AnimatePresence mode="wait" initial={false}>
@@ -140,6 +140,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                                             {drop.key && (
                                                                 <button
                                                                     type="button"
+                                                                    aria-describedby={`drop-info-${drop.id}`}
                                                                     onClick={() => copyLink(drop)}
                                                                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#112838] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer"
                                                                 >
@@ -149,6 +150,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                                             )}
                                                             <button
                                                                 type="button"
+                                                                aria-describedby={`drop-info-${drop.id}`}
                                                                 onClick={() => setConfirming(drop.id)}
                                                                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 rounded-lg cursor-pointer"
                                                             >
@@ -165,6 +167,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                             </AnimatePresence>
                         </ul>
                         {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+                        <p role="status" className="sr-only">{copiedId ? 'Link copied' : ''}</p>
                         <AnimatePresence initial={false}>
                             {past.length > 0 && (
                                 <motion.div key="past" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
@@ -175,7 +178,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                         className="flex items-center gap-1 text-xs font-bold text-[#3a5566] uppercase tracking-wider cursor-pointer"
                                     >
                                         <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${showPast ? 'rotate-90' : ''}`} />
-                                        Past links ({past.length})
+                                        Past drops ({past.length})
                                     </button>
                                     <AnimatePresence initial={false}>
                                         {showPast && (
@@ -185,15 +188,15 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                                         <motion.li key={entry.id} custom={i} variants={pastRow} className="p-3 rounded-xl bg-[#f5fafc]/50 border border-white/90">
                                                             {entry.name
                                                                 ? <p className="text-sm font-medium text-[#0c1820] truncate">{entry.name}</p>
-                                                                : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
+                                                                : <p className="text-sm italic text-[#5c7788]">Unnamed drop</p>}
                                                             <p className="text-xs text-[#3a5566]">
-                                                                Shared {when(entry.createdAt)} · {ENDED[entry.reason] || 'Ended'} {when(entry.endedAt)} · {opened(entry.opens)}
+                                                                Dropped {when(entry.createdAt)} · {ENDED[entry.reason] || 'Ended'} {when(entry.endedAt)} · {opened(entry.opens)}
                                                             </p>
                                                         </motion.li>
                                                     ))}
                                                 </ul>
                                                 <div className="flex items-center justify-between gap-3 mt-1.5">
-                                                    <p className="text-xs text-[#5c7788]">Past links are kept for 30 days, then forgotten.</p>
+                                                    <p className="text-xs text-[#5c7788]">Past drops are kept for 30 days, then forgotten.</p>
                                                     <AnimatePresence mode="wait" initial={false}>
                                                         {clearing ? (
                                                             <motion.div key="confirm" {...swap} className="flex items-center gap-2 shrink-0">
@@ -204,7 +207,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                                             <motion.div key="clear" {...swap} className="shrink-0">
                                                                 <button type="button" onClick={() => setClearing(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">
                                                                     <Trash2 className="w-3.5 h-3.5" />
-                                                                    Clear past links
+                                                                    Clear past drops
                                                                 </button>
                                                             </motion.div>
                                                         )}

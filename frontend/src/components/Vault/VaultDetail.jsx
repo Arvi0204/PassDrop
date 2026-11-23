@@ -7,7 +7,7 @@ import {
     Eye,
     EyeOff,
     Edit3,
-    Share2,
+    Droplet,
     Trash2,
     ShieldCheck,
     Calendar,
@@ -21,6 +21,7 @@ import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
 import CopyIcon from './CopyIcon';
 import IconSwap from '../common/IconSwap';
+import Tooltip from '../common/Tooltip';
 import WaterMask, { useLingering } from './WaterMask';
 
 export default function VaultDetail({
@@ -123,15 +124,20 @@ export default function VaultDetail({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
-                    <button
-                        type="button"
-                        title="Share this login with a link"
-                        onClick={() => onShare(item)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
-                    >
-                        <Share2 className="w-3.5 h-3.5 text-[#3a5566]" />
-                        Share
-                    </button>
+                    <Tooltip title="Drop this login" text="Share it with a link that destroys itself after a number of views or a set time.">
+                        {(hint) => (
+                            <button
+                                type="button"
+                                data-action="drop"
+                                {...hint}
+                                onClick={() => onShare(item)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
+                            >
+                                <Droplet className="w-3.5 h-3.5 text-[#3a5566]" />
+                                Drop
+                            </button>
+                        )}
+                    </Tooltip>
                     <button
                         type="button"
                         onClick={() => onEdit(item)}

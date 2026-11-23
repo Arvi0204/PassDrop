@@ -29,12 +29,12 @@ describe('SharedLinks', () => {
 
     it('tells the links apart by the name the sender gave, when it was made, and what is left', () => {
         render(<SharedLinks drops={drops} onChanged={() => {}} />);
-        expect(screen.getByText('Shared links (2)')).toBeTruthy();
+        expect(screen.getByText('Drops (2)')).toBeTruthy();
         expect(screen.getByText('For Priya')).toBeTruthy();
-        expect(screen.getByText('Unnamed link')).toBeTruthy(); // a link made without a name
+        expect(screen.getByText('Unnamed drop')).toBeTruthy(); // a link made without a name
         const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-        expect(screen.getByText(new RegExp(`Shared ${when('2026-11-22T14:05:00Z')} · ends in 3 h`))).toBeTruthy();
-        expect(screen.getByText(new RegExp(`Shared ${when('2026-11-21T09:30:00Z')} · 2 views left`))).toBeTruthy();
+        expect(screen.getByText(new RegExp(`Dropped ${when('2026-11-22T14:05:00Z')} · ends in 3 h`))).toBeTruthy();
+        expect(screen.getByText(new RegExp(`Dropped ${when('2026-11-21T09:30:00Z')} · 2 views left`))).toBeTruthy();
     });
 
     describe('a login edited after it was shared', () => {
@@ -43,22 +43,22 @@ describe('SharedLinks', () => {
         it('marks the links made before the edit, and not the ones that still match', async () => {
             const [fresh, stale] = [await fingerprintOf(login), await fingerprintOf({ ...login, password: 'old' })];
             render(<SharedLinks item={login} drops={[{ ...drops[0], fp: stale }, { ...drops[1], fp: fresh }]} onChanged={() => {}} />);
-            expect(await screen.findAllByText(/edited after you shared this link/)).toHaveLength(1);
+            expect(await screen.findAllByText(/edited after you made this drop/)).toHaveLength(1);
         });
 
         it('says nothing for a link made before details were tracked, or when the favourite star changes', async () => {
             const fp = await fingerprintOf(login);
             render(<SharedLinks item={{ ...login, isFavorite: true }} drops={[{ ...drops[0], fp: '' }, { ...drops[1], fp }]} onChanged={() => {}} />);
-            await waitFor(() => expect(screen.getByText('Shared links (2)')).toBeTruthy());
+            await waitFor(() => expect(screen.getByText('Drops (2)')).toBeTruthy());
             await new Promise((resolve) => setTimeout(resolve, 20)); // let the fingerprint settle
-            expect(screen.queryByText(/edited after you shared/)).toBeNull();
+            expect(screen.queryByText(/edited after you made this drop/)).toBeNull();
         });
     });
 
     it('can list links that have no login, under their own heading and saying which login each came from', () => {
-        render(<SharedLinks drops={[{ ...drops[1], title: 'Old login' }]} onChanged={() => {}} heading="Links without a login" showTitle />);
-        expect(screen.getByText('Links without a login (1)')).toBeTruthy();
-        expect(screen.getByText(/From Old login · Shared/)).toBeTruthy();
+        render(<SharedLinks drops={[{ ...drops[1], title: 'Old login' }]} onChanged={() => {}} heading="Drops without a login" showTitle />);
+        expect(screen.getByText('Drops without a login (1)')).toBeTruthy();
+        expect(screen.getByText(/From Old login · Dropped/)).toBeTruthy();
     });
 
     describe('past links', () => {
@@ -72,16 +72,16 @@ describe('SharedLinks', () => {
             const user = userEvent.setup();
             render(<SharedLinks drops={[]} past={past} onChanged={() => {}} />);
             expect(screen.queryByText('For Sam')).toBeNull();
-            expect(screen.queryByText(/Shared links/)).toBeNull(); // no live links: no live heading
-            await user.click(screen.getByRole('button', { name: 'Past links (3)' }));
+            expect(screen.queryByText(/Drops \(/)).toBeNull(); // no live links: no live heading
+            await user.click(screen.getByRole('button', { name: 'Past drops (3)' }));
             expect(screen.getByText('For Sam')).toBeTruthy();
             const row = (name) => screen.getByText(name).closest('li').textContent;
             expect(row('For Sam')).toMatch(/Used up .*opened 1 time$/);
-            expect(row('Unnamed link')).toMatch(/Revoked .*never opened$/);
+            expect(row('Unnamed drop')).toMatch(/Revoked .*never opened$/);
             expect(row('Old')).toMatch(/Expired .*opened 4 times$/);
             expect(screen.getByText(/kept for 30 days/)).toBeTruthy();
             expect(screen.queryByRole('button', { name: 'Revoke' })).toBeNull(); // nothing to revoke: they are over
-            await user.click(screen.getByRole('button', { name: 'Past links (3)' }));
+            await user.click(screen.getByRole('button', { name: 'Past drops (3)' }));
             await waitFor(() => expect(screen.queryByText('For Sam')).toBeNull()); // it folds shut
         });
 
@@ -89,14 +89,14 @@ describe('SharedLinks', () => {
             const mine = past.map((entry) => ({ ...entry, login: 'L1' }));
             const open = async (user, onChanged) => {
                 render(<SharedLinks drops={[]} past={mine} onChanged={onChanged} />);
-                await user.click(screen.getByRole('button', { name: 'Past links (3)' }));
+                await user.click(screen.getByRole('button', { name: 'Past drops (3)' }));
             };
 
             it('clears this login\'s past links only after a second click, then tells the vault to load the history again', async () => {
                 const user = userEvent.setup();
                 const onChanged = vi.fn();
                 await open(user, onChanged);
-                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                await user.click(screen.getByRole('button', { name: 'Clear past drops' }));
                 expect(calls).toEqual([]); // one click only asks
                 await user.click(await screen.findByRole('button', { name: 'Clear now' }));
                 await waitFor(() => expect(onChanged).toHaveBeenCalledWith(true));
@@ -106,17 +106,17 @@ describe('SharedLinks', () => {
             it('Keep backs out without clearing', async () => {
                 const user = userEvent.setup();
                 await open(user, () => {});
-                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                await user.click(screen.getByRole('button', { name: 'Clear past drops' }));
                 await user.click(await screen.findByRole('button', { name: 'Keep' }));
                 expect(calls).toEqual([]);
-                expect(await screen.findByRole('button', { name: 'Clear past links' })).toBeTruthy();
+                expect(await screen.findByRole('button', { name: 'Clear past drops' })).toBeTruthy();
             });
 
             it('shows the refusal when clearing fails', async () => {
                 fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Internal Server Error' }) });
                 const user = userEvent.setup();
                 await open(user, () => {});
-                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                await user.click(screen.getByRole('button', { name: 'Clear past drops' }));
                 await user.click(await screen.findByRole('button', { name: 'Clear now' }));
                 expect(await screen.findByRole('alert')).toBeTruthy();
             });
@@ -124,8 +124,8 @@ describe('SharedLinks', () => {
 
         it('show under the live links of the same login', () => {
             render(<SharedLinks drops={drops} past={past} onChanged={() => {}} />);
-            expect(screen.getByText('Shared links (2)')).toBeTruthy();
-            expect(screen.getByRole('button', { name: 'Past links (3)' })).toBeTruthy();
+            expect(screen.getByText('Drops (2)')).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Past drops (3)' })).toBeTruthy();
         });
     });
 
@@ -148,6 +148,14 @@ describe('SharedLinks', () => {
         it('says so on a link made before the key was kept, and offers no button for it', () => {
             render(<SharedLinks drops={live} onChanged={() => {}} />);
             expect(screen.getAllByText(/Made before a link could be copied again/)).toHaveLength(1);
+        });
+
+        it('describes each button by its drop, so a screen reader can tell which drop a Copy link or Revoke is for', () => {
+            render(<SharedLinks drops={live} onChanged={() => {}} />);
+            for (const name of ['Copy link', 'Revoke']) {
+                const button = screen.getAllByRole('button', { name })[0];
+                expect(document.getElementById(button.getAttribute('aria-describedby')).textContent).toMatch(/Dropped .*(views? left|ends in)/);
+            }
         });
 
         it('says when the browser would not copy', async () => {

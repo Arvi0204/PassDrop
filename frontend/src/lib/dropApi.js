@@ -46,7 +46,7 @@ const openLabels = (rows, vaultKey, userId) => Promise.all(rows.map(async ({ lab
 export async function listDrops(host, token, { vaultKey, userId }) {
     const response = await authFetch(`${host}/api/drops`, { method: 'GET', headers: headers(token) });
     const json = await response.json();
-    if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to load your shared logins') };
+    if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to load your drops') };
     return { ok: true, drops: await openLabels(json, vaultKey, userId) };
 }
 
@@ -54,7 +54,7 @@ export async function listDrops(host, token, { vaultKey, userId }) {
 export async function listHistory(host, token, { vaultKey, userId }) {
     const response = await authFetch(`${host}/api/drops/history`, { method: 'GET', headers: headers(token) });
     const json = await response.json();
-    if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to load your past links') };
+    if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to load your past drops') };
     // an ended link has nothing to copy, so its key is not kept in memory
     return { ok: true, history: (await openLabels(json, vaultKey, userId)).map((entry) => ({ ...entry, key: '' })) };
 }
@@ -62,7 +62,7 @@ export async function listHistory(host, token, { vaultKey, userId }) {
 /** Clears the ended links in one login's history now, instead of at 30 days. Live links are not touched. */
 export async function clearHistory(host, token, login) {
     const response = await authFetch(`${host}/api/drops/history?login=${encodeURIComponent(login)}`, { method: 'DELETE', headers: headers(token) });
-    return response.ok ? { ok: true } : { ok: false, error: errorOf(await response.json(), 'Failed to clear the past links') };
+    return response.ok ? { ok: true } : { ok: false, error: errorOf(await response.json(), 'Failed to clear the past drops') };
 }
 
 export async function revokeDrop(host, token, id) {

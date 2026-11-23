@@ -186,6 +186,14 @@ describe('open (no sign-in)', () => {
         assert.equal(answers[0][0], 404);
     });
 
+    test('opening says when it ends only for a timer drop (a views drop\'s 7-day backstop is not shown)', async () => {
+        const user = await signedInUser();
+        const byViews = await open((await as(user).create(views(2))).body.id);
+        assert.deepEqual(Object.keys(byViews.body).sort(), ['blob', 'mode', 'now', 'viewsLeft']);
+        const byTime = await open((await as(user).create(timer())).body.id);
+        assert.deepEqual(Object.keys(byTime.body).sort(), ['blob', 'createdAt', 'expiresAt', 'mode', 'now']);
+    });
+
     test('the 404 is never cached either, so a gone answer cannot outlive a mistake', async () => {
         assert.equal((await open('AAAAAAAAAAAAAAAAAAAAAA')).headers['cache-control'], 'no-store');
     });

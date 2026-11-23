@@ -68,5 +68,6 @@ describe('time and rule in words', () => {
         expect(describeRule({ mode: 'views', viewsLeft: 1 }, now)).toBe('1 view left');
         expect(describeRule({ mode: 'views', viewsLeft: 3 }, now)).toBe('3 views left');
         expect(describeRule({ mode: 'timer', expiresAt: after(90 * 60000) }, now)).toBe('ends in 1 h 30 min');
+        expect(describeRule({ mode: 'timer', expiresAt: after(-1000) }, now)).toBe('ended'); // not "ends in ended"
     });
 });

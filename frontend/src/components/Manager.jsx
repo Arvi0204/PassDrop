@@ -7,7 +7,7 @@ import {
     ArrowLeft,
     X,
     KeyRound,
-    Share2
+    Droplet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import passwordContext from '../context/passwordContext';
@@ -58,7 +58,7 @@ export default function Manager() {
     // the live drops (links that share a login), grouped by the login they were made from
     const { drops, history, reload: reloadDrops } = useDrops(fetched);
     // The server ends a login's links with it, so none can outlive its login. The only ones that can have no login here
-    // are links made in earlier versions, before logins were recorded: they are listed one by one under Shared.
+    // are links made in earlier versions, before logins were recorded: they are listed one by one under Dropped.
     const { dropsByLogin, orphanDrops } = useMemo(() => {
         const logins = new Set(passwordArray.map((item) => item._id));
         const byLogin = new Map(), orphans = [];
@@ -68,7 +68,7 @@ export default function Manager() {
         });
         return { dropsByLogin: byLogin, orphanDrops: orphans };
     }, [drops, passwordArray]);
-    const sharedCount = dropsByLogin.size + orphanDrops.length; // everything the Shared view lists
+    const sharedCount = dropsByLogin.size + orphanDrops.length; // everything the Dropped view lists
     const pastByLogin = useMemo(() => {
         const byLogin = new Map();
         history.forEach((entry) => byLogin.set(entry.login, [...(byLogin.get(entry.login) || []), entry]));
@@ -195,7 +195,7 @@ export default function Manager() {
             if (res.success) {
                 toast.success('Account updated successfully!');
                 if (links.length && before !== await fingerprintOf(res.item)) {
-                    toast(`${links.length} shared ${links.length === 1 ? 'link still shows' : 'links still show'} the old details. Revoke ${links.length === 1 ? 'it' : 'them'} under Shared links if that matters.`, { duration: 8000 });
+                    toast(`${links.length} ${links.length === 1 ? 'drop still shows' : 'drops still show'} the old details. Revoke ${links.length === 1 ? 'it' : 'them'} under Drops if that matters.`, { duration: 8000 });
                 }
             }
         } else {
@@ -300,8 +300,8 @@ export default function Manager() {
                                         : 'text-[#3a5566] hover:text-[#0c1820]'
                                 }`}
                             >
-                                <Share2 className="w-3.5 h-3.5" />
-                                Shared ({sharedCount})
+                                <Droplet className="w-3.5 h-3.5" />
+                                Dropped ({sharedCount})
                             </button>
                         </div>
 
@@ -326,14 +326,14 @@ export default function Manager() {
                     >
                         <div data-entrance className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
                             <span>
-                                {activeFilter === 'favorites' ? 'Favorite Accounts' : activeFilter === 'shared' ? 'Shared Accounts' : 'Vault Accounts'}
+                                {activeFilter === 'favorites' ? 'Favorite Accounts' : activeFilter === 'shared' ? 'Accounts with Drops' : 'Vault Accounts'}
                             </span>
                             <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
                         {frozen ? <FrozenRows /> : filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
                             <motion.div
-                                key={searchQuery ? 'no-match' : 'empty'}
+                                key={searchQuery ? 'no-match' : `empty-${activeFilter}`}
                                 data-entrance
                                 variants={variants.fadeUp}
                                 initial={animateEnter.current ? 'hidden' : false}
@@ -345,14 +345,18 @@ export default function Manager() {
                                     <KeyRound className="w-6 h-6" />
                                 </div>
                                 <p className="text-sm font-bold text-[#0c1820]">
-                                    {searchQuery ? 'No matching accounts found' : 'Your vault is empty'}
+                                    {searchQuery ? 'No matching accounts found'
+                                        : activeFilter === 'shared' ? 'No logins have a drop'
+                                            : activeFilter === 'favorites' ? 'No favorites yet'
+                                                : 'Your vault is empty'}
                                 </p>
                                 <p className="text-xs text-[#3a5566] max-w-xs mx-auto">
-                                    {searchQuery
-                                        ? 'Try searching with a different term or clear the filter.'
-                                        : 'Add your first login, website credential, or secure note.'}
+                                    {searchQuery ? 'Try searching with a different term or clear the filter.'
+                                        : activeFilter === 'shared' ? 'Press Drop on a login to share it with a link. Logins with a live drop are listed here.'
+                                            : activeFilter === 'favorites' ? 'Star a login to find it here.'
+                                                : 'Add your first login, website credential, or secure note.'}
                                 </p>
-                                {!searchQuery && (
+                                {!searchQuery && activeFilter === 'all' && (
                                     <button
                                         type="button"
                                         onClick={handleOpenCreate}
@@ -409,7 +413,7 @@ export default function Manager() {
                         )}
 
                         {activeFilter === 'shared' && orphanDrops.length > 0 && (
-                            <SharedLinks drops={orphanDrops} onChanged={reloadDrops} heading="Links without a login" showTitle />
+                            <SharedLinks drops={orphanDrops} onChanged={reloadDrops} heading="Drops without a login" showTitle />
                         )}
                     </div>
 
@@ -472,7 +476,7 @@ export default function Manager() {
                 onClose={() => setDeleteModalState({ isOpen: false, itemId: null })}
                 onConfirm={handleConfirmDelete}
                 message={`Are you sure you want to delete this account? This action cannot be undone.${
-                    dropsByLogin.get(deleteModalState.itemId)?.length ? ' Its shared links will stop working.' : ''
+                    dropsByLogin.get(deleteModalState.itemId)?.length ? ' Its drops will stop working.' : ''
                 }`}
                 confirmText="Yes, Delete"
             />

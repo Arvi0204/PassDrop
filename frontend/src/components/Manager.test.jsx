@@ -108,41 +108,54 @@ describe('shared links', () => {
         liveDrops.push(await drop('D4', undefined, 'Old login'));
         await saveVaultKey(vaultKey);
         show();
-        const chip = await screen.findByRole('button', { name: 'Shared (3)' }); // GitHub, Mail, and the link without a login
+        const chip = await screen.findByRole('button', { name: 'Dropped (3)' }); // GitHub, Mail, and the link without a login
         await user.click(chip);
-        expect(await screen.findByText('Links without a login (1)')).toBeTruthy();
+        expect(await screen.findByText('Drops without a login (1)')).toBeTruthy();
         const row = screen.getByText(/From Old login/).closest('li');
-        expect(row.textContent).toMatch(/Shared .* · 2 views left/); // who, when, what is left
+        expect(row.textContent).toMatch(/Dropped .* · 2 views left/); // who, when, what is left
         expect(revoked).toEqual([]); // nothing is revoked on its own or in bulk
         await user.click(within(row).getByRole('button', { name: 'Revoke' }));
         await user.click(await within(row).findByRole('button', { name: 'Revoke now' }));
         await waitFor(() => expect(revoked).toEqual(['D4']));
-        await waitFor(() => expect(screen.queryByText(/Links without a login/)).toBeNull());
-        expect(screen.getByRole('button', { name: 'Shared (2)' })).toBeTruthy();
+        await waitFor(() => expect(screen.queryByText(/Drops without a login/)).toBeNull());
+        expect(screen.getByRole('button', { name: 'Dropped (2)' })).toBeTruthy();
     });
 
-    it('shows a badge on a login that has links, and a Shared filter that lists only those logins', async () => {
+    it('shows a badge on a login that has links, and a Dropped filter that lists only those logins', async () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);
         show();
-        expect(await screen.findByRole('button', { name: 'Shared (2)' })).toBeTruthy(); // GitHub and Mail
-        expect(await screen.findByLabelText('2 shared links')).toBeTruthy();
-        expect(screen.getByLabelText('1 shared link')).toBeTruthy();
-        await user.click(screen.getByRole('button', { name: 'Shared (2)' }));
-        expect(screen.getByText('Shared Accounts')).toBeTruthy();
+        expect(await screen.findByRole('button', { name: 'Dropped (2)' })).toBeTruthy(); // GitHub and Mail
+        expect(await screen.findByLabelText('2 drops')).toBeTruthy();
+        expect(screen.getByLabelText('1 drop')).toBeTruthy();
+        await user.click(screen.getByRole('button', { name: 'Dropped (2)' }));
+        expect(screen.getByText('Accounts with Drops')).toBeTruthy();
         await waitFor(() => expect(screen.getByText('2 items')).toBeTruthy());
         await waitFor(() => expect(screen.queryByText('This login could not be decrypted')).toBeNull()); // after its exit animation
+    });
+
+    it('says what an empty Dropped or Favorites filter is for, instead of calling the vault empty', async () => {
+        const user = userEvent.setup();
+        liveDrops = [];
+        await saveVaultKey(vaultKey);
+        show();
+        await user.click(await screen.findByRole('button', { name: 'Dropped (0)' }));
+        expect(await screen.findByText('No logins have a drop')).toBeTruthy();
+        expect(screen.queryByText('Your vault is empty')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Add Account' })).toBeNull(); // adding a login does not fill this filter
+        await user.click(screen.getByRole('button', { name: 'Favorites (0)' }));
+        expect(await screen.findByText('No favorites yet')).toBeTruthy();
     });
 
     it('lists the links of a login in its own panel, and Revoke ends one', async () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);
         show();
-        expect(await screen.findByText('Shared links (2)')).toBeTruthy(); // GitHub is selected first
+        expect(await screen.findByText('Drops (2)')).toBeTruthy(); // GitHub is selected first
         await user.click(screen.getAllByRole('button', { name: 'Revoke' })[0]);
         expect(revoked).toEqual([]); // one click only asks
         await user.click(await screen.findByRole('button', { name: 'Revoke now' }));
-        expect(await screen.findByText('Shared links (1)')).toBeTruthy();
+        expect(await screen.findByText('Drops (1)')).toBeTruthy();
         expect(revoked).toHaveLength(1);
     });
 
@@ -150,14 +163,14 @@ describe('shared links', () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);
         show();
-        await user.click(await screen.findByRole('button', { name: 'Past links (1)' })); // GitHub is selected first
+        await user.click(await screen.findByRole('button', { name: 'Past drops (1)' })); // GitHub is selected first
         const row = screen.getByText('For Sam').closest('li');
         expect(row.textContent).toMatch(/Used up .*opened 1 time/);
     });
 
     describe('editing a login that has links', () => {
         const edit = async (user, password) => {
-            await screen.findByText('Shared links (2)');
+            await screen.findByText('Drops (2)');
             await user.click(screen.getByRole('button', { name: 'Edit' }));
             if (password) {
                 const field = screen.getByPlaceholderText('Enter account password');
@@ -173,7 +186,7 @@ describe('shared links', () => {
             await saveVaultKey(vaultKey);
             show();
             await edit(user, 'a-new-password-1');
-            await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/2 shared links still show the old details/), expect.anything()));
+            await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/2 drops still show the old details/), expect.anything()));
         });
 
         it('says nothing when the edit leaves what a link shows unchanged', async () => {
@@ -191,12 +204,12 @@ describe('shared links', () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);
         show();
-        await screen.findByText('Shared links (2)');
+        await screen.findByText('Drops (2)');
         await user.click(screen.getAllByRole('button', { name: 'Delete' }).at(-1)); // the panel's, after the list's own row
-        expect(screen.getByText(/Its shared links will stop working/)).toBeTruthy();
+        expect(screen.getByText(/Its drops will stop working/)).toBeTruthy();
         await user.click(screen.getByRole('button', { name: 'Yes, Delete' }));
         await waitFor(() => expect(deleted).toEqual(['a']));
         expect(revoked).toEqual([]); // the page no longer revokes by itself: a failed request could have left a link behind
-        expect(await screen.findByRole('button', { name: 'Shared (1)' })).toBeTruthy(); // only Mail's link is left
+        expect(await screen.findByRole('button', { name: 'Dropped (1)' })).toBeTruthy(); // only Mail's link is left
     });
 });

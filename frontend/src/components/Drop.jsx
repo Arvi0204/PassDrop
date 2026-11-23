@@ -21,11 +21,17 @@ const plural = (n) => `${n} ${n === 1 ? 'view' : 'views'} left`;
 function Field({ label, value, secret }) {
     const [shown, setShown] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [failed, setFailed] = useState(false);
     if (!value) return null;
     const copy = async () => {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            setFailed(true); // the browser refused: say so, and the value is on the page to select by hand
+            setTimeout(() => setFailed(false), 4000);
+        }
     };
     return (
         <div>
@@ -43,6 +49,9 @@ function Field({ label, value, secret }) {
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
             </div>
+            <p role="status" className={failed ? 'mt-1.5 text-xs text-rose-700' : 'sr-only'}>
+                {failed ? 'Your browser would not copy it. Select it and copy by hand.' : copied ? `${label} copied` : ''}
+            </p>
         </div>
     );
 }
@@ -182,8 +191,12 @@ export default function Drop() {
         setState({ status: 'opening' });
         try {
             const result = await openDrop(host, id, linkKey);
-            if (result.ok) await show(result);
-            else if (result.gone) finish('');
+            if (result.ok) {
+                // the view is already used, so whatever the animation does (fails, or never finishes), the login is shown
+                await Promise.race([show(result).catch(() => {}), new Promise((resolve) => later(resolve, 4000))]);
+                setLeaving(false);
+                setState((s) => (s.status === 'open' ? s : { status: 'open', ...result }));
+            } else if (result.gone) finish('');
             else setState({ status: 'error', error: result.error });
         } catch {
             setState({ status: 'error', error: 'Cannot connect to the server. Try again.' });
@@ -212,7 +225,7 @@ export default function Drop() {
         body = (
             <div className="space-y-4">
                 <Arrive from={impact}>
-                    <h1 className="text-2xl font-bold text-[#0c1820] break-words">{state.item.title || state.item.url || 'Shared login'}</h1>
+                    <h1 className="text-2xl font-bold text-[#0c1820] break-words">{state.item.title || state.item.url || 'Dropped login'}</h1>
                     {state.item.url && (
                         <a href={/^https?:\/\//.test(state.item.url) ? state.item.url : `https://${state.item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 font-medium break-all">
                             {state.item.url} <ExternalLink className="w-3 h-3 shrink-0" />
@@ -250,7 +263,7 @@ export default function Drop() {
         body = (
             <div>
                 <div className={tile}><Gift className="w-6 h-6" /></div>
-                <h1 className="text-2xl font-bold text-[#0c1820]">Someone shared a login with you</h1>
+                <h1 className="text-2xl font-bold text-[#0c1820]">Someone dropped a login for you</h1>
                 <p className="text-sm text-[#3a5566] mt-1.5">
                     It is encrypted, and only this link can open it. If the sender limited its views, revealing it uses one, so press Reveal when you are ready to copy what you need.
                 </p>

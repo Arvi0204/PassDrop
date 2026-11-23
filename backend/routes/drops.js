@@ -176,9 +176,10 @@ router.post('/:id/open', async (req, res) => {
         await record((await getLog()).updateOne({ _id: drop._id }, { $inc: { opens: 1 }, ...(lastView && { $set: endedNow('used', now) }) }));
 
         res.set('Cache-Control', 'no-store');
+        // a views drop's end time is only its 7-day backstop, which is not shown: only a timer drop says when it ends
         return res.json({
-            blob: drop.blob, mode: drop.mode, viewsLeft: drop.viewsLeft, expiresAt: drop.expiresAt, now,
-            ...(drop.mode === 'timer' && { createdAt: drop.createdAt })
+            blob: drop.blob, mode: drop.mode, viewsLeft: drop.viewsLeft, now,
+            ...(drop.mode === 'timer' && { expiresAt: drop.expiresAt, createdAt: drop.createdAt })
         });
     } catch (error) {
         return fail(res, error);

@@ -41,7 +41,7 @@ const url = (calls, method) => calls.filter(([, o]) => (o?.method || 'GET') === 
 describe('Drop', () => {
     it('looks at what is left on arrival and opens nothing until Reveal is pressed, so a link preview cannot use up a view', async () => {
         at(`/drop/ID-1#${linkKey}`);
-        expect(screen.getByText('Someone shared a login with you')).toBeTruthy();
+        expect(screen.getByText('Someone dropped a login for you')).toBeTruthy();
         expect(await screen.findByText('3 views left')).toBeTruthy(); // the lookup answered
         expect(url(fetch.mock.calls, 'GET')).toEqual(['http://api.test/api/drops/ID-1']);
         expect(url(fetch.mock.calls, 'POST')).toEqual([]);
@@ -84,6 +84,15 @@ describe('Drop', () => {
         await user.click(screen.getByRole('button', { name: 'Reveal login' }));
         await user.click(await screen.findByRole('button', { name: 'Copy Password' }));
         expect(write).toHaveBeenCalledWith('S3cret-pw!');
+    });
+
+    it('says so when the browser would not copy, instead of failing silently', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
+        at(`/drop/ID-1#${linkKey}`);
+        await user.click(screen.getByRole('button', { name: 'Reveal login' }));
+        await user.click(await screen.findByRole('button', { name: 'Copy Password' }));
+        expect(await screen.findByText(/would not copy it/)).toBeTruthy();
     });
 
     it('says the drop is gone at once when it had already ended, with nothing to reveal', async () => {

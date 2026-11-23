@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Copy, Share2, X } from 'lucide-react';
+import { Check, Copy, Droplet, X } from 'lucide-react';
 import useEscapeKey from '../lib/useEscapeKey';
 import { ErrorLine } from './common/FormError';
 import Arrive from './common/Arrive';
@@ -18,8 +18,8 @@ const choice = (active) =>
     }`;
 
 /**
- * Shares one login by a link that ends after a number of views or a time (never both). The link is shown once: it holds the
- * key, which the server never has, so it cannot be shown again later (the sender revokes and makes a new one instead).
+ * Drops one login by a link that ends after a number of views or a time (never both). The link holds the key, which the
+ * server never has, so it is shown here and can be copied again later from the login's Drops (the key is kept in its encrypted label).
  */
 export default function ShareDropModal({ item, onClose, onMade }) {
     const host = import.meta.env.VITE_BACKEND;
@@ -47,7 +47,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
     closeRef.current = onClose;
 
     // Once the link is copied the dialog closes itself 2 seconds after. It can also be closed at any time (Escape, the X, the
-    // backdrop): a live link is kept in its login's Shared links, where it can be copied again, so closing loses nothing.
+    // backdrop): a live link is kept in its login's Drops, where it can be copied again, so closing loses nothing.
     const requestClose = () => onClose();
     useEscapeKey(true, requestClose);
     useEffect(() => {
@@ -148,9 +148,9 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                 <MorphHeight animated={animated} innerClassName={leaving ? 'opacity-0 blur-[3px] transition-[opacity,filter] duration-200 pointer-events-none' : ''}>
                     <div>
                         <Arrive from={made ? impact : null} className="w-11 h-11 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] text-[#112838] flex items-center justify-center shadow-xs mb-4">
-                            {made ? <SettledLogo size={30} /> : <Share2 className="w-5 h-5" />}
+                            {made ? <SettledLogo size={30} /> : <Droplet className="w-5 h-5" />}
                         </Arrive>
-                        <Arrive from={made ? impact : null} as="h3" id="share-drop-title" className="text-lg font-bold text-[#0c1820]">{made ? 'Your drop link' : `Share ${title}`}</Arrive>
+                        <Arrive from={made ? impact : null} as="h3" id="share-drop-title" className="text-lg font-bold text-[#0c1820]">{made ? 'Your drop link' : `Drop ${title}`}</Arrive>
 
                         {made ? (
                             <div className="mt-3 space-y-3">
@@ -169,7 +169,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                                 </Arrive>
                                 {copyFailed && <p role="alert" className="text-xs text-rose-700">Your browser would not copy it. Select the link above and copy it yourself.</p>}
                                 <Arrive from={impact} as="p" className="text-xs text-[#3a5566] leading-relaxed">
-                                    Anyone with this link can see this login until it ends. You can copy it again, or revoke it, any time under Shared links on this login.
+                                    Anyone with this link can see this login until it ends. You can copy it again, or revoke it, any time under Drops on this login.
                                 </Arrive>
                                 <Arrive from={impact}>
                                     <button type="button" autoFocus onClick={copy} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] shadow-md cursor-pointer">
@@ -184,7 +184,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                                     Make a link that opens this login for one person, no account needed. It destroys itself when it ends.
                                 </p>
 
-                                <div role="group" aria-label="How the link ends" className="flex gap-2">
+                                <div role="group" aria-label="How the drop ends" className="flex gap-2">
                                     <button type="button" aria-pressed={mode === 'views'} onClick={() => setMode('views')} className={choice(mode === 'views')}>After a number of views</button>
                                     <button type="button" aria-pressed={mode === 'timer'} onClick={() => setMode('timer')} className={choice(mode === 'timer')}>After a time</button>
                                 </div>
@@ -208,7 +208,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                                 )}
 
                                 <div>
-                                    <label htmlFor="drop-name" className="block text-xs font-semibold text-[#0c1820] mb-1.5">Name this link (optional)</label>
+                                    <label htmlFor="drop-name" className="block text-xs font-semibold text-[#0c1820] mb-1.5">Name this drop (optional)</label>
                                     <input
                                         id="drop-name"
                                         value={name}
@@ -227,7 +227,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                                         Cancel
                                     </button>
                                     <button type="button" ref={buttonRef} onClick={create} disabled={working} className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] shadow-md disabled:opacity-70 cursor-pointer">
-                                        {working ? 'Making link...' : 'Create link'}
+                                        {working ? 'Making drop...' : 'Create drop'}
                                     </button>
                                 </div>
                             </div>

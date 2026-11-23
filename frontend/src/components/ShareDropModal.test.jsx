@@ -26,7 +26,7 @@ describe('ShareDropModal', () => {
     it('makes a one-view link by default and shows it, with the key only in the #fragment', async () => {
         const user = userEvent.setup();
         open();
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         const link = (await screen.findByLabelText('Drop link')).value;
         expect(posted.body).toMatchObject({ mode: 'views', views: 1 });
         expect(posted.options.headers['auth-token']).toBe('tok-1');
@@ -35,14 +35,14 @@ describe('ShareDropModal', () => {
         expect(key).toBeTruthy();
         expect(posted.options.body).not.toContain(key);
         expect(posted.options.body).not.toContain('S3cret-pw!');
-        expect(screen.getByText(/copy it again, or revoke it, any time under Shared links/)).toBeTruthy(); // nothing is lost by closing
+        expect(screen.getByText(/copy it again, or revoke it, any time under Drops/)).toBeTruthy(); // nothing is lost by closing
     });
 
     it('lets the sender name the link, and the name is sent only inside the encrypted label', async () => {
         const user = userEvent.setup();
         open();
-        await user.type(screen.getByLabelText(/Name this link/), 'For Priya');
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.type(screen.getByLabelText(/Name this drop/), 'For Priya');
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         await screen.findByLabelText('Drop link');
         expect(posted.options.body).not.toContain('Priya');
     });
@@ -51,7 +51,7 @@ describe('ShareDropModal', () => {
         const user = userEvent.setup();
         const onMade = vi.fn();
         render(<ShareDropModal item={item} onClose={() => {}} onMade={onMade} />);
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         await screen.findByLabelText('Drop link');
         expect(onMade).toHaveBeenCalledTimes(1);
     });
@@ -63,7 +63,7 @@ describe('ShareDropModal', () => {
         await user.click(screen.getByRole('button', { name: 'After a time' }));
         expect(screen.queryByRole('button', { name: '5 views' })).toBeNull(); // the view choices are gone
         await user.click(screen.getByRole('button', { name: '24 hours' }));
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         await screen.findByLabelText('Drop link');
         expect(posted.body).toMatchObject({ mode: 'timer', ttl: 86400 });
         expect(posted.body.views).toBeUndefined();
@@ -73,7 +73,7 @@ describe('ShareDropModal', () => {
         const user = userEvent.setup(); // gives the page a clipboard
         const write = vi.spyOn(navigator.clipboard, 'writeText');
         open();
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         const link = (await screen.findByLabelText('Drop link')).value;
         await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
         expect(write).toHaveBeenCalledWith(link);
@@ -85,7 +85,7 @@ describe('ShareDropModal', () => {
             vi.useFakeTimers({ shouldAdvanceTime: true });
             const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
             render(<ShareDropModal item={item} onClose={onClose} />);
-            await user.click(screen.getByRole('button', { name: 'Create link' }));
+            await user.click(screen.getByRole('button', { name: 'Create drop' }));
             await screen.findByLabelText('Drop link');
             return user;
         };
@@ -132,7 +132,7 @@ describe('ShareDropModal', () => {
             expect(onClose).not.toHaveBeenCalled();
         });
 
-        it('has one copy button, and can be closed at any time (Escape, the X, the backdrop), because the link stays in the login\'s Shared links', async () => {
+        it('has one copy button, and can be closed at any time (Escape, the X, the backdrop), because the link stays in the login\'s Drops', async () => {
             const onClose = vi.fn();
             const user = await made(onClose);
             expect(screen.getAllByRole('button', { name: /copy/i })).toHaveLength(1);
@@ -158,7 +158,7 @@ describe('ShareDropModal', () => {
         sessionStorage.clear();
         const user = userEvent.setup();
         open();
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         expect(await screen.findByText('Unlock your vault first.')).toBeTruthy();
         expect(fetch).not.toHaveBeenCalled();
     });
@@ -167,7 +167,7 @@ describe('ShareDropModal', () => {
         fetch.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ errors: [{ msg: 'You have 25 live drops. Revoke one to make another.' }] }) });
         const user = userEvent.setup();
         open();
-        await user.click(screen.getByRole('button', { name: 'Create link' }));
+        await user.click(screen.getByRole('button', { name: 'Create drop' }));
         expect(await screen.findByText('You have 25 live drops. Revoke one to make another.')).toBeTruthy();
     });
 });
