@@ -220,9 +220,12 @@ async function run() {
         await tab2.click('button', 'Create link');
         await tab2.waitFor(`!!document.querySelector('input[aria-label="Drop link"]')`, 'the drop link');
         const link = await tab2.eval(`document.querySelector('input[aria-label="Drop link"]').value`);
-        await tab2.click('button', 'Done');
-        await tab2.waitText('You have not copied the link yet'); // the link cannot be shown again, so closing asks first
-        await tab2.click('button', 'Close anyway');
+        // copying is the way out: the dialog closes itself 2 seconds later (and has no X until a copy is refused)
+        await tab2.click('button', 'Copy link and close');
+        await tab2.waitFor(`!document.querySelector('[role="dialog"]') || document.body.innerText.includes('would not copy')`, 'the dialog to close');
+        const stillOpen = await tab2.eval(`!!document.querySelector('[role="dialog"]')`);
+        check('copying the link closes the dialog by itself', !stillOpen, 'the browser refused to copy');
+        if (stillOpen) { await tab2.click('button', 'Close'); await tab2.waitFor(`!document.querySelector('[role="dialog"]')`, 'the dialog to close'); }
         return link;
     };
     const openLink = async (link) => {

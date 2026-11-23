@@ -1,0 +1,12 @@
+/* full screen and click-through: the grid sits behind a dialog and only draws */
+.ripple-grid-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ripple-grid-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -32,3 +32,37 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(2, 132, 199, 0.45);
 }
+
+/* The logo arriving when a share link is made (components/common/SettledLogo.jsx): each drop lands in turn and the shine fades */
+.settled-d1, .settled-d2 {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: settled-land 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.settled-d1 { animation-delay: calc(var(--arrive-delay, 0s) + 0.1s); }
+.settled-d2 { animation-delay: calc(var(--arrive-delay, 0s) + 0.25s); }
+.settled-gloss { animation: settled-gloss 1.2s ease-out calc(var(--arrive-delay, 0s) + 0.35s) both; }
+@keyframes settled-land {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.8, 1.25); }
+  50% { opacity: 1; transform: scale(1.14, 0.84); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes settled-gloss {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settled-d1, .settled-d2 { animation: none; }
+  .settled-gloss { animation: none; opacity: 0; }
+}
+
+/* Parts of the share link view arriving as the ripple's wave reaches them (ShareDropModal's Arrive sets --arrive-delay by distance) */
+.arrive { animation: arrive 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--arrive-delay, 0s) both; }
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive { animation: none; }
+}
+

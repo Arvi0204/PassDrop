@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ShareDropModal from './ShareDropModal';
 import { saveSignIn, saveVaultKey } from '../lib/session';
@@ -75,69 +75,86 @@ describe('ShareDropModal', () => {
         open();
         await user.click(screen.getByRole('button', { name: 'Create link' }));
         const link = (await screen.findByLabelText('Drop link')).value;
-        await user.click(screen.getByRole('button', { name: /Copy link/ }));
+        await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
         expect(write).toHaveBeenCalledWith(link);
     });
 
     describe('closing the dialog once the link is made', () => {
-        const made = async (user, onClose) => {
+        // fake clocks, so the 2 seconds can be skipped; the user-event clicks keep working because they advance the clock too
+        const made = async (onClose) => {
+            vi.useFakeTimers({ shouldAdvanceTime: true });
+            const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
             render(<ShareDropModal item={item} onClose={onClose} />);
             await user.click(screen.getByRole('button', { name: 'Create link' }));
             await screen.findByLabelText('Drop link');
+            return user;
         };
+        afterEach(() => vi.useRealTimers());
+        // a second at a time, so each render and its next timer settle before the clock moves on
+        const wait = async (seconds) => { for (let i = 0; i < seconds; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); };
 
-        it('asks first when the link has not been copied, because it cannot be shown again', async () => {
-            const user = userEvent.setup();
+        it('the big button copies the link, counts down from 2, and closes the dialog by itself', async () => {
             const onClose = vi.fn();
-            await made(user, onClose);
-            await user.click(screen.getByRole('button', { name: 'Done' }));
-            expect(screen.getByText(/You have not copied the link yet/)).toBeTruthy();
+            const user = await made(onClose);
+            const write = vi.spyOn(navigator.clipboard, 'writeText');
+            await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
+            expect(write).toHaveBeenCalledWith(screen.getByLabelText('Drop link').value);
+            expect(screen.getByRole('button', { name: 'Copied. Closing in 2' })).toBeTruthy();
+            await wait(1);
+            expect(screen.getByRole('button', { name: 'Copied. Closing in 1' })).toBeTruthy();
             expect(onClose).not.toHaveBeenCalled();
-            await user.click(screen.getByRole('button', { name: 'Close anyway' }));
+            await wait(1);
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('closes straight away once the link has been copied with the button', async () => {
-            const user = userEvent.setup();
+        it('a link copied by hand from the box starts it too', async () => {
             const onClose = vi.fn();
-            await made(user, onClose);
-            await user.click(screen.getByRole('button', { name: /Copy link/ }));
-            await user.click(screen.getByRole('button', { name: 'Done' }));
-            expect(onClose).toHaveBeenCalledTimes(1);
-        });
-
-        it('counts a link copied by hand from the box', async () => {
-            const user = userEvent.setup();
-            const onClose = vi.fn();
-            await made(user, onClose);
+            await made(onClose);
             fireEvent.copy(screen.getByLabelText('Drop link'));
-            await user.click(screen.getByRole('button', { name: 'Close' }));
+            await wait(2);
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('Escape asks the first time and closes the second', async () => {
-            const user = userEvent.setup();
+        it('does not close by itself before the link is copied', async () => {
             const onClose = vi.fn();
-            await made(user, onClose);
-            await user.keyboard('{Escape}');
+            await made(onClose);
+            await wait(30);
             expect(onClose).not.toHaveBeenCalled();
-            expect(screen.getByText(/You have not copied the link yet/)).toBeTruthy();
-            await user.keyboard('{Escape}');
-            expect(onClose).toHaveBeenCalledTimes(1);
         });
 
-        it('a copy the browser refuses does not count: it says so and still asks before closing', async () => {
-            const user = userEvent.setup();
+        it('a copy the browser refuses does not start it: it says so and stays open', async () => {
             const onClose = vi.fn();
-            await made(user, onClose);
+            const user = await made(onClose);
             vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
-            await user.click(screen.getByRole('button', { name: /Copy link/ }));
+            await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
             expect(await screen.findByText(/would not copy it/)).toBeTruthy();
-            await user.click(screen.getByRole('button', { name: 'Done' }));
+            await wait(10);
             expect(onClose).not.toHaveBeenCalled();
+        });
+
+        it('has one copy button, and nothing else closes the dialog once the link is made', async () => {
+            const onClose = vi.fn();
+            const user = await made(onClose);
+            expect(screen.getAllByRole('button', { name: /copy/i })).toHaveLength(1);
+            expect(screen.queryByRole('button', { name: 'Close' })).toBeNull(); // no X
+            await user.keyboard('{Escape}');
+            await user.click(document.querySelector('.backdrop-blur-sm'));
+            expect(onClose).not.toHaveBeenCalled();
+        });
+
+        it('if the browser refuses to copy, Escape and the X come back so nobody is stuck', async () => {
+            const onClose = vi.fn();
+            const user = await made(onClose);
+            vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
+            await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
+            await user.keyboard('{Escape}');
+            expect(onClose).toHaveBeenCalledTimes(1);
+            await user.click(screen.getByRole('button', { name: 'Close' }));
+            expect(onClose).toHaveBeenCalledTimes(2);
         });
 
         it('closes without asking before any link is made', async () => {
+            vi.useRealTimers();
             const user = userEvent.setup();
             const onClose = vi.fn();
             render(<ShareDropModal item={item} onClose={onClose} />);
