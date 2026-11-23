@@ -115,7 +115,7 @@ describe('shared links', () => {
         expect(row.textContent).toMatch(/Shared .* · 2 views left/); // who, when, what is left
         expect(revoked).toEqual([]); // nothing is revoked on its own or in bulk
         await user.click(within(row).getByRole('button', { name: 'Revoke' }));
-        await user.click(within(row).getByRole('button', { name: 'Revoke now' }));
+        await user.click(await within(row).findByRole('button', { name: 'Revoke now' }));
         await waitFor(() => expect(revoked).toEqual(['D4']));
         await waitFor(() => expect(screen.queryByText(/Links without a login/)).toBeNull());
         expect(screen.getByRole('button', { name: 'Shared (2)' })).toBeTruthy();
@@ -141,7 +141,7 @@ describe('shared links', () => {
         expect(await screen.findByText('Shared links (2)')).toBeTruthy(); // GitHub is selected first
         await user.click(screen.getAllByRole('button', { name: 'Revoke' })[0]);
         expect(revoked).toEqual([]); // one click only asks
-        await user.click(screen.getByRole('button', { name: 'Revoke now' }));
+        await user.click(await screen.findByRole('button', { name: 'Revoke now' }));
         expect(await screen.findByText('Shared links (1)')).toBeTruthy();
         expect(revoked).toHaveLength(1);
     });

@@ -1,12 +1,39 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronRight, Copy, Share2, Trash2 } from 'lucide-react';
 import { clearHistory, revokeDrop } from '../../lib/dropApi';
 import { describeRule, dropLink, fingerprintOf } from '../../lib/drop';
+import { duration, ease } from '../../lib/motion';
 import { getToken } from '../../lib/session';
 
 const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 const ENDED = { used: 'Used up', expired: 'Expired', revoked: 'Revoked' };
 const opened = (n) => (n ? `opened ${n} ${n === 1 ? 'time' : 'times'}` : 'never opened');
+
+// Everything here grows open and folds shut instead of popping in and out (reduced motion is handled globally by MotionConfig).
+// A block opens by height first and fades in a beat behind it; it closes the other way round.
+const fold = {
+    hidden: { height: 0, opacity: 0 },
+    visible: { height: 'auto', opacity: 1, transition: { height: { duration: duration.slow, ease: ease.out }, opacity: { duration: duration.base, delay: 0.06 }, staggerChildren: 0.05 } },
+    exit: { height: 0, opacity: 0, transition: { height: { duration: duration.slow, ease: ease.inOut, delay: 0.08 }, opacity: { duration: duration.base } } }
+};
+// a link leaving a list: it slides aside and fades, then the gap closes; the ones after it follow one after another (`custom` is its place)
+const leave = (i = 0) => ({
+    opacity: 0, x: 24,
+    transition: { opacity: { duration: duration.base, delay: i * 0.05 }, x: { duration: duration.base, ease: ease.inOut, delay: i * 0.05 } }
+});
+const liveRow = {
+    hidden: { height: 0, opacity: 0, y: -6 },
+    visible: { height: 'auto', opacity: 1, y: 0, transition: { height: { duration: duration.slow, ease: ease.out }, opacity: { duration: duration.base, delay: 0.06 }, y: { duration: duration.slow, ease: ease.out } } },
+    exit: (i) => ({ height: 0, ...leave(i), transition: { ...leave(i).transition, height: { duration: duration.slow, ease: ease.inOut, delay: 0.12 + (i || 0) * 0.05 } } })
+};
+const pastRow = {
+    hidden: { opacity: 0, y: 6 },
+    visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.out } },
+    exit: (i) => ({ opacity: 0, x: -14, transition: { duration: duration.base, ease: ease.inOut, delay: (i || 0) * 0.05 } })
+};
+// the two buttons that swap places (Revoke / Revoke now and Keep): a quick cross-fade
+const swap = { initial: { opacity: 0, x: 6 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -6 }, transition: { duration: duration.fast } };
 
 /**
  * The links made from one login, in that login's detail panel. The live ones: what is left of each, Copy link, and Revoke. Under
@@ -29,8 +56,6 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
         if (item) fingerprintOf(item).then((fp) => { if (current) setCurrentFp(fp); });
         return () => { current = false; };
     }, [item]);
-
-    if (!drops.length && !past.length) return null;
 
     const revoke = async (id) => {
         setConfirming(null);
@@ -68,106 +93,132 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
     };
 
     return (
-        <div className="space-y-1.5">
-            {drops.length > 0 && (
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
-                    <Share2 className="w-3.5 h-3.5 text-[#0284c7]" />
-                    <span>{heading} ({drops.length})</span>
-                </div>
-            )}
-            <ul className="space-y-2">
-                {drops.map((drop) => (
-                    <li key={drop.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f5fafc]/85 border border-white/90 shadow-xs">
-                        <div className="min-w-0">
-                            {drop.name
-                                ? <p className="text-sm font-medium text-[#0c1820] truncate">{drop.name}</p>
-                                : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
-                            <p className="text-xs text-[#3a5566]">
-                                {showTitle && drop.title ? `From ${drop.title} · ` : ''}Shared {when(drop.createdAt)} · {describeRule(drop)}
-                            </p>
-                            {!drop.key && <p className="text-xs text-[#5c7788] mt-0.5">Made before a link could be copied again, so this one cannot be.</p>}
-                            {drop.fp && currentFp && drop.fp !== currentFp && (
-                                <p className="text-xs font-semibold text-amber-700 mt-0.5">This login was edited after you shared this link, so the link shows the old details.</p>
+        <AnimatePresence initial={false}>
+            {(drops.length > 0 || past.length > 0) && (
+                <motion.div key="links" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
+                    <div className="space-y-1.5">
+                        <AnimatePresence initial={false}>
+                            {drops.length > 0 && (
+                                <motion.div key="heading" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#3a5566] uppercase tracking-wider">
+                                        <Share2 className="w-3.5 h-3.5 text-[#0284c7]" />
+                                        <span>{heading} ({drops.length})</span>
+                                    </div>
+                                </motion.div>
                             )}
-                        </div>
-                        {confirming === drop.id ? (
-                            <div className="flex items-center gap-2 shrink-0">
-                                <button type="button" onClick={() => revoke(drop.id)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">
-                                    Revoke now
-                                </button>
-                                <button type="button" onClick={() => setConfirming(null)} className="px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">
-                                    Keep
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 shrink-0">
-                                {drop.key && (
+                        </AnimatePresence>
+                        <ul className="-mb-2">
+                            <AnimatePresence initial={false}>
+                                {drops.map((drop, i) => (
+                                    <motion.li key={drop.id} custom={i} variants={liveRow} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
+                                        <div className="pb-2">
+                                            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f5fafc]/85 border border-white/90 shadow-xs">
+                                                <div className="min-w-0">
+                                                    {drop.name
+                                                        ? <p className="text-sm font-medium text-[#0c1820] truncate">{drop.name}</p>
+                                                        : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
+                                                    <p className="text-xs text-[#3a5566]">
+                                                        {showTitle && drop.title ? `From ${drop.title} · ` : ''}Shared {when(drop.createdAt)} · {describeRule(drop)}
+                                                    </p>
+                                                    {!drop.key && <p className="text-xs text-[#5c7788] mt-0.5">Made before a link could be copied again, so this one cannot be.</p>}
+                                                    {drop.fp && currentFp && drop.fp !== currentFp && (
+                                                        <p className="text-xs font-semibold text-amber-700 mt-0.5">This login was edited after you shared this link, so the link shows the old details.</p>
+                                                    )}
+                                                </div>
+                                                <AnimatePresence mode="wait" initial={false}>
+                                                    {confirming === drop.id ? (
+                                                        <motion.div key="confirm" {...swap} className="flex items-center gap-2 shrink-0">
+                                                            <button type="button" onClick={() => revoke(drop.id)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">
+                                                                Revoke now
+                                                            </button>
+                                                            <button type="button" onClick={() => setConfirming(null)} className="px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">
+                                                                Keep
+                                                            </button>
+                                                        </motion.div>
+                                                    ) : (
+                                                        <motion.div key="actions" {...swap} className="flex items-center gap-2 shrink-0">
+                                                            {drop.key && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => copyLink(drop)}
+                                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#112838] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer"
+                                                                >
+                                                                    {copiedId === drop.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                                                    {copiedId === drop.id ? 'Copied' : 'Copy link'}
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setConfirming(drop.id)}
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 rounded-lg cursor-pointer"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Revoke
+                                                            </button>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </div>
+                                    </motion.li>
+                                ))}
+                            </AnimatePresence>
+                        </ul>
+                        {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+                        <AnimatePresence initial={false}>
+                            {past.length > 0 && (
+                                <motion.div key="past" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
                                     <button
                                         type="button"
-                                        onClick={() => copyLink(drop)}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#112838] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer"
+                                        onClick={() => setShowPast(!showPast)}
+                                        aria-expanded={showPast}
+                                        className="flex items-center gap-1 text-xs font-bold text-[#3a5566] uppercase tracking-wider cursor-pointer"
                                     >
-                                        {copiedId === drop.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                                        {copiedId === drop.id ? 'Copied' : 'Copy link'}
+                                        <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${showPast ? 'rotate-90' : ''}`} />
+                                        Past links ({past.length})
                                     </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirming(drop.id)}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 rounded-lg cursor-pointer"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    Revoke
-                                </button>
-                            </div>
-                        )}
-                    </li>
-                ))}
-            </ul>
-            {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
-            {past.length > 0 && (
-                <div>
-                    <button
-                        type="button"
-                        onClick={() => setShowPast(!showPast)}
-                        aria-expanded={showPast}
-                        className="flex items-center gap-1 text-xs font-bold text-[#3a5566] uppercase tracking-wider cursor-pointer"
-                    >
-                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showPast ? 'rotate-90' : ''}`} />
-                        Past links ({past.length})
-                    </button>
-                    {showPast && (
-                        <>
-                            <ul className="space-y-2 mt-1.5">
-                                {past.map((entry) => (
-                                    <li key={entry.id} className="p-3 rounded-xl bg-[#f5fafc]/50 border border-white/90">
-                                        {entry.name
-                                            ? <p className="text-sm font-medium text-[#0c1820] truncate">{entry.name}</p>
-                                            : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
-                                        <p className="text-xs text-[#3a5566]">
-                                            Shared {when(entry.createdAt)} · {ENDED[entry.reason] || 'Ended'} {when(entry.endedAt)} · {opened(entry.opens)}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                            <div className="flex items-center justify-between gap-3 mt-1.5">
-                                <p className="text-xs text-[#5c7788]">Past links are kept for 30 days, then forgotten.</p>
-                                {clearing ? (
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button type="button" onClick={clearPast} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">Clear now</button>
-                                        <button type="button" onClick={() => setClearing(false)} className="px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">Keep</button>
-                                    </div>
-                                ) : (
-                                    <button type="button" onClick={() => setClearing(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg shrink-0 cursor-pointer">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        Clear past links
-                                    </button>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </div>
+                                    <AnimatePresence initial={false}>
+                                        {showPast && (
+                                            <motion.div key="list" variants={fold} initial="hidden" animate="visible" exit="exit" className="overflow-hidden">
+                                                <ul className="space-y-2 mt-1.5">
+                                                    {past.map((entry, i) => (
+                                                        <motion.li key={entry.id} custom={i} variants={pastRow} className="p-3 rounded-xl bg-[#f5fafc]/50 border border-white/90">
+                                                            {entry.name
+                                                                ? <p className="text-sm font-medium text-[#0c1820] truncate">{entry.name}</p>
+                                                                : <p className="text-sm italic text-[#5c7788]">Unnamed link</p>}
+                                                            <p className="text-xs text-[#3a5566]">
+                                                                Shared {when(entry.createdAt)} · {ENDED[entry.reason] || 'Ended'} {when(entry.endedAt)} · {opened(entry.opens)}
+                                                            </p>
+                                                        </motion.li>
+                                                    ))}
+                                                </ul>
+                                                <div className="flex items-center justify-between gap-3 mt-1.5">
+                                                    <p className="text-xs text-[#5c7788]">Past links are kept for 30 days, then forgotten.</p>
+                                                    <AnimatePresence mode="wait" initial={false}>
+                                                        {clearing ? (
+                                                            <motion.div key="confirm" {...swap} className="flex items-center gap-2 shrink-0">
+                                                                <button type="button" onClick={clearPast} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">Clear now</button>
+                                                                <button type="button" onClick={() => setClearing(false)} className="px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">Keep</button>
+                                                            </motion.div>
+                                                        ) : (
+                                                            <motion.div key="clear" {...swap} className="shrink-0">
+                                                                <button type="button" onClick={() => setClearing(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                    Clear past links
+                                                                </button>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
             )}
-        </div>
+        </AnimatePresence>
     );
 }

@@ -124,7 +124,10 @@ class Tab {
         await this.front();
         const find = `[...document.querySelectorAll(${JSON.stringify(selector)})].find((e) => !${JSON.stringify(text || '')} || e.textContent.includes(${JSON.stringify(text || '')}))`;
         await this.waitFor(`!!(${find})`, `${selector} ${text || ''}`);
-        const box = await this.eval(`(() => { const el = ${find}; el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+        // the page animates: click where the element settles, not where it was a moment ago
+        const measure = `(() => { const el = ${find}; el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`;
+        let box = await this.eval(measure);
+        for (let i = 0; i < 14; i += 1) { await sleep(70); const next = await this.eval(measure); const still = next.x === box.x && next.y === box.y; box = next; if (still) break; }
         for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await this.cdp('Input.dispatchMouseEvent', { type, x: box.x, y: box.y, button: 'left', clickCount: 1 });
     }
     close() { try { this.ws.close(); } catch { /* already gone */ } }

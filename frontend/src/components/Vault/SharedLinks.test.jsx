@@ -82,7 +82,7 @@ describe('SharedLinks', () => {
             expect(screen.getByText(/kept for 30 days/)).toBeTruthy();
             expect(screen.queryByRole('button', { name: 'Revoke' })).toBeNull(); // nothing to revoke: they are over
             await user.click(screen.getByRole('button', { name: 'Past links (3)' }));
-            expect(screen.queryByText('For Sam')).toBeNull();
+            await waitFor(() => expect(screen.queryByText('For Sam')).toBeNull()); // it folds shut
         });
 
         describe('clearing them', () => {
@@ -98,7 +98,7 @@ describe('SharedLinks', () => {
                 await open(user, onChanged);
                 await user.click(screen.getByRole('button', { name: 'Clear past links' }));
                 expect(calls).toEqual([]); // one click only asks
-                await user.click(screen.getByRole('button', { name: 'Clear now' }));
+                await user.click(await screen.findByRole('button', { name: 'Clear now' }));
                 await waitFor(() => expect(onChanged).toHaveBeenCalledWith(true));
                 expect(calls).toEqual(['DELETE /api/drops/history?login=L1']);
             });
@@ -107,9 +107,9 @@ describe('SharedLinks', () => {
                 const user = userEvent.setup();
                 await open(user, () => {});
                 await user.click(screen.getByRole('button', { name: 'Clear past links' }));
-                await user.click(screen.getByRole('button', { name: 'Keep' }));
+                await user.click(await screen.findByRole('button', { name: 'Keep' }));
                 expect(calls).toEqual([]);
-                expect(screen.getByRole('button', { name: 'Clear past links' })).toBeTruthy();
+                expect(await screen.findByRole('button', { name: 'Clear past links' })).toBeTruthy();
             });
 
             it('shows the refusal when clearing fails', async () => {
@@ -117,7 +117,7 @@ describe('SharedLinks', () => {
                 const user = userEvent.setup();
                 await open(user, () => {});
                 await user.click(screen.getByRole('button', { name: 'Clear past links' }));
-                await user.click(screen.getByRole('button', { name: 'Clear now' }));
+                await user.click(await screen.findByRole('button', { name: 'Clear now' }));
                 expect(await screen.findByRole('alert')).toBeTruthy();
             });
         });
@@ -165,7 +165,7 @@ describe('SharedLinks', () => {
         render(<SharedLinks drops={drops} onChanged={onChanged} />);
         await user.click(screen.getAllByRole('button', { name: 'Revoke' })[0]);
         expect(calls).toEqual([]); // one click only asks
-        await user.click(screen.getByRole('button', { name: 'Revoke now' }));
+        await user.click(await screen.findByRole('button', { name: 'Revoke now' }));
         await waitFor(() => expect(onChanged).toHaveBeenCalled());
         expect(calls).toEqual(['DELETE /api/drops/D2']);
     });
@@ -174,9 +174,9 @@ describe('SharedLinks', () => {
         const user = userEvent.setup();
         render(<SharedLinks drops={drops} onChanged={() => {}} />);
         await user.click(screen.getAllByRole('button', { name: 'Revoke' })[0]);
-        await user.click(screen.getByRole('button', { name: 'Keep' }));
+        await user.click(await screen.findByRole('button', { name: 'Keep' }));
         expect(calls).toEqual([]);
-        expect(screen.getAllByRole('button', { name: 'Revoke' })).toHaveLength(2);
+        await waitFor(() => expect(screen.getAllByRole('button', { name: 'Revoke' })).toHaveLength(2));
     });
 
     it('shows the refusal when a revoke fails', async () => {
@@ -184,7 +184,7 @@ describe('SharedLinks', () => {
         const user = userEvent.setup();
         render(<SharedLinks drops={drops} onChanged={() => {}} />);
         await user.click(screen.getAllByRole('button', { name: 'Revoke' })[0]);
-        await user.click(screen.getByRole('button', { name: 'Revoke now' }));
+        await user.click(await screen.findByRole('button', { name: 'Revoke now' }));
         expect(await screen.findByRole('alert')).toBeTruthy();
     });
 });

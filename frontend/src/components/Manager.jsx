@@ -445,7 +445,7 @@ export default function Manager() {
                                         onEdit={handleOpenEdit}
                                         onDelete={handleDeleteClick}
                                         onShare={setShareItem}
-                                        sharedLinks={activeItem && <SharedLinks drops={dropsByLogin.get(activeItem._id) || []} past={pastByLogin.get(activeItem._id)} item={activeItem} onChanged={reloadDrops} />}
+                                        sharedLinks={activeItem && <SharedLinks key={activeItem._id} drops={dropsByLogin.get(activeItem._id) || []} past={pastByLogin.get(activeItem._id)} item={activeItem} onChanged={reloadDrops} />}
                                         onToggleFavorite={handleToggleFavorite}
                                         onCopy={handleCopy}
                                     />
