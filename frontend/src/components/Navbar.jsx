@@ -69,22 +69,43 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  const brand = (
+    <>
+      <PassDropLogo size={32} className="group-hover:scale-105 transition-transform" />
+      <span className="font-extrabold text-lg tracking-tight flex items-center">
+        <span className="text-[#112838]">
+          Pass
+        </span>
+        <span className="text-[#0284c7]">
+          Drop
+        </span>
+      </span>
+    </>
+  );
+  const headerClass = "sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]";
+
+  // A drop page belongs to whoever opened the link, signed in or not: no menu, no sign-in buttons, and the logo is not a link.
+  // The login on it is only in memory (and a view may be spent), so one stray click on a menu item would lose it for good.
+  if (location.pathname.startsWith('/drop/')) {
+    return (
+      <header className={headerClass}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            <div className="flex items-center gap-2.5">{brand}</div>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#e1eef5]/75 backdrop-blur-xl shadow-[0_4px_20px_-4px_rgba(22,44,58,0.1)]">
+      <header className={headerClass}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* PassDrop Logo & Wordmark */}
             <Link to={token ? "/" : "/home"} className="flex items-center gap-2.5 group">
-              <PassDropLogo size={32} className="group-hover:scale-105 transition-transform" />
-              <span className="font-extrabold text-lg tracking-tight flex items-center">
-                <span className="text-[#112838]">
-                  Pass
-                </span>
-                <span className="text-[#0284c7]">
-                  Drop
-                </span>
-              </span>
+              {brand}
             </Link>
 
             {/* Desktop Navigation Links */}

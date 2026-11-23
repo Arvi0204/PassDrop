@@ -243,6 +243,7 @@ async function run() {
     check('before Reveal the page already shows what is left, without using a view', true);
     await drop1.waitText(LOGIN_USER);
     check('the link shows the shared login to someone who opened it', (await drop1.text()).includes(LOGIN_TITLE));
+    check('...on a page with no menu and nothing to click away to, although this browser is signed in', !(await drop1.text()).includes('Logout') && !(await drop1.eval(`!!document.querySelector('header a, header nav, header button')`)));
     check('...with the password hidden until it is shown', !(await drop1.text()).includes(LOGIN_PASSWORD));
     await drop1.click('button[aria-label="Show Password"]');
     await drop1.waitText(LOGIN_PASSWORD);
