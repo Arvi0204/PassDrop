@@ -1,6 +1,6 @@
-// Drop calls. The share key is made here, used to encrypt the login, and goes only into the link that is returned: it is
-// never sent to the server. A drop's label (the login's title, for the sender's list) is encrypted with the sender's vault
-// key. Results are `{ ok: true, ... }` or `{ ok: false, error }`; a network failure throws, so callers can show their own
+// Drop calls. The share key is made here, used to encrypt the login, and goes into the link that is returned: it is never sent to
+// the server in the clear. A drop's label (the login's title, the sender's name for it, and the link's key, for the sender's list) is
+// encrypted with the sender's vault key, which the server never has, so only the sender's unlocked vault can rebuild a live link. Results are `{ ok: true, ... }` or `{ ok: false, error }`; a network failure throws, so callers can show their own
 // "cannot connect" message.
 import authFetch from './authFetch';
 import { decryptItem, encryptItem, exportVaultKey, importVaultKey, newVaultKey } from './vaultCrypto';
@@ -15,10 +15,11 @@ const errorOf = (json, fallback) => json.errors?.[0]?.msg || json.error || fallb
 /** `rule` is { mode: 'views', views: 1..10 } or { mode: 'timer', ttl: seconds }. */
 export async function createDrop(host, token, { item, rule, name = '', vaultKey, userId, origin = window.location.origin }) {
     const shareKey = await newVaultKey();
+    const linkKey = toLinkKey(await exportVaultKey(shareKey));
     const body = {
         blob: await encryptItem(shareKey, pickShared(item)),
-        // the login's title and what the sender calls the link, for the sender's list
-        label: await encryptItem(vaultKey, { title: item.title || item.url || '', name: name.trim(), fp: await fingerprintOf(item) }, userId),
+        // the login's title, what the sender calls the link and the link's key, for the sender's list (the key lets a live link be copied again)
+        label: await encryptItem(vaultKey, { title: item.title || item.url || '', name: name.trim(), fp: await fingerprintOf(item), key: linkKey }, userId),
         // which login it was made from: its opaque record id, so the server ends the link when the login is deleted
         login: item._id,
         ...rule
@@ -27,16 +28,17 @@ export async function createDrop(host, token, { item, rule, name = '', vaultKey,
     const json = await response.json();
     if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to make the drop') };
     const { id, mode, viewsLeft, expiresAt } = json;
-    return { ok: true, id, mode, viewsLeft, expiresAt, link: dropLink(origin, id, toLinkKey(await exportVaultKey(shareKey))) };
+    return { ok: true, id, mode, viewsLeft, expiresAt, link: dropLink(origin, id, linkKey) };
 }
 
-// each row has its `login` id from the server, and its label opened: the title and the sender's own `name` (and `fp`)
+// each row has its `login` id from the server, and its label opened: the title, the sender's own `name`, `fp`, and the link's `key`
+// (empty for a link made before the key was kept)
 const openLabels = (rows, vaultKey, userId) => Promise.all(rows.map(async ({ label, ...row }) => {
     try {
-        const { title, name, fp } = await decryptItem(vaultKey, label, userId);
-        return { ...row, title: title || '', name: name || '', fp: fp || '' };
+        const { title, name, fp, key } = await decryptItem(vaultKey, label, userId);
+        return { ...row, title: title || '', name: name || '', fp: fp || '', key: key || '' };
     } catch {
-        return { ...row, title: '', name: '', fp: '' };
+        return { ...row, title: '', name: '', fp: '', key: '' };
     }
 }));
 
@@ -53,7 +55,8 @@ export async function listHistory(host, token, { vaultKey, userId }) {
     const response = await authFetch(`${host}/api/drops/history`, { method: 'GET', headers: headers(token) });
     const json = await response.json();
     if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to load your past links') };
-    return { ok: true, history: await openLabels(json, vaultKey, userId) };
+    // an ended link has nothing to copy, so its key is not kept in memory
+    return { ok: true, history: (await openLabels(json, vaultKey, userId)).map((entry) => ({ ...entry, key: '' })) };
 }
 
 export async function revokeDrop(host, token, id) {

@@ -76,7 +76,7 @@ Each `...AuthKey` is base64 of 32 bytes and each wrapped key is a string like `v
 
 ### Drops (`/api/drops`)
 
-A drop shares one login by a link. The browser encrypts the login with a fresh share key that stays in the link's `#` part, so the server holds only the encrypted login, a label for the sender's list (encrypted with the sender's vault key), and the rule. A drop ends by a view count or by a time, never both.
+A drop shares one login by a link. The browser encrypts the login with a fresh share key that stays in the link's `#` part, so the server holds only the encrypted login, a label for the sender's list (encrypted with the sender's vault key; it holds the login's title, the sender's name for the link and the link's key, which lets the sender copy a live link again), and the rule. A drop ends by a view count or by a time, never both.
 
 | Method and path | Needs | Body | What it does |
 |---|---|---|---|

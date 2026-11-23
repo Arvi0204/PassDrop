@@ -92,6 +92,36 @@ describe('SharedLinks', () => {
         });
     });
 
+    describe('copying a live link again', () => {
+        const KEY = 'K'.repeat(43);
+        const live = [{ ...drops[0], key: KEY }, { ...drops[1], key: '' }]; // the second was made before the key was kept
+
+        it('copies the whole link (this address, the drop and its key) from a link that has its key', async () => {
+            const user = userEvent.setup();
+            const write = vi.spyOn(navigator.clipboard, 'writeText');
+            render(<SharedLinks drops={live} onChanged={() => {}} />);
+            const buttons = screen.getAllByRole('button', { name: 'Copy link' });
+            expect(buttons).toHaveLength(1); // only the link that has its key
+            await user.click(buttons[0]);
+            expect(write).toHaveBeenCalledWith(`${window.location.origin}/drop/D2#${KEY}`);
+            expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
+            expect(calls).toEqual([]); // copying asks the server for nothing
+        });
+
+        it('says so on a link made before the key was kept, and offers no button for it', () => {
+            render(<SharedLinks drops={live} onChanged={() => {}} />);
+            expect(screen.getAllByText(/Made before a link could be copied again/)).toHaveLength(1);
+        });
+
+        it('says when the browser would not copy', async () => {
+            const user = userEvent.setup();
+            vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
+            render(<SharedLinks drops={live} onChanged={() => {}} />);
+            await user.click(screen.getByRole('button', { name: 'Copy link' }));
+            expect(await screen.findByRole('alert')).toBeTruthy();
+        });
+    });
+
     it('revokes only after a second click, then tells the vault to reload', async () => {
         const user = userEvent.setup();
         const onChanged = vi.fn();

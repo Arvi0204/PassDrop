@@ -17,6 +17,8 @@ export default function useDrops(enabled) {
     const [drops, setDrops] = useState([]);
     const [history, setHistory] = useState([]);
     const seen = useRef(null); // the live links the history was last fetched for
+    const on = useRef(enabled);
+    on.current = enabled;
 
     const reload = useCallback(async () => {
         try {
@@ -24,19 +26,24 @@ export default function useDrops(enabled) {
             if (!vaultKey) return;
             const who = { vaultKey, userId: getUserId() };
             const result = await listDrops(host, getToken(), who);
-            if (!result.ok) return;
+            if (!result.ok || !on.current) return; // locked while it loaded: do not bring the links back
             setDrops(result.drops);
             const now = result.drops.map((d) => d.id).join();
             if (seen.current === now) return;
             const past = await listHistory(host, getToken(), who);
-            if (past.ok) { setHistory(past.history); seen.current = now; }
+            if (past.ok && on.current) { setHistory(past.history); seen.current = now; }
         } catch {
             // keep what is shown
         }
     }, [host]);
 
     useEffect(() => {
-        if (!enabled) return undefined;
+        if (!enabled) { // locked: the links hold their keys, so none may stay in memory
+            setDrops((d) => (d.length ? [] : d));
+            setHistory((h) => (h.length ? [] : h));
+            seen.current = null;
+            return undefined;
+        }
         const looked = () => { if (document.visibilityState === 'visible') reload(); };
         reload();
         const timer = setInterval(reload, POLL_MS);

@@ -262,6 +262,10 @@ async function run() {
     // the links live with the login they were made from: in its panel, with a badge and a Shared filter
     await tab2.waitFor(`document.body.innerText.toLowerCase().includes('shared links (1)')`, 'the login to show its link'); // the heading is styled in capitals
     check('the login shows its link in its own panel, and the Shared filter counts the login', (await tab2.text()).includes('Shared (1)') && !!(await tab2.eval(`!!document.querySelector('[aria-label="1 shared link"]')`)));
+    await tab2.eval(`window.__copied = null; const w = navigator.clipboard.writeText.bind(navigator.clipboard); navigator.clipboard.writeText = (t) => { window.__copied = t; return w(t); }; 0`);
+    await tab2.click('button', 'Copy link');
+    await tab2.waitFor(`window.__copied !== null`, 'the link to be copied again');
+    check('a live link is copied again from its login, and it is the same link that was made', (await tab2.eval('window.__copied')) === dropLink2);
     await tab2.click('button', 'Revoke');
     await tab2.click('button', 'Revoke now');
     await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('shared links')`, 'the revoked link to leave the login');

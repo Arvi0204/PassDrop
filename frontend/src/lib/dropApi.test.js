@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BAD_LINK, GONE, createDrop, listDrops, listHistory, openDrop, peekDrop, revokeDrop } from './dropApi';
 import { fingerprintOf, keyFromHash } from './drop';
-import { newVaultKey } from './vaultCrypto';
+import { encryptItem, newVaultKey } from './vaultCrypto';
 
 const HOST = 'http://api.test', ORIGIN = 'https://pass-drop.vercel.app';
 const item = { _id: 'p1', title: 'GitHub', url: 'github.com', username: 'octocat', password: 'S3cret-pw!', notes: 'n', isFavorite: true };
@@ -115,6 +115,23 @@ describe('listDrops and revokeDrop', () => {
     it('returns the server\'s refusal when the history cannot be loaded', async () => {
         fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Internal Server Error' }) });
         expect(await listHistory(HOST, 'tok', { vaultKey, userId: 'u1' })).toEqual({ ok: false, error: 'Internal Server Error' });
+    });
+
+    it('keeps the link\'s key in the encrypted label, so the sender\'s vault can copy a live link again, and the server never sees it in the clear', async () => {
+        const { link } = await make();
+        const linkKey = keyFromHash(new URL(link).hash);
+        expect(sent.options.body).not.toContain(linkKey);
+        const { drops } = await listDrops(HOST, 'tok', { vaultKey, userId: 'u1' });
+        expect(drops[0].key).toBe(linkKey);
+    });
+
+    it('gives an empty key for a link made before the key was kept, and none for an ended link', async () => {
+        await make();
+        stored.label = await encryptItem(vaultKey, { title: 'GitHub', name: '', fp: 'x' }, 'u1'); // no key in it
+        expect((await listDrops(HOST, 'tok', { vaultKey, userId: 'u1' })).drops[0].key).toBe('');
+        await make();
+        const { history } = await listHistory(HOST, 'tok', { vaultKey, userId: 'u1' });
+        expect(history[0].key).toBe(''); // an ended link has nothing to copy
     });
 
     it('revokes by id, and passes a refusal on', async () => {

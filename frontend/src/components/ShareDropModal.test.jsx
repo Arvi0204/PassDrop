@@ -35,7 +35,7 @@ describe('ShareDropModal', () => {
         expect(key).toBeTruthy();
         expect(posted.options.body).not.toContain(key);
         expect(posted.options.body).not.toContain('S3cret-pw!');
-        expect(screen.getByText(/shown only now/)).toBeTruthy();
+        expect(screen.getByText(/copy it again, or revoke it, any time under Shared links/)).toBeTruthy(); // nothing is lost by closing
     });
 
     it('lets the sender name the link, and the name is sent only inside the encrypted label', async () => {
@@ -132,25 +132,16 @@ describe('ShareDropModal', () => {
             expect(onClose).not.toHaveBeenCalled();
         });
 
-        it('has one copy button, and nothing else closes the dialog once the link is made', async () => {
+        it('has one copy button, and can be closed at any time (Escape, the X, the backdrop), because the link stays in the login\'s Shared links', async () => {
             const onClose = vi.fn();
             const user = await made(onClose);
             expect(screen.getAllByRole('button', { name: /copy/i })).toHaveLength(1);
-            expect(screen.queryByRole('button', { name: 'Close' })).toBeNull(); // no X
-            await user.keyboard('{Escape}');
-            await user.click(document.querySelector('.backdrop-blur-sm'));
-            expect(onClose).not.toHaveBeenCalled();
-        });
-
-        it('if the browser refuses to copy, Escape and the X come back so nobody is stuck', async () => {
-            const onClose = vi.fn();
-            const user = await made(onClose);
-            vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
-            await user.click(screen.getByRole('button', { name: 'Copy link and close' }));
             await user.keyboard('{Escape}');
             expect(onClose).toHaveBeenCalledTimes(1);
             await user.click(screen.getByRole('button', { name: 'Close' }));
             expect(onClose).toHaveBeenCalledTimes(2);
+            await user.click(document.querySelector('.backdrop-blur-sm'));
+            expect(onClose).toHaveBeenCalledTimes(3);
         });
 
         it('closes without asking before any link is made', async () => {

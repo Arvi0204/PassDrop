@@ -31,6 +31,30 @@ describe('useDrops', () => {
         expect(listDrops).toHaveBeenCalledTimes(1);
     });
 
+    it('forgets the links (and their keys) when it is disabled, as the vault locks', async () => {
+        live = [{ id: 'D1', login: 'a', key: 'k', expiresAt: '2099-01-01T00:00:00Z' }];
+        past = [{ id: 'P1', login: 'a' }];
+        const { result, rerender } = renderHook(({ on }) => useDrops(on), { initialProps: { on: true } });
+        await flush();
+        expect(result.current.drops).toHaveLength(1);
+        expect(result.current.history).toHaveLength(1);
+        rerender({ on: false });
+        await flush();
+        expect(result.current.drops).toEqual([]);
+        expect(result.current.history).toEqual([]);
+    });
+
+    it('does not bring the links back when the vault locks while they load', async () => {
+        let finish;
+        live = [{ id: 'D1', login: 'a', key: 'k', expiresAt: '2099-01-01T00:00:00Z' }];
+        listDrops.mockImplementation(() => new Promise((resolve) => { finish = () => resolve({ ok: true, drops: live }); }));
+        const { result, rerender } = renderHook(({ on }) => useDrops(on), { initialProps: { on: true } });
+        await flush();
+        rerender({ on: false });
+        await act(async () => { finish(); await Promise.resolve(); await Promise.resolve(); });
+        expect(result.current.drops).toEqual([]);
+    });
+
     it('reloads every 10 seconds, so views other people use up show without a page reload', async () => {
         const { result } = renderHook(() => useDrops(true));
         await flush();

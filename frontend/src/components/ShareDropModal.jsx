@@ -34,9 +34,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
     const [copyFailed, setCopyFailed] = useState(false);
     // The drop animation: drops hang above the button until the link exists, then fall onto it, and the grid behind the dialog
     // ripples out from where they land. The form fades as the first drop lands (`leaving`), the dialog eases to the size of the link
-    // view, and its parts arrive as the wave reaches them (`impact` is where it started). `landing` is the moment the link exists
-    // but is not shown yet: closing then would lose it.
-    const [landing, setLanding] = useState(false);
+    // view, and its parts arrive as the wave reaches them (`impact` is where it started).
     const [leaving, setLeaving] = useState(false);
     const [impact, setImpact] = useState(null);
     const [gridMounted, setGridMounted] = useState(false);
@@ -48,11 +46,9 @@ export default function ShareDropModal({ item, onClose, onMade }) {
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
 
-    // Once the link is made, copying it is the way out: the dialog closes itself 2 seconds after (the link cannot be shown
-    // again, so there is nothing more to do here). Until then nothing else closes it, and not while the drops are landing.
-    // If the browser refuses to copy, Escape and the X come back, so nobody is stuck.
-    const locked = landing || (made && !copyFailed);
-    const requestClose = () => { if (!locked) onClose(); };
+    // Once the link is copied the dialog closes itself 2 seconds after. It can also be closed at any time (Escape, the X, the
+    // backdrop): a live link is kept in its login's Shared links, where it can be copied again, so closing loses nothing.
+    const requestClose = () => onClose();
     useEscapeKey(true, requestClose);
     useEffect(() => {
         if (closeIn === null) return undefined;
@@ -78,7 +74,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
             },
             onLand: () => {
                 setLeaving(true);
-                later(() => { setMade(pending.current); setLeaving(false); setLanding(false); setWorking(false); }, 240);
+                later(() => { setMade(pending.current); setLeaving(false); setWorking(false); }, 240);
                 later(() => setGridOn(false), 2400);
             },
             onEnd: (aborted) => { if (aborted) setGridOn(false); }
@@ -107,7 +103,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
         }
         if (!result) { release(false); setWorking(false); return; }
         onMade?.();
-        if (animate) { pending.current = result; setLanding(true); release(true); } else { setMade(result); setWorking(false); }
+        if (animate) { pending.current = result; release(true); } else { setMade(result); setWorking(false); }
     };
 
     const copy = async () => {
@@ -144,12 +140,10 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                 transition={{ duration: 0.18, ease: 'easeOut' }}
                 className="relative z-10 w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-2xl p-6"
             >
-                {!locked && (
-                    <button type="button" onClick={requestClose} className="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer">
-                        <X className="w-4 h-4" />
-                        <span className="sr-only">Close</span>
-                    </button>
-                )}
+                <button type="button" onClick={requestClose} className="absolute top-4 right-4 z-10 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer">
+                    <X className="w-4 h-4" />
+                    <span className="sr-only">Close</span>
+                </button>
 
                 <MorphHeight animated={animated} innerClassName={leaving ? 'opacity-0 blur-[3px] transition-[opacity,filter] duration-200 pointer-events-none' : ''}>
                     <div>
@@ -175,7 +169,7 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                                 </Arrive>
                                 {copyFailed && <p role="alert" className="text-xs text-rose-700">Your browser would not copy it. Select the link above and copy it yourself.</p>}
                                 <Arrive from={impact} as="p" className="text-xs text-[#3a5566] leading-relaxed">
-                                    Anyone with this link can see this login until it ends. This link is shown only now: PassDrop never has the key, so it cannot show it again. You can revoke the link any time under Shared links on this login.
+                                    Anyone with this link can see this login until it ends. You can copy it again, or revoke it, any time under Shared links on this login.
                                 </Arrive>
                                 <Arrive from={impact}>
                                     <button type="button" autoFocus onClick={copy} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] shadow-md cursor-pointer">
