@@ -6,6 +6,7 @@ const { ObjectId } = require('mongodb');
 const { body, validationResult } = require('express-validator');
 const connectToDb = require('../db');
 const { isBlob } = require('../utils/vaultFields');
+const removeDrops = require('../utils/removeDrops');
 
 // Every login is one encrypted blob made in the browser. The server cannot read it: it stores the blob next to the owner
 // and the times, and hands it back. (Titles, addresses, usernames, passwords and notes are all inside the blob.)
@@ -110,7 +111,12 @@ router.delete('/:id', fetchUser, async (req, res) => {
             return res.status(403).json({ success: false, error: 'Not authorized to delete this entry' });
         }
 
+        // the links made from this login end with it (first, so a failure here can never leave a link without its login)
+        const db = await connectToDb(), drops = { login: existing._id, owner: new ObjectId(req.user.id) };
+        await removeDrops(db, drops);
         await collection.deleteOne({ _id: new ObjectId(id) });
+        // a drop made in the gap between those two steps is ended too (drops.js also removes its own drop if it sees the login gone)
+        await removeDrops(db, drops).catch((error) => console.error('Second sweep of drops failed:', error.message));
         return res.json({ success: true, message: 'Password deleted successfully', deletedPass: { _id: existing._id } });
     } catch (error) {
         console.error('Error deleting password:', error.message);
@@ -122,7 +128,11 @@ router.delete('/:id', fetchUser, async (req, res) => {
 router.delete('/', fetchUser, requirePassword, async (req, res) => {
     try {
         const collection = await getPasswordsCollection();
+        // every link was made from one of these logins, so all of the user's links end with them
+        const db = await connectToDb(), drops = { owner: new ObjectId(req.user.id) };
+        await removeDrops(db, drops);
         const result = await collection.deleteMany({ user: new ObjectId(req.user.id) });
+        await removeDrops(db, drops).catch((error) => console.error('Second sweep of drops failed:', error.message)); // as in the single delete
 
         return res.json({
             success: true,

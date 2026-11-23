@@ -7,6 +7,7 @@ import {
     Eye,
     EyeOff,
     Edit3,
+    Droplet,
     Trash2,
     ShieldCheck,
     Calendar,
@@ -20,12 +21,15 @@ import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
 import CopyIcon from './CopyIcon';
 import IconSwap from '../common/IconSwap';
+import Tooltip from '../common/Tooltip';
 import WaterMask, { useLingering } from './WaterMask';
 
 export default function VaultDetail({
     item,
     onEdit,
     onDelete,
+    onShare,
+    sharedLinks,
     onToggleFavorite,
     onCopy
 }) {
@@ -120,6 +124,20 @@ export default function VaultDetail({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
+                    <Tooltip title="Drop this login" text="Share it with a link that destroys itself after a number of views or a set time.">
+                        {(hint) => (
+                            <button
+                                type="button"
+                                data-action="drop"
+                                {...hint}
+                                onClick={() => onShare(item)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#0c1820] bg-white/80 hover:bg-white border border-white/90 rounded-xl shadow-xs transition-all cursor-pointer"
+                            >
+                                <Droplet className="w-3.5 h-3.5 text-[#3a5566]" />
+                                Drop
+                            </button>
+                        )}
+                    </Tooltip>
                     <button
                         type="button"
                         onClick={() => onEdit(item)}
@@ -248,6 +266,8 @@ export default function VaultDetail({
                         </div>
                     </div>
                 )}
+
+                {sharedLinks}
             </div>
 
             {/* Footer Metadata */}

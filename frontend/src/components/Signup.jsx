@@ -141,7 +141,7 @@ export default function Signup() {
                                 <div className="w-5 h-5 rounded-lg bg-white/20 text-[#d0e4ee] flex items-center justify-center shrink-0">
                                     <Sparkles className="w-3.5 h-3.5" />
                                 </div>
-                                <span>Single-view ephemeral sharing</span>
+                                <span>Self-destructing drops</span>
                             </div>
                         </div>
                     </div>

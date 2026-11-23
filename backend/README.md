@@ -74,6 +74,22 @@ Each `...AuthKey` is base64 of 32 bytes and each wrapped key is a string like `v
 | `DELETE /:id` | Token | | Deletes one login. |
 | `DELETE /` | Token, re-auth | `currentAuthKey` | Deletes all of the user's logins. |
 
+### Drops (`/api/drops`)
+
+A drop shares one login by a link. The browser encrypts the login with a fresh share key that stays in the link's `#` part, so the server holds only the encrypted login, a label for the sender's list (encrypted with the sender's vault key; it holds the login's title, the sender's name for the link and the link's key, which lets the sender copy a live link again), and the rule. A drop ends by a view count or by a time, never both.
+
+| Method and path | Needs | Body | What it does |
+|---|---|---|---|
+| `POST /` | Token | `login` (the id of one of the sender's logins), `blob`, `label`, `mode` (`views` or `timer`), and `views` (1 to 10) or `ttl` (600, 3600, 86400 or 604800 seconds) | Makes a drop and returns `{ id, mode, viewsLeft, expiresAt }`. At most 25 live drops per user. A views drop also ends after 7 days if nobody opens it. |
+| `GET /` | Token | | The sender's live drops as `[{ id, login, label, mode, viewsLeft, expiresAt, createdAt }]`, newest first. Never the blob. |
+| `GET /history` | Token | | The sender's links that ended in the last 30 days (used up, expired or revoked) as `[{ id, login, label, mode, createdAt, endedAt, reason, opens }]`, newest first, at most 200. Never the blob. |
+| `GET /:id` | | | What is left of a live drop, with no sign-in and no key, so the page can show it before anyone opens it: `{ mode: "views", viewsLeft, now }` or `{ mode: "timer", expiresAt, createdAt, now }` (`now` is the server's clock, so a countdown follows the server's time). It only reads and never takes a view, so a link preview cannot use one up. Never the login, the label, the owner or the 7-day backstop. |
+| `DELETE /history` | Token | `?login=` (optional) | Clears the sender's history of ended links now instead of at 30 days: one login's with `?login=<record id>`, or all of them without it. Returns `{ deleted }`. A link that is still live keeps its record. |
+| `DELETE /:id` | Token | | Revokes one of your drops at once. |
+| `POST /:id/open` | | | Opens a drop with no sign-in and returns `{ blob, mode, viewsLeft, now }`, and `expiresAt` and `createdAt` as well for a timer drop (a views drop's 7-day backstop is not shown) (`Cache-Control: no-store`). A views drop loses a view in one atomic update and is deleted on its last; a timer drop opens as often as you like until it ends. A POST, so a link preview cannot use up a view. |
+
+Missing, malformed, ended, revoked and used-up drops all answer the same, on both the lookup and the open, `404 { success: false, error: "This drop is gone" }`. A MongoDB TTL index deletes ended drops within about a minute, and every query also checks the end time, so an ended drop is never served. A drop stores the id of the login it was made from (an opaque record id, nothing readable) and never outlives it: deleting a login (`DELETE /api/passwords/:id`) deletes its drops in the same request, Delete All Passwords deletes all of the user's drops, and deleting the account deletes them too. A drop made at the very moment its login is deleted is ended as well: creating a drop looks again, once the drop is stored, that its login still exists (and removes its own drop and history row if not), and deleting a login or all logins sweeps its drops a second time after the login is gone. A drop made before logins were recorded has no `login`; it still lists and can be revoked on its own. Each drop also has a history row in the `droplog` collection (no blob): its encrypted label, the login id, the rule, when it was made, how many times it was opened and, once over, when and why it ended. A TTL index deletes the row 30 days after the link ended, so the history cannot grow for ever; it goes at once with its login, with Delete All Passwords and with the account. The history is a record for the sender only: it never decides whether a link works, and a failure to write it does not fail the request. It does mean the server keeps times and an open count for 30 days after a link ends. There is no rate limiter in the app: add a Vercel firewall rule for `/api/drops/*/open`.
+
 ## Responses and errors
 
 Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ msg }] }` for validation and sign-in problems, or `{ success: false, error }` for the rest. Error messages never include internal details.
@@ -97,9 +113,9 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 ## Code layout
 
 - `server.js`, `db.js`: the Express app and the MongoDB connection.
-- `routes/`: `auth.js` and `passwords.js`.
+- `routes/`: `auth.js`, `passwords.js` and `drops.js`.
 - `middleware/`: `fetchUser` (checks the token and its `tokenVersion`) and `requirePassword` (asks for the master password again).
-- `utils/`: `passwordGuard` (checks a proof and counts failures for the lockout), `kdf` (the fake key settings for unknown emails) and `vaultFields` (checks the shape and size of the keys and blobs the browser sends).
+- `utils/`: `removeDrops` (ends drops and their history with a login or an account), `passwordGuard` (checks a proof and counts failures for the lockout), `kdf` (the fake key settings for unknown emails) and `vaultFields` (checks the shape and size of the keys and blobs the browser sends).
 - `bruno/`: the API request collection.
 - `test/`: the automated tests. `test-helpers/`: the helper that boots the app against a throwaway MongoDB for them.
 
@@ -109,10 +125,11 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 npm test --workspace=backend
 ```
 
-61 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+104 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
 - **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
 - **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the shared lockout, and a stable fake for unknown emails.
 - **Logins:** every route needs a token, a login is stored as exactly one blob with no readable field (even if the client also sends plaintext), listing shows only your own, updating and deleting other people's logins is refused, size and format limits, and deleting all.
+- **Drops:** the rule is one view count or one of the timers, only encrypted blobs are stored, the list never shows a blob, the last view deletes the drop, 6 simultaneous opens of a 2-view drop give exactly 2 successes, a timer drop is refused after its end, only the sender can revoke, every kind of "gone" answers the same, a link never outlives its login (even one made at the moment its login is deleted), deleting an account deletes its drops, and the history of ended links (how each ended, how often it was opened, kept 30 days, gone with its login).
 - **The server:** malformed and oversized bodies, no framework header, and that nothing reads an encryption key any more.
 
 **The tests use a real MongoDB.** Each test file starts its own throwaway MongoDB with [mongodb-memory-server-core](https://github.com/typegoose/mongodb-memory-server) and throws it away afterwards, so the API's real queries are what get tested, and nothing is mocked. `test-helpers/testApp.js` sets the tests' own secrets and a placeholder database address before the app loads, so not even a `.env` file pointing at your real database is used, and it refuses to carry on unless the throwaway database is on this computer.

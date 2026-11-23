@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Star, KeyRound, User } from 'lucide-react';
+import { Star, KeyRound, User, Droplet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import FaviconImage from './FaviconImage';
 import CopyIcon from './CopyIcon';
@@ -8,6 +8,7 @@ import { spring } from '../../lib/motion';
 export default function VaultItemCard({
     item,
     isSelected,
+    shared = 0, // how many live links were made from this login
     onSelect,
     onCopyUsername,
     onCopyPassword
@@ -56,6 +57,12 @@ export default function VaultItemCard({
                         </span>
                         {item.isFavorite && (
                             <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                        )}
+                        {shared > 0 && (
+                            <span role="img" title={`${shared} ${shared === 1 ? 'drop' : 'drops'}`} aria-label={`${shared} ${shared === 1 ? 'drop' : 'drops'}`} className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#0284c7] shrink-0">
+                                <Droplet className="w-3 h-3" />
+                                {shared}
+                            </span>
                         )}
                     </div>
                     <p className="text-xs text-[#3a5566] truncate mt-0.5">

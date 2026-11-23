@@ -6,7 +6,8 @@ import {
     Star,
     ArrowLeft,
     X,
-    KeyRound
+    KeyRound,
+    Droplet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import passwordContext from '../context/passwordContext';
@@ -14,9 +15,13 @@ import VaultItemCard from './Vault/VaultItemCard';
 import VaultDetail from './Vault/VaultDetail';
 import VaultModal from './Vault/VaultModal';
 import ConfirmationModal from './ConfirmationModal';
+import ShareDropModal from './ShareDropModal';
+import SharedLinks from './Vault/SharedLinks';
+import useDrops from './Vault/useDrops';
 import FrozenVault from './FrozenVault';
 import FrozenRows from './Vault/FrozenRows';
 import { getToken } from '../lib/session';
+import { fingerprintOf } from '../lib/drop';
 import { useTide } from '../context/useTide';
 import { playVaultEntrance } from '../lib/vaultEntrance';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,11 +34,12 @@ export default function Manager() {
 
     const [selectedId, setSelectedId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'favorites'
+    const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'favorites' | 'shared'
 
     // Modal state for Add/Edit
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [itemToEdit, setItemToEdit] = useState(null);
+    const [shareItem, setShareItem] = useState(null); // the login being shared as a drop
 
     // Delete confirmation state
     const [deleteModalState, setDeleteModalState] = useState({
@@ -49,6 +55,26 @@ export default function Manager() {
     const rootRef = useRef(null);
     const [fetched, setFetched] = useState(false);
 
+    // the live drops (links that share a login), grouped by the login they were made from
+    const { drops, history, reload: reloadDrops } = useDrops(fetched);
+    // The server ends a login's links with it, so none can outlive its login. The only ones that can have no login here
+    // are links made in earlier versions, before logins were recorded: they are listed one by one under Dropped.
+    const { dropsByLogin, orphanDrops } = useMemo(() => {
+        const logins = new Set(passwordArray.map((item) => item._id));
+        const byLogin = new Map(), orphans = [];
+        drops.forEach((drop) => {
+            if (logins.has(drop.login)) byLogin.set(drop.login, [...(byLogin.get(drop.login) || []), drop]);
+            else orphans.push(drop);
+        });
+        return { dropsByLogin: byLogin, orphanDrops: orphans };
+    }, [drops, passwordArray]);
+    const sharedCount = dropsByLogin.size + orphanDrops.length; // everything the Dropped view lists
+    const pastByLogin = useMemo(() => {
+        const byLogin = new Map();
+        history.forEach((entry) => byLogin.set(entry.login, [...(byLogin.get(entry.login) || []), entry]));
+        return byLogin;
+    }, [history]);
+
     // Rows animate in only after the first load, so the login entrance isn't doubled up
     const animateEnter = useRef(false);
     useEffect(() => {
@@ -63,7 +89,10 @@ export default function Manager() {
         if (frozen) setCovered(true);
     }, [frozen]);
     useEffect(() => {
-        if (locked) setFetched(false); // a vault that is locked again fetches and surfaces afresh
+        if (locked) {
+            setFetched(false); // a vault that is locked again fetches and surfaces afresh
+            setShareItem(null); // the Drop dialog holds a decrypted login: it goes with the vault's own list
+        }
     }, [locked]);
     // nothing behind the frost can be reached from the keyboard
     useEffect(() => {
@@ -97,6 +126,9 @@ export default function Manager() {
             if (activeFilter === 'favorites' && !item.isFavorite) {
                 return false;
             }
+            if (activeFilter === 'shared' && !dropsByLogin.has(item._id)) {
+                return false;
+            }
             if (!searchQuery.trim()) return true;
 
             const query = searchQuery.toLowerCase().trim();
@@ -106,7 +138,7 @@ export default function Manager() {
 
             return title.includes(query) || url.includes(query) || username.includes(query);
         });
-    }, [passwordArray, activeFilter, searchQuery]);
+    }, [passwordArray, activeFilter, searchQuery, dropsByLogin]);
 
     // Keep active item valid (a login that could not be decrypted has nothing to show, so it is never selected)
     useEffect(() => {
@@ -159,9 +191,15 @@ export default function Manager() {
     // Save modal action (Add or Edit)
     const handleSaveModal = async (formData) => {
         if (formData._id) {
+            // a link shows the login as it was when it was shared: say so when an edit changes what a link shows
+            const links = dropsByLogin.get(formData._id) || [];
+            const before = links.length ? await fingerprintOf(passwordArray.find((item) => item._id === formData._id) || {}) : null;
             const res = await editPass(formData._id, formData);
             if (res.success) {
                 toast.success('Account updated successfully!');
+                if (links.length && before !== await fingerprintOf(res.item)) {
+                    toast(`${links.length} ${links.length === 1 ? 'drop still shows' : 'drops still show'} the old details. Revoke ${links.length === 1 ? 'it' : 'them'} under Drops if that matters.`, { duration: 8000 });
+                }
             }
         } else {
             const res = await addPass(formData);
@@ -185,6 +223,7 @@ export default function Manager() {
         if (!deleteModalState.itemId) return;
         const res = await deletePass(deleteModalState.itemId);
         if (res.success) {
+            reloadDrops(); // the server ended the login's links with it
             toast.success('Account deleted successfully');
             setDeleteModalState({ isOpen: false, itemId: null });
             if (mobileView === 'detail') {
@@ -255,6 +294,18 @@ export default function Manager() {
                                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                                 Favorites ({favoritesCount})
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveFilter('shared')}
+                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                                    activeFilter === 'shared'
+                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
+                                        : 'text-[#3a5566] hover:text-[#0c1820]'
+                                }`}
+                            >
+                                <Droplet className="w-3.5 h-3.5" />
+                                Dropped ({sharedCount})
+                            </button>
                         </div>
 
                         <button
@@ -278,14 +329,14 @@ export default function Manager() {
                     >
                         <div data-entrance className="flex items-center justify-between px-1 text-xs font-bold text-[#0c1820] uppercase tracking-wider">
                             <span>
-                                {activeFilter === 'favorites' ? 'Favorite Accounts' : 'Vault Accounts'}
+                                {activeFilter === 'favorites' ? 'Favorite Accounts' : activeFilter === 'shared' ? 'Accounts with Drops' : 'Vault Accounts'}
                             </span>
                             <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
                         {frozen ? <FrozenRows /> : filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
                             <motion.div
-                                key={searchQuery ? 'no-match' : 'empty'}
+                                key={searchQuery ? 'no-match' : `empty-${activeFilter}`}
                                 data-entrance
                                 variants={variants.fadeUp}
                                 initial={animateEnter.current ? 'hidden' : false}
@@ -297,14 +348,18 @@ export default function Manager() {
                                     <KeyRound className="w-6 h-6" />
                                 </div>
                                 <p className="text-sm font-bold text-[#0c1820]">
-                                    {searchQuery ? 'No matching accounts found' : 'Your vault is empty'}
+                                    {searchQuery ? 'No matching accounts found'
+                                        : activeFilter === 'shared' ? 'No logins have a drop'
+                                            : activeFilter === 'favorites' ? 'No favorites yet'
+                                                : 'Your vault is empty'}
                                 </p>
                                 <p className="text-xs text-[#3a5566] max-w-xs mx-auto">
-                                    {searchQuery
-                                        ? 'Try searching with a different term or clear the filter.'
-                                        : 'Add your first login, website credential, or secure note.'}
+                                    {searchQuery ? 'Try searching with a different term or clear the filter.'
+                                        : activeFilter === 'shared' ? 'Press Drop on a login to share it with a link. Logins with a live drop are listed here.'
+                                            : activeFilter === 'favorites' ? 'Star a login to find it here.'
+                                                : 'Add your first login, website credential, or secure note.'}
                                 </p>
-                                {!searchQuery && (
+                                {!searchQuery && activeFilter === 'all' && (
                                     <button
                                         type="button"
                                         onClick={handleOpenCreate}
@@ -345,6 +400,7 @@ export default function Manager() {
                                                 <VaultItemCard
                                                     item={item}
                                                     isSelected={item._id === selectedId}
+                                                    shared={dropsByLogin.get(item._id)?.length || 0}
                                                     onSelect={(clickedItem) => {
                                                         setSelectedId(clickedItem._id);
                                                         setMobileView('detail');
@@ -357,6 +413,10 @@ export default function Manager() {
                                     ))}
                                 </AnimatePresence>
                             </div>
+                        )}
+
+                        {activeFilter === 'shared' && orphanDrops.length > 0 && (
+                            <SharedLinks drops={orphanDrops} onChanged={reloadDrops} heading="Drops without a login" showTitle />
                         )}
                     </div>
 
@@ -391,6 +451,8 @@ export default function Manager() {
                                         item={activeItem}
                                         onEdit={handleOpenEdit}
                                         onDelete={handleDeleteClick}
+                                        onShare={setShareItem}
+                                        sharedLinks={activeItem && <SharedLinks key={activeItem._id} drops={dropsByLogin.get(activeItem._id) || []} past={pastByLogin.get(activeItem._id)} item={activeItem} onChanged={reloadDrops} />}
                                         onToggleFavorite={handleToggleFavorite}
                                         onCopy={handleCopy}
                                     />
@@ -409,12 +471,16 @@ export default function Manager() {
                 onSave={handleSaveModal}
             />
 
+            {shareItem && <ShareDropModal key={shareItem._id} item={shareItem} onClose={() => setShareItem(null)} onMade={reloadDrops} />}
+
             {/* Confirmation Modal for Deletion */}
             <ConfirmationModal
                 isOpen={deleteModalState.isOpen}
                 onClose={() => setDeleteModalState({ isOpen: false, itemId: null })}
                 onConfirm={handleConfirmDelete}
-                message="Are you sure you want to delete this account? This action cannot be undone."
+                message={`Are you sure you want to delete this account? This action cannot be undone.${
+                    dropsByLogin.get(deleteModalState.itemId)?.length ? ' Its drops will stop working.' : ''
+                }`}
                 confirmText="Yes, Delete"
             />
         </div>

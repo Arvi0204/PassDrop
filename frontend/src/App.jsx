@@ -14,6 +14,7 @@ import { Toaster } from 'react-hot-toast';
 import Home from './components/Home'
 import UserDetails from './components/UserDetails'
 import ExtensionInstructions from './components/ExtensionInstructions'
+import Drop from './components/Drop'
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
               <Route exact path="/" element={<Manager />} />
               <Route exact path="/user" element={<UserDetails />} />
               <Route exact path="/extension" element={<ExtensionInstructions />} />
+              <Route exact path="/drop/:id" element={<Drop />} />
             </Routes>
           </div>
         </div>

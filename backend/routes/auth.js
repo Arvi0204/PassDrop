@@ -12,6 +12,7 @@ const requirePassword = require('../middleware/requirePassword');
 const { checkPassword, LOCKED_MESSAGE } = require('../utils/passwordGuard');
 const { isBase64Of, isKdf, isWrappedKey } = require('../utils/vaultFields');
 const { fakeKdfFor } = require('../utils/kdf');
+const removeDrops = require('../utils/removeDrops');
 const connectToDb = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -246,6 +247,7 @@ router.delete('/me', fetchUser, requirePassword, async (req, res) => {
         const db = await connectToDb();
 
         await db.collection('passwords').deleteMany({ user: new ObjectId(userId) });
+        await removeDrops(db, { owner: new ObjectId(userId) });
         await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
 
         return res.status(200).json({

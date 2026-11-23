@@ -12,13 +12,14 @@ A password manager for the web and the browser. Keep your logins in one vault, o
 - [Local build or release build](#local-build-or-release-build)
 - [Deployment](#deployment)
 - [Security](#security)
-- [Status and roadmap](#status-and-roadmap)
+- [Status](#status)
 
 ## Features
 
 - **Vault**: add, search, edit and delete logins, and mark favourites. Everything in it is encrypted in your browser before it is saved, so the server only ever stores data it cannot read (see [Security](#security)).
 - **Password generator**: adjustable length and character sets, with strength feedback as you type.
 - **Lock and recovery**: the vault locks when you close its tab (the extension locks when the browser closes) and shows a "Vault frozen" screen that asks for your master password to open it again. A recovery key, shown in a popup the first time you open the Account page after signing up, is for the day you forget the master password. If you did not save it, you can make a new one on the Account page at any time (the old one then stops working).
+- **Drops (sharing)**: share one login by a link that destroys itself, after a number of views (1 to 10) or a time (10 minutes to 7 days). The person needs no account, and you can revoke a link from the login it came from (each login lists its own drops, with a badge and a Dropped filter in the vault, and keeps the ones that ended for 30 days under Past drops). The server only ever holds the login encrypted with a key that is in the link's `#` part (see [Security](#security)).
 - **Account**: change your master password (with a strength meter) and a danger zone for deleting all logins or the account. Both ask for your master password again.
 - **Browser extension** (Chrome, Edge, Brave and other Chromium browsers): click a login field on a site you have a login for, and a PassDrop menu offers it. Nothing is filled until you click a row.
 - **Water-themed interface**: a tide animation between pages, and passwords revealed through a waterline that drains away.
@@ -158,9 +159,9 @@ npm run test:e2e                                 # real Chrome, the whole web ap
 
 | Part | Tests | Tool | What they cover |
 |---|---|---|---|
-| Web app (`frontend/`) | 102 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
-| API (`backend/`) | 61 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, recovery, who can touch whose logins, and that no readable field is ever stored |
-| Extension (`web_extension/`) | 97 | Node's built-in runner and jsdom | Address matching, field detection, signing in and unlocking in the service worker (with real encrypted data), the content script's rules and the popup helpers |
+| Web app (`frontend/`) | 220 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
+| API (`backend/`) | 104 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, recovery, who can touch whose logins, and that no readable field is ever stored |
+| Extension (`web_extension/`) | 98 | Node's built-in runner and jsdom | Address matching, field detection, signing in and unlocking in the service worker (with real encrypted data), the content script's rules and the popup helpers |
 
 Each test is a small program that runs part of the code with known input and checks the answer. A good run prints a tick for each test and ends with a summary of passed and failed counts; a failure names the test and shows what it expected. To run one part, use `npm test --workspace=frontend` (or `backend`, `web_extension`).
 
@@ -196,17 +197,15 @@ To deploy, import the repository in Vercel (the settings come from `vercel.json`
 - Master passwords are hashed with bcrypt. Ten wrong attempts in a row lock an account for 15 minutes. Changing the master password signs out every other session. Deleting the account, deleting all logins and changing the master password ask for the master password again.
 - **The server cannot read your vault.** Your master password never leaves your browser. The browser stretches it (PBKDF2-SHA256, 600,000 rounds) into two keys: one is a sign-in proof the server stores only as a bcrypt hash, the other locks a random vault key. Every login (title, address, username, password, notes) is encrypted with that vault key (AES-256-GCM) in the browser before it is sent, and the server keeps the vault key only in locked form. The code is in [`frontend/src/lib/vaultCrypto.js`](frontend/src/lib/vaultCrypto.js).
 - **Locking:** the vault key is kept only for as long as the tab is open (the extension: until the browser closes). Reopening needs the master password again, locally, without the server seeing it.
+- **Drops keep the key out of the server's reach.** Sharing a login makes a fresh key in the browser, encrypts the login with it, and puts the key after the `#` in the link; browsers never send that part to a server. The server stores only the encrypted login, the rule (a view count or an end time), who made it, and the opaque record id of the login it came from (so that deleting a login ends its links; the server never sees what the login contains). Opening needs no sign-in and happens only when the person presses Reveal (so a chat app previewing the link cannot use up a view); it takes a view atomically, and the last view, an end time that has passed, or a revoke by the sender deletes the drop. Missing, ended, revoked and used-up all look the same. Before it is opened, the page looks at what is left (a views drop's count, or when a timer ends on the server's clock) with a lookup that needs the link's id but not its key and never takes a view; so anyone who holds the id can see the rule, but nothing about the login. For the sender's own accountability the server also keeps, for 30 days after a link ends, a row with the times, how it ended and how often it was opened (never the login or the key); it is deleted with the login. Limits: anyone who has the whole link can open it until it ends (there is no recipient identity), a timer drop can be opened any number of times until it ends, and the key is kept in the drop's label, which is encrypted with the sender's vault key (the server never has that key), so the sender's unlocked vault can copy a live link again from the login's Drops; a link made before this has no key there and cannot be copied again. The receiver's page has no menu (the login on it is only in memory, so a stray click would lose it). The code is in [`backend/routes/drops.js`](backend/routes/drops.js) and [`frontend/src/lib/dropApi.js`](frontend/src/lib/dropApi.js).
 - **Site icons come from Google.** To show each login's icon, the web app and the extension ask Google's favicon service (`www.google.com/s2/favicons`) for it by site name, for example `github.com`. Only the site name is sent, never a username, password or note, and names that are not public (no dot, `localhost`, IP addresses) are never sent: they get a letter tile instead. Google can see which sites you ask about. The code is in [`frontend/src/lib/siteIcon.js`](frontend/src/lib/siteIcon.js).
 - **The browser does not trust the server's key settings.** Before it derives any key, the web app and the extension check the settings the server sends (PBKDF2-SHA256, at least 600,000 rounds, at most 10,000,000, a 16-byte salt), so a tampered database or a hostile server cannot make them use weak settings or freeze the page.
 - **If you forget your master password, you need the recovery key** (shown once, the first time you open the Account page after signing up, and replaceable there at any time; 32 hex digits). **If you lose both, nobody can recover the vault, including whoever runs the server.** That is the point of the design.
 - The extension puts a password into a web page only after a real click on a row in its menu, and only for the exact site (host and port) the login was saved for. See [`web_extension/README.md`](web_extension/README.md#what-a-web-page-can-and-cannot-do).
 
-## Status and roadmap
+## Status
 
-Done: the vault is encrypted in the browser (zero-knowledge), with a recovery key. Planned, in this order:
-
-1. **A freeze and thaw animation for the lock screen.**
-2. **Drop sharing**: share one login by a link that expires, with the key kept in the link's fragment so the server never sees it.
+Done: the vault is encrypted in the browser (zero-knowledge), with a recovery key; the lock screen freezes the vault under frost that clears as you type; and drop sharing (a login shared by a link that ends after a number of views or a time, with the key kept in the link's fragment so the server never sees it), with a water-drop and ripple animation when a link is made and when it is opened.
 
 Known limits of the extension today: it handles the top frame only (no login forms inside iframes) and no shadow-DOM forms.
 

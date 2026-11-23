@@ -21,6 +21,7 @@ app.use(express.json());
 // Available routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/passwords', require('./routes/passwords'));
+app.use('/api/drops', require('./routes/drops'));
 
 // Root endpoint
 app.get('/', (req, res) => {
