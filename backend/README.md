@@ -84,6 +84,7 @@ A drop shares one login by a link. The browser encrypts the login with a fresh s
 | `GET /` | Token | | The sender's live drops as `[{ id, login, label, mode, viewsLeft, expiresAt, createdAt }]`, newest first. Never the blob. |
 | `GET /history` | Token | | The sender's links that ended in the last 30 days (used up, expired or revoked) as `[{ id, login, label, mode, createdAt, endedAt, reason, opens }]`, newest first, at most 200. Never the blob. |
 | `GET /:id` | | | What is left of a live drop, with no sign-in and no key, so the page can show it before anyone opens it: `{ mode: "views", viewsLeft, now }` or `{ mode: "timer", expiresAt, createdAt, now }` (`now` is the server's clock, so a countdown follows the server's time). It only reads and never takes a view, so a link preview cannot use one up. Never the login, the label, the owner or the 7-day backstop. |
+| `DELETE /history` | Token | `?login=` (optional) | Clears the sender's history of ended links now instead of at 30 days: one login's with `?login=<record id>`, or all of them without it. Returns `{ deleted }`. A link that is still live keeps its record. |
 | `DELETE /:id` | Token | | Revokes one of your drops at once. |
 | `POST /:id/open` | | | Opens a drop with no sign-in and returns `{ blob, mode, viewsLeft, expiresAt }` (`Cache-Control: no-store`). A views drop loses a view in one atomic update and is deleted on its last; a timer drop opens as often as you like until it ends. A POST, so a link preview cannot use up a view. |
 
@@ -124,7 +125,7 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 npm test --workspace=backend
 ```
 
-97 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+100 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
 - **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
 - **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the shared lockout, and a stable fake for unknown emails.
 - **Logins:** every route needs a token, a login is stored as exactly one blob with no readable field (even if the client also sends plaintext), listing shows only your own, updating and deleting other people's logins is refused, size and format limits, and deleting all.

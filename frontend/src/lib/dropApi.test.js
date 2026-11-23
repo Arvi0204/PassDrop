@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BAD_LINK, GONE, createDrop, listDrops, listHistory, openDrop, peekDrop, revokeDrop } from './dropApi';
+import { BAD_LINK, GONE, clearHistory, createDrop, listDrops, listHistory, openDrop, peekDrop, revokeDrop } from './dropApi';
 import { fingerprintOf, keyFromHash } from './drop';
 import { encryptItem, newVaultKey } from './vaultCrypto';
 
@@ -132,6 +132,15 @@ describe('listDrops and revokeDrop', () => {
         await make();
         const { history } = await listHistory(HOST, 'tok', { vaultKey, userId: 'u1' });
         expect(history[0].key).toBe(''); // an ended link has nothing to copy
+    });
+
+    it('clears one login\'s past links with a DELETE for that login, and passes a refusal on', async () => {
+        fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, deleted: 2 }) });
+        expect(await clearHistory(HOST, 'tok', 'abc123')).toEqual({ ok: true });
+        const [url, options] = fetch.mock.calls.at(-1);
+        expect([url, options.method, options.headers['auth-token']]).toEqual([HOST + '/api/drops/history?login=abc123', 'DELETE', 'tok']);
+        fetch.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ errors: [{ msg: 'That login was not found.' }] }) });
+        expect(await clearHistory(HOST, 'tok', 'x')).toEqual({ ok: false, error: 'That login was not found.' });
     });
 
     it('revokes by id, and passes a refusal on', async () => {

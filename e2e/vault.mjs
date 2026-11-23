@@ -359,6 +359,14 @@ async function run() {
     check('each link has a history row with no blob: its rule, how often it was opened, and (when over) how it ended',
         log.length === 3 && log.every((row) => row.blob === undefined && row.purgeAt > new Date() && typeof row.opens === 'number') && log.map((row) => row.endedBy ?? 'live').sort().join() === 'live,revoked,used');
 
+    // the sender can clear the past links of a login: they go from the server too, and the live link's record stays
+    const hasButton = (text) => tab2.eval(`!![...document.querySelectorAll('button')].find((b) => b.textContent.includes(${JSON.stringify(text)}))`);
+    if (!(await hasButton('Clear past links'))) await tab2.click('button', 'Past links');
+    await tab2.click('button', 'Clear past links');
+    await tab2.click('button', 'Clear now');
+    await tab2.waitFor(`!document.body.innerText.toLowerCase().includes('past links')`, 'the past links to go');
+    check('clearing the past links removes them for good, and leaves the live link\'s record', (await db.collection('droplog').countDocuments()) === 1);
+
     // ---- delete everything with the master password ----
     await tab.goto('/user');
     await tab.click('button', 'Delete All Passwords');

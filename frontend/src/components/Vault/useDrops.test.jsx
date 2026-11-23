@@ -117,6 +117,16 @@ describe('useDrops', () => {
         });
     });
 
+    it('fetches the history again when asked, even though the live links did not change (after clearing it)', async () => {
+        const { result } = renderHook(() => useDrops(true));
+        await flush();
+        expect(listHistory).toHaveBeenCalledTimes(1);
+        past = [];
+        await act(async () => { await result.current.reload(true); });
+        expect(listHistory).toHaveBeenCalledTimes(2);
+        expect(result.current.history).toEqual([]);
+    });
+
     it('keeps what it showed when a reload fails', async () => {
         live = [{ id: 'D1', login: 'a', expiresAt: '2099-01-01T00:00:00Z' }];
         const { result } = renderHook(() => useDrops(true));

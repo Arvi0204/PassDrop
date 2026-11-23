@@ -59,6 +59,12 @@ export async function listHistory(host, token, { vaultKey, userId }) {
     return { ok: true, history: (await openLabels(json, vaultKey, userId)).map((entry) => ({ ...entry, key: '' })) };
 }
 
+/** Clears the ended links in one login's history now, instead of at 30 days. Live links are not touched. */
+export async function clearHistory(host, token, login) {
+    const response = await authFetch(`${host}/api/drops/history?login=${encodeURIComponent(login)}`, { method: 'DELETE', headers: headers(token) });
+    return response.ok ? { ok: true } : { ok: false, error: errorOf(await response.json(), 'Failed to clear the past links') };
+}
+
 export async function revokeDrop(host, token, id) {
     const response = await authFetch(`${host}/api/drops/${encodeURIComponent(id)}`, { method: 'DELETE', headers: headers(token) });
     return response.ok ? { ok: true } : { ok: false, error: errorOf(await response.json(), 'Failed to revoke') };

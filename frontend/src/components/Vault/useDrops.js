@@ -10,7 +10,7 @@ const MIN_WAIT_MS = 5000; // so a clock that disagrees with the server's cannot 
  * people, so it reloads every 10 seconds and whenever the tab is looked at again, and again at the moment the soonest
  * drop ends. A failed load keeps what was shown: sharing is secondary to the vault, so it never raises an error over it.
  * It also returns the history of ended links. That only changes when a live link appears or goes, so it is fetched
- * on the first load and then only when the set of live links has changed, not on every poll.
+ * on the first load and then only when the set of live links has changed, not on every poll (or when asked: `reload(true)`).
  */
 export default function useDrops(enabled) {
     const host = import.meta.env.VITE_BACKEND;
@@ -20,7 +20,7 @@ export default function useDrops(enabled) {
     const on = useRef(enabled);
     on.current = enabled;
 
-    const reload = useCallback(async () => {
+    const reload = useCallback(async (forceHistory = false) => {
         try {
             const vaultKey = await getVaultKey();
             if (!vaultKey) return;
@@ -29,7 +29,7 @@ export default function useDrops(enabled) {
             if (!result.ok || !on.current) return; // locked while it loaded: do not bring the links back
             setDrops(result.drops);
             const now = result.drops.map((d) => d.id).join();
-            if (seen.current === now) return;
+            if (!forceHistory && seen.current === now) return;
             const past = await listHistory(host, getToken(), who);
             if (past.ok && on.current) { setHistory(past.history); seen.current = now; }
         } catch {

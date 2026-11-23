@@ -360,6 +360,50 @@ describe('history of ended links', () => {
         assert.ok(Math.abs((row.purgeAt - row.endedAt) / DAY - 30) < 0.01);
     });
 
+    describe('clearing it', () => {
+        const clear = (user, query = '') => request().delete(`/api/drops/history${query}`).set('auth-token', user.token);
+        const ended = async (user, login) => { const { id } = (await as(user).create({ ...views(1), login })).body; await open(id); return id; };
+
+        test('removes the sender\'s ended links, and leaves a live link\'s record alone', async () => {
+            const user = await signedInUser();
+            await ended(user, await loginOf(user));
+            await ended(user, user.login);
+            const live = (await as(user).create(timer())).body.id;
+            assert.equal((await as(user).history()).body.length, 2);
+
+            const res = await clear(user);
+            assert.deepEqual([res.status, res.body.deleted], [200, 2]);
+            assert.deepEqual((await as(user).history()).body, []);
+            assert.deepEqual((await all('droplog')).map((r) => r._id), [live]); // the live link keeps its record
+            await as(user).revoke(live);
+            assert.equal((await as(user).history()).body.length, 1); // ...and it joins the history when it ends
+        });
+
+        test('can be limited to one login, and never touches anyone else\'s', async () => {
+            const ann = await signedInUser({ email: 'ann@example.com', username: 'ann' });
+            const bob = await signedInUser({ email: 'bob@example.com', username: 'bob' });
+            const second = (await request().post('/api/passwords').set('auth-token', ann.token).send({ blob: blob() })).body._id;
+            const a1 = await ended(ann, await loginOf(ann));
+            await ended(ann, second);
+            const b1 = await ended(bob, await loginOf(bob));
+
+            const res = await clear(ann, `?login=${second}`);
+            assert.equal(res.body.deleted, 1);
+            assert.deepEqual((await as(ann).history()).body.map((e) => e.id), [a1]);
+            assert.equal((await as(bob).history()).body.length, 1);
+
+            assert.equal((await clear(ann)).body.deleted, 1); // no login: all of Ann's, still not Bob's
+            assert.deepEqual((await as(bob).history()).body.map((e) => e.id), [b1]);
+        });
+
+        test('needs a token, and refuses a login that is not an id', async () => {
+            const user = await signedInUser();
+            assert.equal((await request().delete('/api/drops/history')).status, 401);
+            for (const login of ['abc', 'z'.repeat(24), '']) assert.equal((await clear(user, `?login=${login}`)).status, 400, login);
+            assert.equal((await clear(user, '?login=a&login=b')).status, 400); // repeated: not one id
+        });
+    });
+
     test('goes with its login, with Delete All, and with the account', async () => {
         const ann = await signedInUser({ email: 'ann@example.com', username: 'ann' });
         const bob = await signedInUser({ email: 'bob@example.com', username: 'bob' });

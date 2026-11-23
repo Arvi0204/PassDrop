@@ -111,6 +111,22 @@ router.get('/history', fetchUser, async (req, res) => {
     }
 });
 
+// CLEAR the sender's history of ended links, all of them or one login's (?login=<record id>), if they want it gone sooner than the
+// 30 days. Only ended links: the history of a link that is still live is kept, and it is only ever the caller's own.
+router.delete('/history', fetchUser, async (req, res) => {
+    const { login } = req.query;
+    if (login !== undefined && !(typeof login === 'string' && login.length === 24 && ObjectId.isValid(login))) {
+        return res.status(400).json({ success: false, errors: [{ msg: 'That login was not found. Reload the page and try again.' }] });
+    }
+    try {
+        const ended = [{ endedAt: { $exists: true } }, { endsAt: { $lte: new Date() } }];
+        const { deletedCount } = await (await getLog()).deleteMany({ owner: new ObjectId(req.user.id), $or: ended, ...(login && { login: new ObjectId(login) }) });
+        return res.json({ success: true, deleted: deletedCount });
+    } catch (error) {
+        return fail(res, error);
+    }
+});
+
 // LOOK: no sign-in and no key. What is left of a live drop, so the page can show it before anyone opens it. It only reads: it never
 // takes a view, so a chat app previewing the link cannot use one up. A views drop answers with its views left; a timer drop with
 // when it ends and when it began (a views drop's 7-day backstop is not shown). `now` is the server's clock, so the page

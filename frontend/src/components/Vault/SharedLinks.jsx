@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, ChevronRight, Copy, Share2, Trash2 } from 'lucide-react';
-import { revokeDrop } from '../../lib/dropApi';
+import { clearHistory, revokeDrop } from '../../lib/dropApi';
 import { describeRule, dropLink, fingerprintOf } from '../../lib/drop';
 import { getToken } from '../../lib/session';
 
@@ -20,6 +20,7 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
     const [error, setError] = useState('');
     const [showPast, setShowPast] = useState(false);
     const [copiedId, setCopiedId] = useState(null);
+    const [clearing, setClearing] = useState(false); // waiting for "Clear now"
     // what the login looks like now, to tell the links that were made before its last edit (they show the old details)
     const [currentFp, setCurrentFp] = useState(null);
     useEffect(() => {
@@ -40,6 +41,19 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
             setError('Cannot connect to the server. Try again.');
         }
         onChanged();
+    };
+
+    // the past links of this login go now, instead of at 30 days (the live ones are not touched)
+    const clearPast = async () => {
+        setClearing(false);
+        if (!past[0]?.login) return;
+        try {
+            const result = await clearHistory(host, getToken(), past[0].login);
+            setError(result.ok ? '' : result.error);
+        } catch {
+            setError('Cannot connect to the server. Try again.');
+        }
+        onChanged(true);
     };
 
     const copyLink = async (drop) => {
@@ -136,7 +150,20 @@ export default function SharedLinks({ drops, past = [], onChanged, item, heading
                                     </li>
                                 ))}
                             </ul>
-                            <p className="text-xs text-[#5c7788] mt-1.5">Past links are kept for 30 days, then forgotten.</p>
+                            <div className="flex items-center justify-between gap-3 mt-1.5">
+                                <p className="text-xs text-[#5c7788]">Past links are kept for 30 days, then forgotten.</p>
+                                {clearing ? (
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button type="button" onClick={clearPast} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">Clear now</button>
+                                        <button type="button" onClick={() => setClearing(false)} className="px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg cursor-pointer">Keep</button>
+                                    </div>
+                                ) : (
+                                    <button type="button" onClick={() => setClearing(true)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-[#3a5566] bg-white/80 hover:bg-white border border-white/90 rounded-lg shrink-0 cursor-pointer">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        Clear past links
+                                    </button>
+                                )}
+                            </div>
                         </>
                     )}
                 </div>

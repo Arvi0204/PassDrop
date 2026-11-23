@@ -85,6 +85,43 @@ describe('SharedLinks', () => {
             expect(screen.queryByText('For Sam')).toBeNull();
         });
 
+        describe('clearing them', () => {
+            const mine = past.map((entry) => ({ ...entry, login: 'L1' }));
+            const open = async (user, onChanged) => {
+                render(<SharedLinks drops={[]} past={mine} onChanged={onChanged} />);
+                await user.click(screen.getByRole('button', { name: 'Past links (3)' }));
+            };
+
+            it('clears this login\'s past links only after a second click, then tells the vault to load the history again', async () => {
+                const user = userEvent.setup();
+                const onChanged = vi.fn();
+                await open(user, onChanged);
+                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                expect(calls).toEqual([]); // one click only asks
+                await user.click(screen.getByRole('button', { name: 'Clear now' }));
+                await waitFor(() => expect(onChanged).toHaveBeenCalledWith(true));
+                expect(calls).toEqual(['DELETE /api/drops/history?login=L1']);
+            });
+
+            it('Keep backs out without clearing', async () => {
+                const user = userEvent.setup();
+                await open(user, () => {});
+                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                await user.click(screen.getByRole('button', { name: 'Keep' }));
+                expect(calls).toEqual([]);
+                expect(screen.getByRole('button', { name: 'Clear past links' })).toBeTruthy();
+            });
+
+            it('shows the refusal when clearing fails', async () => {
+                fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Internal Server Error' }) });
+                const user = userEvent.setup();
+                await open(user, () => {});
+                await user.click(screen.getByRole('button', { name: 'Clear past links' }));
+                await user.click(screen.getByRole('button', { name: 'Clear now' }));
+                expect(await screen.findByRole('alert')).toBeTruthy();
+            });
+        });
+
         it('show under the live links of the same login', () => {
             render(<SharedLinks drops={drops} past={past} onChanged={() => {}} />);
             expect(screen.getByText('Shared links (2)')).toBeTruthy();
