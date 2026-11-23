@@ -111,6 +111,25 @@ router.get('/history', fetchUser, async (req, res) => {
     }
 });
 
+// LOOK: no sign-in and no key. What is left of a live drop, so the page can show it before anyone opens it. It only reads: it never
+// takes a view, so a chat app previewing the link cannot use one up. A views drop answers with its views left; a timer drop with
+// when it ends and when it began (a views drop's 7-day backstop is not shown). `now` is the server's clock, so the page
+// counts down on the server's time and not on the visitor's. Every kind of "gone" answers the same as opening does.
+router.get('/:id', async (req, res) => {
+    if (!ID.test(req.params.id)) return gone(res);
+    try {
+        const now = new Date();
+        const drop = await (await getDrops()).findOne({ _id: req.params.id, ...live(now) }, { projection: { mode: 1, viewsLeft: 1, expiresAt: 1, createdAt: 1 } });
+        if (!drop) return gone(res);
+        res.set('Cache-Control', 'no-store');
+        return res.json(drop.mode === 'views'
+            ? { mode: 'views', viewsLeft: drop.viewsLeft, now }
+            : { mode: 'timer', expiresAt: drop.expiresAt, createdAt: drop.createdAt, now });
+    } catch (error) {
+        return fail(res, error);
+    }
+});
+
 // REVOKE: only the sender can, and it deletes the drop at once
 router.delete('/:id', fetchUser, async (req, res) => {
     if (!ID.test(req.params.id)) return gone(res);
@@ -141,7 +160,10 @@ router.post('/:id/open', async (req, res) => {
         await record((await getLog()).updateOne({ _id: drop._id }, { $inc: { opens: 1 }, ...(lastView && { $set: endedNow('used', now) }) }));
 
         res.set('Cache-Control', 'no-store');
-        return res.json({ blob: drop.blob, mode: drop.mode, viewsLeft: drop.viewsLeft, expiresAt: drop.expiresAt });
+        return res.json({
+            blob: drop.blob, mode: drop.mode, viewsLeft: drop.viewsLeft, expiresAt: drop.expiresAt, now,
+            ...(drop.mode === 'timer' && { createdAt: drop.createdAt })
+        });
     } catch (error) {
         return fail(res, error);
     }

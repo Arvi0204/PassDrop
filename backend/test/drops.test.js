@@ -187,6 +187,71 @@ describe('open (no sign-in)', () => {
     });
 });
 
+describe('look (no sign-in, no key)', () => {
+    const look = (id) => request().get(`/api/drops/${id}`);
+
+    test('a views drop answers with its views left and the server clock, and looking takes no view', async () => {
+        const user = await signedInUser();
+        const { id } = (await as(user).create(views(3))).body;
+        for (let i = 0; i < 3; i += 1) {
+            const res = await look(id);
+            assert.equal(res.status, 200);
+            assert.deepEqual(Object.keys(res.body).sort(), ['mode', 'now', 'viewsLeft']); // not the 7-day backstop
+            assert.deepEqual([res.body.mode, res.body.viewsLeft], ['views', 3]);
+            assert.ok(Math.abs(new Date(res.body.now) - Date.now()) < 5000);
+            assert.equal(res.headers['cache-control'], 'no-store');
+        }
+        assert.equal((await open(id)).body.viewsLeft, 2); // all three looks left the 3 views untouched
+        assert.equal((await look(id)).body.viewsLeft, 2);
+    });
+
+    test('a timer drop answers with when it ends and began', async () => {
+        const user = await signedInUser();
+        const { id } = (await as(user).create(timer(600))).body;
+        const res = await look(id);
+        assert.deepEqual(Object.keys(res.body).sort(), ['createdAt', 'expiresAt', 'mode', 'now']);
+        assert.equal(res.body.mode, 'timer');
+        assert.ok(Math.abs((new Date(res.body.expiresAt) - new Date(res.body.createdAt)) / 1000 - 600) < 1);
+        assert.equal((await open(id)).status, 200); // looking and opening do not get in each other's way
+    });
+
+    test('never shows the blob, the label, the owner or the login', async () => {
+        const user = await signedInUser();
+        const body = timer();
+        const { id } = (await as(user).create(body)).body;
+        const text = JSON.stringify((await look(id)).body);
+        for (const secret of [body.blob, body.label, String(user.id), user.login]) assert.equal(text.includes(secret), false);
+    });
+
+    test('missing, malformed, used-up, revoked and ended answer the identical 404 as opening', async () => {
+        const user = await signedInUser();
+        const used = (await as(user).create(views(1))).body.id;
+        await open(used);
+        const revoked = (await as(user).create(timer())).body.id;
+        await as(user).revoke(revoked);
+        const ended = (await as(user).create(timer())).body.id;
+        await expire(ended);
+
+        const answers = [];
+        for (const id of ['AAAAAAAAAAAAAAAAAAAAAA', 'short', 'AAAAAAAAAAAAAAAAAAAA!!', used, revoked, ended]) {
+            const looked = await look(id), opened = await open(id);
+            assert.equal(looked.status, 404);
+            assert.deepEqual(looked.body, opened.body);
+            answers.push(JSON.stringify(looked.body));
+        }
+        assert.equal(new Set(answers).size, 1);
+    });
+
+    test('opening also tells the server clock, and a timer drop when it began', async () => {
+        const user = await signedInUser();
+        const first = await open((await as(user).create(views(2))).body.id);
+        assert.ok(first.body.now);
+        assert.equal(first.body.createdAt, undefined);
+        const second = await open((await as(user).create(timer())).body.id);
+        assert.ok(second.body.now && second.body.createdAt);
+    });
+});
+
 describe('revoke', () => {
     test('the sender revokes at once: the link then says gone', async () => {
         const user = await signedInUser();
