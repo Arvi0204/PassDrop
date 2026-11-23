@@ -1,4 +1,7 @@
 // RippleGrid, from React Bits (https://reactbits.dev, DavidHDev/react-bits: Backgrounds/RippleGrid), kept as published.
+// Copyright (c) 2026 David Haz. Used under the React Bits licence, "MIT + Commons Clause":
+// https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
+// (free to use as part of an application; the component itself may not be sold or redistributed on its own).
 // It is a plain WebGL2 grid with no dependency. Here the Drop dialog starts a ripple by sending a pointerdown at the
 // spot where a drop lands (clickRipple), so this file needs no change.
 import { useEffect, useRef } from 'react';

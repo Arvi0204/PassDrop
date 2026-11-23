@@ -62,9 +62,9 @@ router.post('/', fetchUser, createValidation, async (req, res) => {
         const drops = await getDrops();
         const owner = new ObjectId(req.user.id), login = new ObjectId(req.body.login), now = new Date();
         // a link is made from one of the sender's own logins (the server sees only its opaque id), and ends with it
-        if (!await (await connectToDb()).collection('passwords').findOne({ _id: login, user: owner }, { projection: { _id: 1 } })) {
-            return res.status(400).json({ success: false, errors: [{ msg: 'That login was not found. Reload the page and try again.' }] });
-        }
+        const loginExists = async () => !!await (await connectToDb()).collection('passwords').findOne({ _id: login, user: owner }, { projection: { _id: 1 } });
+        const notFound = () => res.status(400).json({ success: false, errors: [{ msg: 'That login was not found. Reload the page and try again.' }] });
+        if (!await loginExists()) return notFound();
         if (await drops.countDocuments({ owner, ...live(now) }) >= MAX_LIVE_PER_USER) {
             return res.status(400).json({ success: false, errors: [{ msg: `You have ${MAX_LIVE_PER_USER} live drops. Revoke one to make another.` }] });
         }
@@ -79,6 +79,14 @@ router.post('/', fetchUser, createValidation, async (req, res) => {
         await record((await getLog()).insertOne({
             _id: doc._id, owner, login, label, mode, createdAt: now, endsAt: doc.expiresAt, opens: 0, purgeAt: new Date(doc.expiresAt.getTime() + HISTORY_MS)
         }));
+        // The login may have been deleted while this was being made: its delete ended the drops it could see, and not this one.
+        // Looking again once the drop is stored closes that gap together with the second sweep the delete makes (routes/passwords.js):
+        // either this sees the login gone and removes its own drop, or the login was still there and that sweep removes it.
+        if (!await loginExists()) {
+            await drops.deleteOne({ _id: doc._id });
+            await (await getLog()).deleteOne({ _id: doc._id });
+            return notFound();
+        }
         return res.status(201).json({ id: doc._id, mode, viewsLeft: doc.viewsLeft, expiresAt: doc.expiresAt });
     } catch (error) {
         return fail(res, error);

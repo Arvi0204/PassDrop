@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Manager from './Manager';
 import PasswordState from '../context/PasswordState';
 import toast from 'react-hot-toast';
-import { saveSignIn, saveVaultKey } from '../lib/session';
+import { lock, saveSignIn, saveVaultKey } from '../lib/session';
 import { deriveKeys, encryptItem, newVaultKey, wrapVaultKey } from '../lib/vaultCrypto';
 
 vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
@@ -132,6 +132,16 @@ describe('shared links', () => {
         expect(screen.getByText('Accounts with Drops')).toBeTruthy();
         await waitFor(() => expect(screen.getByText('2 items')).toBeTruthy());
         await waitFor(() => expect(screen.queryByText('This login could not be decrypted')).toBeNull()); // after its exit animation
+    });
+
+    it('closes the Drop dialog when the vault locks, so the login it holds does not stay in memory', async () => {
+        const user = userEvent.setup();
+        await saveVaultKey(vaultKey);
+        show();
+        await user.click(await screen.findByRole('button', { name: 'Drop' }));
+        expect(await screen.findByRole('dialog')).toBeTruthy();
+        act(() => lock());
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     });
 
     it('says what an empty Dropped or Favorites filter is for, instead of calling the vault empty', async () => {

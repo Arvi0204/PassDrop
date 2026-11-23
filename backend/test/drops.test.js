@@ -1,6 +1,8 @@
 const { test, beforeEach, describe } = require('node:test');
 const assert = require('node:assert/strict');
+const { ObjectId } = require('mongodb');
 const { reset, all, collection, request, signedInUser, blob } = require('../test-helpers/testApp');
+const connectToDb = require('../db');
 
 beforeEach(reset);
 
@@ -465,6 +467,66 @@ describe('a link never outlives its login', () => {
         assert.equal((await as(ann).list()).body.length, 0);
         assert.equal((await open(bobs)).status, 200);
         assert.equal((await all('drops')).length, 1);
+    });
+
+    // Runs `fn` while the passwords collection is wrapped, so a test can make something happen at the exact moment between two
+    // steps of a route (a drop being made while its login is being deleted). `wrap` maps a method name to (collection) => replacement.
+    const during = async (wrap, fn) => {
+        const db = await connectToDb();
+        const original = db.collection;
+        db.collection = function (name, ...rest) {
+            const c = original.call(this, name, ...rest);
+            return name === 'passwords' ? new Proxy(c, { get: (t, p) => (wrap[p] ? wrap[p](t) : typeof t[p] === 'function' ? t[p].bind(t) : t[p]) }) : c;
+        };
+        try { return await fn(); } finally { delete db.collection; }
+    };
+    const rowFor = (user, login, id) => {
+        const now = new Date();
+        return { _id: id, owner: new ObjectId(user.id), login: new ObjectId(login), label: blob(), mode: 'views', createdAt: now, expiresAt: new Date(now.getTime() + 3600000) };
+    };
+
+    test('a drop made at the moment its login is deleted is not kept (the login went after it was checked)', async () => {
+        const user = await signedInUser();
+        await loginOf(user);
+        let armed = true;
+        const res = await during({
+            findOne: (t) => async (...args) => { // right after the "does this login exist?" check passes, the login is deleted
+                const found = await t.findOne(...args);
+                if (armed && found) { armed = false; await t.deleteOne({ _id: found._id }); }
+                return found;
+            }
+        }, () => as(user).create(views()));
+        assert.equal(res.status, 400); // told the login is not found, like any drop for a login that is not there
+        assert.equal((await all('drops')).length, 0);
+        assert.equal((await all('droplog')).length, 0);
+    });
+
+    test('deleting a login also ends a drop that was made after its drops were removed but before the login went', async () => {
+        const user = await signedInUser();
+        const login = await loginOf(user);
+        const res = await during({
+            deleteOne: (t) => async (...args) => { // a drop lands in the gap between ending the login's drops and deleting the login
+                await (await collection('drops')).insertOne({ ...rowFor(user, login, 'R'.repeat(22)), blob: blob(), viewsLeft: 1 });
+                await (await collection('droplog')).insertOne({ ...rowFor(user, login, 'R'.repeat(22)), endsAt: new Date(Date.now() + 3600000), opens: 0, purgeAt: new Date(Date.now() + 40 * 86400000) });
+                return t.deleteOne(...args);
+            }
+        }, () => as(user).deleteLogin(login));
+        assert.equal(res.status, 200);
+        assert.equal((await all('drops')).length, 0);
+        assert.equal((await all('droplog')).length, 0);
+    });
+
+    test('Delete All Passwords also ends a drop made in the gap before the logins went', async () => {
+        const user = await signedInUser();
+        const login = await loginOf(user);
+        const res = await during({
+            deleteMany: (t) => async (...args) => {
+                await (await collection('drops')).insertOne({ ...rowFor(user, login, 'R'.repeat(22)), blob: blob(), viewsLeft: 1 });
+                return t.deleteMany(...args);
+            }
+        }, () => as(user).deleteAllLogins());
+        assert.equal(res.status, 200);
+        assert.equal((await all('drops')).length, 0);
     });
 
     test('a link made before logins were recorded still lists, and can be revoked on its own', async () => {

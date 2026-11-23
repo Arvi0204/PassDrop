@@ -89,7 +89,10 @@ export default function Manager() {
         if (frozen) setCovered(true);
     }, [frozen]);
     useEffect(() => {
-        if (locked) setFetched(false); // a vault that is locked again fetches and surfaces afresh
+        if (locked) {
+            setFetched(false); // a vault that is locked again fetches and surfaces afresh
+            setShareItem(null); // the Drop dialog holds a decrypted login: it goes with the vault's own list
+        }
     }, [locked]);
     // nothing behind the frost can be reached from the keyboard
     useEffect(() => {

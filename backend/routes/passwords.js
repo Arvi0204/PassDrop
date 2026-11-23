@@ -112,8 +112,11 @@ router.delete('/:id', fetchUser, async (req, res) => {
         }
 
         // the links made from this login end with it (first, so a failure here can never leave a link without its login)
-        await removeDrops(await connectToDb(), { login: existing._id, owner: new ObjectId(req.user.id) });
+        const db = await connectToDb(), drops = { login: existing._id, owner: new ObjectId(req.user.id) };
+        await removeDrops(db, drops);
         await collection.deleteOne({ _id: new ObjectId(id) });
+        // a drop made in the gap between those two steps is ended too (drops.js also removes its own drop if it sees the login gone)
+        await removeDrops(db, drops).catch((error) => console.error('Second sweep of drops failed:', error.message));
         return res.json({ success: true, message: 'Password deleted successfully', deletedPass: { _id: existing._id } });
     } catch (error) {
         console.error('Error deleting password:', error.message);
@@ -126,8 +129,10 @@ router.delete('/', fetchUser, requirePassword, async (req, res) => {
     try {
         const collection = await getPasswordsCollection();
         // every link was made from one of these logins, so all of the user's links end with them
-        await removeDrops(await connectToDb(), { owner: new ObjectId(req.user.id) });
+        const db = await connectToDb(), drops = { owner: new ObjectId(req.user.id) };
+        await removeDrops(db, drops);
         const result = await collection.deleteMany({ user: new ObjectId(req.user.id) });
+        await removeDrops(db, drops).catch((error) => console.error('Second sweep of drops failed:', error.message)); // as in the single delete
 
         return res.json({
             success: true,

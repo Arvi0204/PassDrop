@@ -1,3 +1,7 @@
+/* The styles of RippleGrid, from React Bits (https://reactbits.dev).
+   Copyright (c) 2026 David Haz. Used under the React Bits licence, "MIT + Commons Clause":
+   https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md
+   (free to use as part of an application; the component itself may not be sold or redistributed on its own). */
 /* full screen and click-through: the grid sits behind a dialog and only draws */
 .ripple-grid-container {
   position: fixed;
