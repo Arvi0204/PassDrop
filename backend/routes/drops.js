@@ -47,7 +47,7 @@ const createValidation = [
     body('mode', 'Choose a number of views (1 to 10) or one of the timers.').custom(ruleIsValid)
 ];
 
-const gone = (res) => res.status(404).json({ success: false, error: GONE });
+const gone = (res) => res.set('Cache-Control', 'no-store').status(404).json({ success: false, error: GONE });
 const fail = (res, error) => {
     console.error('Drop error:', error.message);
     return res.status(500).json({ success: false, error: 'Internal Server Error' });

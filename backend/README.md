@@ -124,7 +124,7 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 npm test --workspace=backend
 ```
 
-96 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+97 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
 - **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
 - **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the shared lockout, and a stable fake for unknown emails.
 - **Logins:** every route needs a token, a login is stored as exactly one blob with no readable field (even if the client also sends plaintext), listing shows only your own, updating and deleting other people's logins is refused, size and format limits, and deleting all.

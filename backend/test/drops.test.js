@@ -185,6 +185,10 @@ describe('open (no sign-in)', () => {
         assert.equal(new Set(answers.map((a) => a.join())).size, 1);
         assert.equal(answers[0][0], 404);
     });
+
+    test('the 404 is never cached either, so a gone answer cannot outlive a mistake', async () => {
+        assert.equal((await open('AAAAAAAAAAAAAAAAAAAAAA')).headers['cache-control'], 'no-store');
+    });
 });
 
 describe('look (no sign-in, no key)', () => {
