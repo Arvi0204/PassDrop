@@ -1,4 +1,5 @@
 import React from 'react';
+import { DROP_PATHS, LOGO_COLORS } from '../../lib/logo';
 
 /**
  * PassDrop Logo Icon
@@ -23,25 +24,18 @@ export default function PassDropLogo({ size = 32, className = '' }) {
         >
             <defs>
                 <linearGradient id={grad1} x1="0.1" y1="0" x2="0.9" y2="1">
-                    <stop offset="0%" stopColor="#0077b6" />
-                    <stop offset="100%" stopColor="#0284c7" />
+                    <stop offset="0%" stopColor={LOGO_COLORS.primary[0]} />
+                    <stop offset="100%" stopColor={LOGO_COLORS.primary[1]} />
                 </linearGradient>
                 <linearGradient id={grad2} x1="0.1" y1="0" x2="0.9" y2="1">
-                    <stop offset="0%" stopColor="#00b4d8" />
-                    <stop offset="100%" stopColor="#48cae4" />
+                    <stop offset="0%" stopColor={LOGO_COLORS.secondary[0]} />
+                    <stop offset="100%" stopColor={LOGO_COLORS.secondary[1]} />
                 </linearGradient>
             </defs>
             {/* Primary Drop (Storage / Security Anchor) */}
-            <path
-                d="M22 2C22 2 4 18 4 30A18 18 0 0 0 40 30C40 18 22 2 22 2Z"
-                fill={`url(#${grad1})`}
-            />
+            <path d={DROP_PATHS.primary} fill={`url(#${grad1})`} />
             {/* Secondary Intersecting Drop (Sharing / Ephemeral Drop) */}
-            <path
-                d="M40 16C40 16 24 30 24 40A16 16 0 0 0 56 40C56 30 40 16 40 16Z"
-                fill={`url(#${grad2})`}
-                opacity="0.92"
-            />
+            <path d={DROP_PATHS.secondary} fill={`url(#${grad2})`} opacity="0.92" />
         </svg>
     );
 }
