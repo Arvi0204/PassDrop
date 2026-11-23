@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BAD_LINK, GONE, createDrop, listDrops, listHistory, openDrop, revokeDrop } from './dropApi';
+import { BAD_LINK, GONE, createDrop, listDrops, listHistory, openDrop, peekDrop, revokeDrop } from './dropApi';
 import { fingerprintOf, keyFromHash } from './drop';
 import { newVaultKey } from './vaultCrypto';
 
@@ -68,6 +68,21 @@ describe('openDrop', () => {
 
     it('treats a 404 as gone', async () => {
         expect(await openDrop(HOST, 'ID-1', 'A'.repeat(43))).toEqual({ ok: false, gone: true, error: GONE });
+    });
+});
+
+describe('peekDrop', () => {
+    it('looks at what is left with a plain GET: no token, no key, nothing to open', async () => {
+        fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ mode: 'views', viewsLeft: 3, now: 'x' }) });
+        expect(await peekDrop(HOST, 'ID-1')).toEqual({ ok: true, mode: 'views', viewsLeft: 3, now: 'x' });
+        expect(fetch).toHaveBeenCalledWith(HOST + '/api/drops/ID-1');
+    });
+
+    it('treats a 404 as gone, and any other refusal as an error', async () => {
+        fetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ success: false }) });
+        expect(await peekDrop(HOST, 'ID-1')).toEqual({ ok: false, gone: true, error: GONE });
+        fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Internal Server Error' }) });
+        expect(await peekDrop(HOST, 'ID-1')).toEqual({ ok: false, error: 'Internal Server Error' });
     });
 });
 

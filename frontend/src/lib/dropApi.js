@@ -61,6 +61,18 @@ export async function revokeDrop(host, token, id) {
     return response.ok ? { ok: true } : { ok: false, error: errorOf(await response.json(), 'Failed to revoke') };
 }
 
+/**
+ * What is left of a drop, before anyone opens it. No sign-in, no key, and it never takes a view: { ok: true, mode, viewsLeft } for a
+ * views drop, { ok: true, mode, expiresAt, createdAt } for a timer drop (both with `now`, the server's clock), or { ok: false, gone: true }.
+ */
+export async function peekDrop(host, id) {
+    const response = await fetch(`${host}/api/drops/${encodeURIComponent(id)}`);
+    if (response.status === 404) return { ok: false, gone: true, error: GONE };
+    const json = await response.json();
+    if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to look at the drop') };
+    return { ok: true, ...json };
+}
+
 /** Opens a drop (this takes a view) and decrypts it with the key from the link. No sign-in. */
 export async function openDrop(host, id, linkKey) {
     const response = await fetch(`${host}/api/drops/${encodeURIComponent(id)}/open`, { method: 'POST' });
@@ -69,7 +81,7 @@ export async function openDrop(host, id, linkKey) {
     if (!response.ok) return { ok: false, error: errorOf(json, 'Failed to open the drop') };
     try {
         const item = await decryptItem(await importVaultKey(fromLinkKey(linkKey)), json.blob);
-        return { ok: true, item, mode: json.mode, viewsLeft: json.viewsLeft, expiresAt: json.expiresAt };
+        return { ok: true, item, mode: json.mode, viewsLeft: json.viewsLeft, expiresAt: json.expiresAt, createdAt: json.createdAt, now: json.now };
     } catch {
         return { ok: false, error: BAD_LINK };
     }

@@ -66,3 +66,22 @@ body {
   .arrive { animation: none; }
 }
 
+/* The rule of a drop as water (components/DropRule.jsx) and a drop falling out of the card (lib/dropFall.js) */
+.drop-glyph { width: 20px; height: 24px; flex: none; }
+.drop-glyph svg, .timer-drop svg { width: 100%; height: 100%; overflow: visible; }
+.drop-glyph .ghost { fill: none; stroke: #7fa3b8; stroke-width: 3; opacity: 0.45; }
+.drop-glyph .full { opacity: 0; transition: opacity 0.35s; }
+.drop-glyph.is-full .full { opacity: 1; }
+.drop-pulse { transform-origin: 50% 100%; animation: drop-swell 0.55s ease-in-out infinite; }
+@keyframes drop-swell { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.28, 1.2); } }
+.timer-drop { display: block; width: 38px; height: 43px; flex: none; transform-origin: 50% 100%; }
+.timer-level { transition: transform 0.8s ease-in; }
+.timer-wave { animation: timer-wave 1.8s linear infinite; }
+@keyframes timer-wave { to { transform: translateX(44px); } }
+.fall-drop { position: fixed; z-index: 60; pointer-events: none; width: 20px; height: 24px; transform-origin: 50% 100%; }
+.fall-ring {
+  position: fixed; z-index: 59; pointer-events: none; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  border: 2px solid rgba(2, 132, 199, 0.65); animation: fall-ring 0.95s cubic-bezier(0.15, 0.6, 0.3, 1) both;
+}
+@keyframes fall-ring { from { transform: scale(0); opacity: 1; } to { transform: scale(9); opacity: 0; border-width: 0.5px; } }
+@media (prefers-reduced-motion: reduce) { .drop-pulse, .timer-wave { animation: none; } }

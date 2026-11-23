@@ -228,16 +228,19 @@ async function run() {
         if (stillOpen) { await tab2.click('button', 'Close'); await tab2.waitFor(`!document.querySelector('[role="dialog"]')`, 'the dialog to close'); }
         return link;
     };
-    const openLink = async (link) => {
+    // the receiver's page looks at what is left first (no view is used), then Reveal opens it
+    const openLink = async (link, rule) => {
         const t = await Tab.open(link);
         await t.waitText('Someone shared a login with you');
+        if (rule) await t.waitText(rule);
         await t.click('button', 'Reveal login');
         return t;
     };
 
     const dropLink1 = await makeDrop(null); // one view
     check('sharing a login makes a link with the key after a # (which a browser never sends)', /\/drop\/[\w-]{22}#[\w-]{43}$/.test(dropLink1), dropLink1);
-    const drop1 = await openLink(dropLink1);
+    const drop1 = await openLink(dropLink1, '1 view left');
+    check('before Reveal the page already shows what is left, without using a view', true);
     await drop1.waitText(LOGIN_USER);
     check('the link shows the shared login to someone who opened it', (await drop1.text()).includes(LOGIN_TITLE));
     check('...with the password hidden until it is shown', !(await drop1.text()).includes(LOGIN_PASSWORD));
@@ -245,14 +248,13 @@ async function run() {
     await drop1.waitText(LOGIN_PASSWORD);
     check('...and shown when asked', true);
     await drop1.cdp('Page.reload'); // the same link again, as someone else with it would open it
-    await drop1.waitText('Someone shared a login with you');
-    await drop1.click('button', 'Reveal login');
-    await drop1.waitText('This drop is gone');
-    check('a one-view drop destroys itself after its view: the second open says gone', !(await drop1.text()).includes(LOGIN_USER));
+    await drop1.waitText('This drop is gone'); // the lookup says so before anything can be pressed
+    check('a one-view drop destroys itself after its view: the next visitor sees gone at once, with nothing to reveal',
+        !(await drop1.text()).includes(LOGIN_USER) && !(await drop1.eval(`!![...document.querySelectorAll('button')].find((b) => b.textContent.includes('Reveal login'))`)));
     drop1.close();
 
     const dropLink2 = await makeDrop('1 hour'); // a timer
-    const drop2 = await openLink(dropLink2);
+    const drop2 = await openLink(dropLink2, 'Ends in');
     await drop2.waitText(LOGIN_USER);
     check('a timer drop opens', true);
     drop2.close();
@@ -268,7 +270,7 @@ async function run() {
     await tab2.click('button', 'Past links');
     const past = (await tab2.text()).toLowerCase();
     check('the login keeps its ended links under Past links: how each ended, and how often it was opened', past.includes('used up') && past.includes('revoked') && past.split('opened 1 time').length === 3); // each of the two was opened once
-    const drop2again = await openLink(dropLink2);
+    const drop2again = await Tab.open(dropLink2); // revoked: the page says gone as soon as it has looked
     await drop2again.waitText('This drop is gone');
     check('a revoked drop says gone straight away', !(await drop2again.text()).includes(LOGIN_USER));
     drop2again.close();

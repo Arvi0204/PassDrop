@@ -47,7 +47,7 @@ One setting, `VITE_BACKEND`: the address of the API.
 | `/login`, `/signup` | Sign in and create an account. The first time you open Account after signing up, a popup shows your recovery key once (it is held in that tab until then). If it was never saved, "Make a new recovery key" on the same page replaces it whenever you like; the old key then stops working. |
 | `/recover` | Get back into a vault with the recovery key when the master password is forgotten. |
 | `/user` | Account: change the master password (with a strength meter), make a new recovery key, and the danger zone. Each of these asks for the master password again. |
-| `/drop/:id#key` | What the person who got a drop link sees. No account needed. Nothing is fetched until they press Reveal, then the login is decrypted in the browser and held in memory only. |
+| `/drop/:id#key` | What the person who got a drop link sees. No account needed. On arrival it only looks at what is left (views or time; this uses no view): one drop per view left, or one bigger drop with a wave for the time left, counted on the server's clock. Nothing is opened until they press Reveal: the drop that is used falls out of the card and the page ripples, then the login is decrypted in the browser and held in memory only. A timer link clears the login when its time is up. A page left open looks again when it is looked at (at most every 30 seconds), and never on a timer. |
 | `/extension` | The extension download and the steps to install it. |
 | `/home` | The landing page. |
 
