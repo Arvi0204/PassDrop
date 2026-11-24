@@ -4,7 +4,6 @@ import {
     Search,
     Plus,
     Star,
-    ArrowLeft,
     X,
     KeyRound,
     Droplet
@@ -49,6 +48,8 @@ export default function Manager() {
 
     // Mobile navigation state ('list' | 'detail')
     const [mobileView, setMobileView] = useState('list');
+    // Mobile search bar collapsed/expanded state
+    const [searchOpen, setSearchOpen] = useState(false);
 
     // Entrance animation: only after a fresh login/signup, once the vault data has arrived
     const tide = useTide();
@@ -157,6 +158,13 @@ export default function Manager() {
         return passwordArray.find((item) => item._id === selectedId) || null;
     }, [passwordArray, selectedId]);
 
+    // Reset mobile navigation back to list if active item is cleared (e.g. filtered out or deleted)
+    useEffect(() => {
+        if (mobileView === 'detail' && !activeItem && fetched) {
+            setMobileView('list');
+        }
+    }, [mobileView, activeItem, fetched]);
+
     // Copy and favorite are confirmed in place (the icon becomes a check, the star pops), so they
     // no longer raise a toast. This message is for screen readers, which can't see those cues.
     const [announcement, setAnnouncement] = useState({ id: 0, text: '' });
@@ -240,82 +248,113 @@ export default function Manager() {
         <>
         {/* outside the page's own container, which is inert while the frost is up */}
         {covered && <FrozenVault unlocked={!frozen} onGone={() => setCovered(false)} />}
-        <div ref={rootRef} className="flex-1 bg-transparent py-8 px-4 sm:px-6 lg:px-8">
+        <div ref={rootRef} className="flex-1 bg-transparent py-6 md:py-8 px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
             <div role="status" aria-live="polite" className="sr-only">
                 <span key={announcement.id}>{announcement.text}</span>
             </div>
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Top Action Bar */}
-                <div data-entrance className="bg-[#e1eef5]/70 px-5 py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-4">
-                    {/* Search Input */}
-                    <div className="relative w-full md:w-96">
-                        <Search className="w-4 h-4 text-[#5c7788] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                            type="text"
-                            placeholder="Search accounts, URLs, or usernames..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-8 py-2.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788] shadow-xs"
-                        />
-                        {searchQuery && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5c7788] hover:text-[#0c1820] p-0.5 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Filter Pills & Add Button */}
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-                        <div className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/60 rounded-xl">
-                            <button
-                                type="button"
-                                onClick={() => setActiveFilter('all')}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                                    activeFilter === 'all'
-                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
-                                        : 'text-[#3a5566] hover:text-[#0c1820]'
-                                }`}
-                            >
-                                All ({passwordArray.length})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveFilter('favorites')}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                                    activeFilter === 'favorites'
-                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-amber-200 shadow-xs'
-                                        : 'text-[#3a5566] hover:text-[#0c1820]'
-                                }`}
-                            >
-                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                Favorites ({favoritesCount})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveFilter('shared')}
-                                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                                    activeFilter === 'shared'
-                                        ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
-                                        : 'text-[#3a5566] hover:text-[#0c1820]'
-                                }`}
-                            >
-                                <Droplet className="w-3.5 h-3.5" />
-                                Dropped ({sharedCount})
-                            </button>
+                <div
+                    data-entrance
+                    className={`bg-[#e1eef5]/70 px-4 py-3 md:px-5 md:py-3.5 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl ${
+                        mobileView === 'detail' ? 'hidden md:block' : 'block'
+                    }`}
+                >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+                        {/* Search Input: order-2 on mobile (below pills row), order-1 on desktop (left side) */}
+                        <div className={`w-full md:w-96 relative order-2 md:order-1 ${searchOpen ? 'block' : 'hidden md:block'}`}>
+                            <Search className="w-4 h-4 text-[#5c7788] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <input
+                                id="vault-search-input"
+                                type="text"
+                                aria-label="Search accounts, URLs, or usernames"
+                                placeholder="Search accounts, URLs, or usernames..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-8 py-2.5 text-sm bg-[#f5fafc]/85 border border-white/90 text-[#0c1820] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#112838]/20 focus:border-[#112838] transition-all placeholder:text-[#5c7788] shadow-xs"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    aria-label="Clear search"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#5c7788] hover:text-[#0c1820] p-0.5 cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 active:scale-[0.98] transition-all shrink-0 cursor-pointer"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>New Item</span>
-                        </button>
+                        {/* Controls: order-1 on mobile (top row), order-2 on desktop (right side) */}
+                        <div className="order-1 md:order-2 flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                            {/* Filter Pills - single instance in DOM */}
+                            <div className="flex items-center gap-1 p-1 bg-white/40 border border-white/60 rounded-xl overflow-x-auto flex-1 md:flex-initial min-w-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveFilter('all')}
+                                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                                        activeFilter === 'all'
+                                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
+                                            : 'text-[#3a5566] hover:text-[#0c1820]'
+                                    }`}
+                                >
+                                    All ({passwordArray.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveFilter('favorites')}
+                                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                                        activeFilter === 'favorites'
+                                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-amber-200 shadow-xs'
+                                            : 'text-[#3a5566] hover:text-[#0c1820]'
+                                    }`}
+                                >
+                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                                    <span>Favorites ({favoritesCount})</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveFilter('shared')}
+                                    className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+                                        activeFilter === 'shared'
+                                            ? 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] text-white shadow-xs'
+                                            : 'text-[#3a5566] hover:text-[#0c1820]'
+                                    }`}
+                                >
+                                    <Droplet className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Dropped ({sharedCount})</span>
+                                </button>
+                            </div>
+
+                            {/* Mobile search toggle button */}
+                            <button
+                                type="button"
+                                aria-label={searchOpen ? 'Close search' : 'Open search'}
+                                aria-expanded={searchOpen}
+                                aria-controls="vault-search-input"
+                                onClick={() => {
+                                    if (searchOpen && searchQuery) setSearchQuery('');
+                                    setSearchOpen((v) => !v);
+                                }}
+                                className={`md:hidden p-2.5 rounded-xl border transition-all cursor-pointer shrink-0 ${
+                                    searchOpen || searchQuery
+                                        ? 'bg-[#0284c7] border-[#0284c7] text-white shadow-xs'
+                                        : 'bg-white/40 border-white/60 text-[#5c7788] hover:text-[#0c1820]'
+                                }`}
+                            >
+                                {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                            </button>
+
+                            {/* Desktop New Item button */}
+                            <button
+                                type="button"
+                                onClick={handleOpenCreate}
+                                className="hidden md:inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl shadow-md shadow-[#0284c7]/25 active:scale-[0.98] transition-all shrink-0 cursor-pointer"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>New Item</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -426,16 +465,7 @@ export default function Manager() {
                             mobileView === 'list' ? 'hidden md:block' : 'block'
                         }`}
                     >
-                        {/* Mobile Back Button */}
-                        <div className="md:hidden mb-3">
-                            <button
-                                type="button"
-                                onClick={() => setMobileView('list')}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#112838] bg-[#e1eef5]/90 px-3.5 py-2 rounded-xl border border-white/80 shadow-xs transition-all cursor-pointer"
-                            >
-                                <ArrowLeft className="w-3.5 h-3.5" /> Back to Accounts List
-                            </button>
-                        </div>
+                        {/* Mobile Back Button — now embedded inside VaultDetail */}
 
                         <div data-entrance className="sticky top-20">
                             <AnimatePresence mode="wait" initial={false}>
@@ -449,6 +479,7 @@ export default function Manager() {
                                 >
                                     <VaultDetail
                                         item={activeItem}
+                                        onBack={() => setMobileView('list')}
                                         onEdit={handleOpenEdit}
                                         onDelete={handleDeleteClick}
                                         onShare={setShareItem}
@@ -462,6 +493,27 @@ export default function Manager() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Mobile FAB: New Item (hidden on desktop, on detail view, or when locked) ── */}
+            <AnimatePresence>
+                {!covered && mobileView === 'list' && (
+                    <motion.button
+                        key="mobile-fab"
+                        type="button"
+                        onClick={handleOpenCreate}
+                        aria-label="New Item"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="md:hidden fixed bottom-6 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-[#0284c7] to-[#0077b6] text-white shadow-xl shadow-[#0284c7]/40 flex items-center justify-center cursor-pointer"
+                        whileTap={{ scale: 0.92 }}
+                        whileHover={{ scale: 1.06 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    >
+                        <Plus className="w-6 h-6" strokeWidth={2.5} />
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             {/* Slide-over / Modal for Create & Edit */}
             <VaultModal

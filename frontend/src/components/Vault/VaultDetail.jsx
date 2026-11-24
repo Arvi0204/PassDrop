@@ -15,7 +15,8 @@ import {
     User,
     KeyRound,
     Globe,
-    FileText
+    FileText,
+    ChevronLeft
 } from 'lucide-react';
 import FaviconImage from './FaviconImage';
 import PasswordStrength from './PasswordStrength';
@@ -26,6 +27,7 @@ import WaterMask, { useLingering } from './WaterMask';
 
 export default function VaultDetail({
     item,
+    onBack,
     onEdit,
     onDelete,
     onShare,
@@ -52,7 +54,17 @@ export default function VaultDetail({
 
     if (!item) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl min-h-[440px]">
+            <div className="relative h-full flex flex-col items-center justify-center text-center p-8 bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl min-h-[440px]">
+                {onBack && (
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        aria-label="Back to accounts list"
+                        className="md:hidden absolute top-4 left-4 p-2 rounded-xl text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-all cursor-pointer"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
+                    </button>
+                )}
                 <div className="w-16 h-16 rounded-2xl bg-[#d0e4ee] border border-[#b8d6e5] flex items-center justify-center mb-4 text-[#112838] shadow-xs">
                     <ShieldCheck className="w-8 h-8" />
                 </div>
@@ -82,21 +94,33 @@ export default function VaultDetail({
     return (
         <div className="bg-[#e1eef5]/70 rounded-2xl border border-white/80 shadow-[0_14px_35px_-8px_rgba(22,44,58,0.18)] backdrop-blur-xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-6 border-b border-white/60 flex items-start justify-between gap-4 bg-white/20">
-                <div className="flex items-center gap-4 min-w-0">
+            <div className="p-4 sm:p-6 border-b border-white/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 bg-white/20">
+                {/* Top / Left: [back arrow mobile] favicon + title + star */}
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                    {/* Back arrow — mobile only, embedded inside the card */}
+                    {onBack && (
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            aria-label="Back to accounts list"
+                            className="md:hidden p-2 -ml-1 rounded-xl text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-all cursor-pointer shrink-0"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                    )}
                     <div className="p-2.5 rounded-2xl bg-white/80 border border-white/90 shadow-xs shrink-0">
                         <FaviconImage url={item.url} title={item.title} size="lg" />
                     </div>
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold tracking-tight text-[#0c1820] truncate">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[#0c1820] truncate min-w-0">
                                 {displayTitle}
                             </h2>
                             <button
                                 type="button"
                                 title={item.isFavorite ? 'Remove from favorites' : 'Mark as favorite'}
                                 onClick={() => onToggleFavorite(item)}
-                                className="p-1.5 rounded-xl text-[#5c7788] hover:text-amber-500 hover:bg-amber-50 transition-all cursor-pointer"
+                                className="p-1.5 rounded-xl text-[#5c7788] hover:text-amber-500 hover:bg-amber-50 transition-all cursor-pointer shrink-0"
                             >
                                 <motion.span animate={starControls} className="inline-flex">
                                     <Star
@@ -114,15 +138,16 @@ export default function VaultDetail({
                                 href={formattedUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 truncate font-medium"
+                                className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 truncate font-medium max-w-full"
                             >
-                                {item.url} <ExternalLink className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{item.url}</span>
+                                <ExternalLink className="w-3 h-3 shrink-0" />
                             </a>
                         )}
                     </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions row — full width on mobile, sits below title on mobile and aligns right on sm+ */}
                 <div className="flex items-center gap-2 shrink-0">
                     <Tooltip title="Drop this login" text="Share it with a link that destroys itself after a number of views or a set time.">
                         {(hint) => (
