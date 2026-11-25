@@ -54,7 +54,7 @@ Each part has its own README with the details: [`frontend/`](frontend/README.md)
 
 Everything in this section points at `localhost`; nothing touches the live site.
 
-**You need** Node.js 20.19 or newer (22 or 24 recommended) and a MongoDB database, such as a free Atlas cluster or a local one.
+**You need** Node.js 22 or newer and a MongoDB database, such as a free Atlas cluster or a local one.
 
 **1. Install**
 
@@ -159,9 +159,9 @@ npm run test:e2e                                 # real Chrome, the whole web ap
 
 | Part | Tests | Tool | What they cover |
 |---|---|---|---|
-| Web app (`frontend/`) | 220 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
-| API (`backend/`) | 104 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, recovery, who can touch whose logins, and that no readable field is ever stored |
-| Extension (`web_extension/`) | 98 | Node's built-in runner and jsdom | Address matching, field detection, signing in and unlocking in the service worker (with real encrypted data), the content script's rules and the popup helpers |
+| Web app (`frontend/`) | 227 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
+| API (`backend/`) | 109 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, recovery, who can touch whose logins, and that no readable field is ever stored |
+| Extension (`web_extension/`) | 100 | Node's built-in runner and jsdom | Address matching, field detection, signing in and unlocking in the service worker (with real encrypted data), the content script's rules and the popup helpers |
 
 Each test is a small program that runs part of the code with known input and checks the answer. A good run prints a tick for each test and ends with a summary of passed and failed counts; a failure names the test and shows what it expected. To run one part, use `npm test --workspace=frontend` (or `backend`, `web_extension`).
 
