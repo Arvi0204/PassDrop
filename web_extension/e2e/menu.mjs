@@ -138,6 +138,7 @@ const evaluate = async (expression) => {
 await send('Page.enable');
 await send('Runtime.enable');
 await send('Runtime.addBinding', { name: '__bridge' });
+await send('Emulation.setFocusEmulationEnabled', { enabled: true }); // so a script's focus() fires focus events
 
 // a message from the page script goes to the real worker, as a top-frame content script at the page's address
 async function answerPage(payload) {
@@ -322,6 +323,33 @@ await attack('faded out by a CSS rule', `document.head.insertAdjacentHTML('befor
 await attack('hidden by a filter rule', `document.head.insertAdjacentHTML('beforeend', '<style>div[style*="2147483647"] { filter: opacity(0) !important }</style>')`);
 await attack('shifted by a rule on the page', `document.head.insertAdjacentHTML('beforeend', '<style>html { position: relative; top: 40px }</style>')`);
 await attack('covered by a decoy button', `(() => { const d = document.createElement('button'); d.textContent = 'Play'; d.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483647;opacity:.01'; document.documentElement.append(d); })()`); // appended after the menu, so it paints on top
+
+// an opaque overlay that lets clicks fall through: elementsFromPoint still says "menu", Chrome's visibility check does not
+await attack('covered by an opaque overlay with pointer-events: none', `(() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483647;background:#fff;pointer-events:none'; document.documentElement.append(d); })()`);
+
+// keyboard picks have no click point: the page focuses the field itself, covers the menu, and asks for "down, Enter"
+await open('plain');
+await evaluate(`document.getElementById('username').focus()`);
+await sleep(600);
+check('clickjacking (blind keyboard): a focus() by the page can open the menu', await menuOpen());
+await evaluate(`(() => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483647;background:#fff'; document.documentElement.append(d); })()`);
+await sleep(100);
+await key('ArrowDown', 40);
+await key('Enter', 13, String.fromCharCode(13));
+await sleep(300);
+v = await values();
+check('clickjacking (blind keyboard): ArrowDown and Enter under an overlay fill nothing', v.username === '' && v.password === '' && !(await sent()).includes('credentials'), JSON.stringify([v, await sent()]));
+
+await open('plain');
+await realClick(field('username'));
+await realClick(row());
+check('clickjacking: a normal click still fills', filled(await values()));
+await open('plain');
+await realClick(field('username'));
+await key('ArrowDown', 40);
+await key('Enter', 13, String.fromCharCode(13));
+await sleep(300);
+check('clickjacking: a normal keyboard pick still fills', filled(await values()));
 
 await open('plain');
 await realClick(field('username'), 0);

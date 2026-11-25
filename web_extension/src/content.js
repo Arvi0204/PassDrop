@@ -145,9 +145,10 @@ function showMenu(anchor, logins, hint) {
       user.textContent = login.username || 'No username';
       text.append(title, user);
       row.append(avatar, text);
-      row.addEventListener('click', (event) => {
+      row.addEventListener('click', async (event) => {
         if (!event.isTrusted) return; // a script on the page cannot press a row
-        if (!current || !genuine(current, event)) {
+        const menu = current;
+        if (!menu || !genuine(menu, event) || !(await reallyVisible(menu.host)) || current !== menu) {
           closeMenu();
           return;
         }
@@ -182,7 +183,7 @@ const TOO_SOON_MS = 300; // a click this soon after the menu appears was aimed a
  * Is the menu really what the user is clicking? A page could fade it out, move it, or put a decoy over it
  * so that one click on a "Play" button presses a row. So: nothing on the menu or the root element may
  * hide or transform it, it must still be where it was drawn, and at the click point it must be on top.
- * A click made with the keyboard has no point, so it skips only that last check; the page cannot press keys.
+ * A click made with the keyboard has no point, so it skips only that last check; `reallyVisible` covers it.
  */
 function genuine(menu, event) {
   if (Date.now() - menu.shownAt < TOO_SOON_MS) return false;
@@ -200,6 +201,24 @@ function genuine(menu, event) {
   if (moved) return false;
   const byKeyboard = event.detail === 0 && event.clientX === 0 && event.clientY === 0;
   return byKeyboard || document.elementsFromPoint(event.clientX, event.clientY)[0] === menu.host;
+}
+
+/**
+ * Chrome's own occlusion check: is the menu fully painted with nothing over it, even an overlay that has
+ * pointer-events: none (which elementsFromPoint skips) and for keyboard picks, which have no click point?
+ * shortcut: Chrome-only (trackVisibility), and a menu that does not report within 500 ms counts as hidden.
+ */
+function reallyVisible(host) {
+  return new Promise((resolve) => {
+    let watcher;
+    const done = (ok) => { clearTimeout(timer); watcher.disconnect(); resolve(ok); };
+    const timer = setTimeout(() => done(false), 500);
+    watcher = new IntersectionObserver(
+      ([entry]) => done(entry.isVisible === true && entry.intersectionRatio >= 0.99),
+      { threshold: 1.0, trackVisibility: true, delay: 100 }
+    );
+    watcher.observe(host);
+  });
 }
 
 async function choose(id) {

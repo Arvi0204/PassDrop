@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildManifest } from './manifest.js';
+import { releaseEnvProblems } from './scripts/checkEnv.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const REQUIRED = ['VITE_BACKEND', 'VITE_WEB_APP_URL'];
@@ -30,6 +31,10 @@ export default defineConfig(({ mode }) => {
     throw new Error(
       `Missing ${missing.join(', ')}. Copy web_extension/.env.example to web_extension/.env and fill it in.`
     );
+  }
+  if (mode === 'production') {
+    const problems = releaseEnvProblems(env);
+    if (problems.length) throw new Error(`Refusing to build a release: ${problems.join('; ')}. Check the shell and the host's project variables.`);
   }
 
   return {

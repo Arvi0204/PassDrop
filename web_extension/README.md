@@ -40,7 +40,7 @@ For setting up the whole project, start with the [root README](../README.md). Th
 
 - The content script holds no passwords. The page can ask the service worker for the **titles and usernames** saved for its own address, and for **one login's password after a real click** on a row in the menu. A click made by the page's own script is ignored.
 - The address is taken from the browser, never from the page. Subdomains, plain http (except localhost), other sites, iframes and other extensions get nothing.
-- The menu lives in a closed shadow root, so the page's scripts cannot read it or press a row. Only real clicks and key presses open it: a page's own `click()` or dispatched events do nothing.
+- The menu lives in a closed shadow root, so the page's scripts cannot read it or press a row. A page's own `click()` or dispatched events open nothing, but its `focus()` can open the menu, so nothing is filled unless the menu is verifiably on top and fully visible (Chrome's occlusion check, which also sees overlays that let clicks through) when a row is picked, by mouse or keyboard.
 - The menu sits in the page's own DOM, so a page could try to fade it out or move it under a decoy button. Before a password is handed over, the script checks that the menu is still exactly where it was drawn, fully visible and on top at the click point, and it ignores a click made within 300 ms of the menu appearing. If the page changes the menu's element, the menu closes.
 - The form that is filled is the one of the field you clicked. If that field has left the page by the time you choose a row, nothing is filled.
 - Moving between fields reuses the list of logins for a few seconds, so a page cannot make the extension look it up over and over.
