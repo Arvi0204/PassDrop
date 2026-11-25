@@ -29,14 +29,31 @@ describe('recovery unlock', () => {
         assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.authKey })).status, 400);
     });
 
-    test('ten wrong proofs lock the account (429), sharing the sign-in counter', async () => {
+    const signIn = (user, authKey = user.authKey) => request().post('/api/auth/login').send({ email: user.email, authKey });
+
+    test('ten wrong proofs lock recovery (429) but not sign-in', async () => {
         const user = await seedUser();
         for (let i = 0; i < 10; i++) assert.equal((await unlock({ email: user.email, recoveryAuthKey: random(32) })).status, 400);
         const locked = await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey });
         assert.equal(locked.status, 429);
         assert.deepEqual(messages(locked.body), [LOCKED_MESSAGE]);
-        const signIn = await request().post('/api/auth/login').send({ email: user.email, authKey: user.authKey });
-        assert.equal(signIn.status, 429);
+        assert.equal((await signIn(user)).status, 200);
+    });
+
+    test('ten wrong sign-in proofs lock sign-in but not recovery', async () => {
+        const user = await seedUser();
+        for (let i = 0; i < 10; i++) assert.equal((await signIn(user, random(32))).status, 400);
+        assert.equal((await signIn(user)).status, 429);
+        assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey })).status, 200);
+    });
+
+    test('a right proof resets the recovery count', async () => {
+        const user = await seedUser();
+        for (let i = 0; i < 9; i++) await unlock({ email: user.email, recoveryAuthKey: random(32) });
+        assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey })).status, 200);
+        for (let i = 0; i < 9; i++) await unlock({ email: user.email, recoveryAuthKey: random(32) }); // would lock only if the count had not reset
+        assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey })).status, 200);
+        assert.equal((await all('users'))[0].failedAttempts, undefined, 'sign-in count untouched');
     });
 
     test('needs a valid email and a proof of the right shape', async () => {
@@ -68,6 +85,14 @@ describe('recovery reset', () => {
         // the recovery key still works afterwards, because the salt it is derived with did not change
         assert.equal((await unlock({ email: user.email, recoveryAuthKey: user.recoveryAuthKey })).status, 200);
         assert.equal((await all('users'))[0].recoveryWrappedKey, user.recoveryWrappedKey);
+    });
+
+    test('also clears a sign-in lock, since the owner just proved who they are', async () => {
+        const user = await seedUser();
+        for (let i = 0; i < 10; i++) await request().post('/api/auth/login').send({ email: user.email, authKey: random(32) });
+        const body = fresh(user);
+        assert.equal((await reset_(body)).status, 200);
+        assert.equal((await request().post('/api/auth/login').send({ email: user.email, authKey: body.newAuthKey })).status, 200);
     });
 
     test('with a wrong proof changes nothing', async () => {

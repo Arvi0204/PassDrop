@@ -264,7 +264,8 @@ router.delete('/me', fetchUser, requirePassword, async (req, res) => {
 // ROUTE 6: Recover an account with the recovery key
 //   POST /api/auth/recovery/unlock  proves the recovery key and returns the vault key wrapped for it
 //   POST /api/auth/recovery/reset   proves it again and sets a new master password (re-wrapping the vault key)
-// Both count wrong proofs toward the same 15-minute lockout as sign-in.
+// Both count wrong proofs toward a 15-minute lockout of their own, separate from sign-in's, so guessing recovery proofs
+// for an email cannot lock its owner out of signing in (and the other way round).
 // ========================================================
 const checkRecovery = async (db, req, res) => {
     const user = await db.collection('users').findOne({ email: normalizeEmail(req.body.email) });
@@ -313,7 +314,7 @@ router.post('/recovery/reset', [
         const kdf = { name: newKdf.name, iterations: newKdf.iterations, salt: newKdf.salt };
         const updated = await db.collection('users').findOneAndUpdate(
             { _id: user._id },
-            { $set: { authHash: await bcrypt.hash(newAuthKey, BCRYPT_COST), kdf, wrappedVaultKey: newWrappedVaultKey, updatedAt: new Date(), lastLogin: new Date() }, $inc: { tokenVersion: 1 } },
+            { $set: { authHash: await bcrypt.hash(newAuthKey, BCRYPT_COST), kdf, wrappedVaultKey: newWrappedVaultKey, updatedAt: new Date(), lastLogin: new Date(), failedAttempts: 0 }, $unset: { lockUntil: '' }, $inc: { tokenVersion: 1 } },
             { returnDocument: 'after' }
         );
         return res.json(signInPayload(updated, signToken(updated._id, updated.tokenVersion)));

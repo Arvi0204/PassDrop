@@ -17,25 +17,27 @@ const checkPassword = async (db, user, secret, hashField = 'authHash') => {
         await bcrypt.compare(String(secret), DUMMY_HASH);
         return 'bad';
     }
-    if (user.lockUntil && user.lockUntil > new Date()) return 'locked';
+    // Recovery has its own counter, so someone guessing recovery proofs for an email cannot lock the owner out of sign-in
+    const [attempts, lock] = hashField === 'recoveryAuthHash' ? ['recoveryFailedAttempts', 'recoveryLockUntil'] : ['failedAttempts', 'lockUntil'];
+    if (user[lock] && user[lock] > new Date()) return 'locked';
 
     const users = db.collection('users');
     if (await bcrypt.compare(String(secret), user[hashField])) {
-        if (user.failedAttempts || user.lockUntil) {
-            await users.updateOne({ _id: user._id }, { $set: { failedAttempts: 0 }, $unset: { lockUntil: '' } });
+        if (user[attempts] || user[lock]) {
+            await users.updateOne({ _id: user._id }, { $set: { [attempts]: 0 }, $unset: { [lock]: '' } });
         }
         return 'ok';
     }
 
-    const { failedAttempts } = await users.findOneAndUpdate(
+    const updated = await users.findOneAndUpdate(
         { _id: user._id },
-        { $inc: { failedAttempts: 1 } },
-        { returnDocument: 'after', projection: { failedAttempts: 1 } }
+        { $inc: { [attempts]: 1 } },
+        { returnDocument: 'after', projection: { [attempts]: 1 } }
     );
-    if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+    if (updated[attempts] >= MAX_FAILED_ATTEMPTS) {
         await users.updateOne(
             { _id: user._id },
-            { $set: { failedAttempts: 0, lockUntil: new Date(Date.now() + LOCK_MS) } }
+            { $set: { [attempts]: 0, [lock]: new Date(Date.now() + LOCK_MS) } }
         );
     }
     return 'bad';

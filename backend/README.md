@@ -31,7 +31,7 @@ Settings come from `backend/.env`. In production they are the Vercel project's e
 | Setting | Required | What it does |
 |---|---|---|
 | `MONGODB_URI` | yes | MongoDB connection string. |
-| `JWT_SECRET` | yes | Signs sign-in tokens. 32 or more random characters; the API warns if it is shorter. |
+| `JWT_SECRET` | yes | Signs sign-in tokens. 32 or more random characters; the API will not start without it and warns if it is shorter. |
 | `PORT` | no | Default `3000`. |
 | `DB_NAME` | no | Default `PassDrop`. |
 | `JWT_EXPIRES_IN` | no | Default `7d`. |
@@ -105,7 +105,7 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 ## Security behaviour
 
 - **The server cannot read a vault.** The browser derives two keys from the master password; one is the sign-in proof (`authKey`), which the server stores only as a bcrypt hash. The logins are encrypted in the browser with a random vault key that the server holds only in wrapped (encrypted) form. A second copy, wrapped by the recovery key, lets an account be recovered. The cryptography lives in [`frontend/src/lib/vaultCrypto.js`](../frontend/src/lib/vaultCrypto.js).
-- **Lockout:** 10 wrong proofs in a row lock the account for 15 minutes. The count covers sign-in, every re-auth and account recovery. An unknown email takes as long to answer as a wrong password, so it does not show which emails have accounts.
+- **Lockout:** 10 wrong proofs in a row lock the account for 15 minutes. The count covers sign-in and every re-auth; account recovery has its own count and lock, so wrong recovery proofs cannot lock sign-in (and the other way round). An unknown email takes as long to answer as a wrong password, so it does not show which emails have accounts.
 - **Sessions can be ended:** changing the master password raises the account's `tokenVersion`, which invalidates every older token, including a stolen one.
 - **Re-auth:** changing the master password, deleting the account and deleting all logins need the master password again (as a derived `currentAuthKey`), so a stolen token alone cannot do them. A stolen token also cannot read anything: it only returns encrypted data.
 - **Indexes:** one account per email (this also settles two simultaneous sign-ups) and a quick lookup of one user's logins, created when the API first connects.
@@ -125,9 +125,9 @@ Success is `{ success: true, ... }`. A failure is `{ success: false, errors: [{ 
 npm test --workspace=backend
 ```
 
-104 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
+109 tests use Node's built-in runner and [Supertest](https://github.com/ladjs/supertest), which calls the real Express app without opening a port. They cover:
 - **Accounts:** sign-up validation (spaces around the email and username are ignored, the password is kept exactly as typed) and duplicate emails, sign-in, the same answer for a wrong password and an unknown email, the lockout (ten failures, 15 minutes, counted across sign-in and re-authentication), `/me`, changing the master password (other sessions die, this one stays), and deleting the account.
-- **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the shared lockout, and a stable fake for unknown emails.
+- **Recovery and prelogin:** recovery with the recovery key (it works again after a password change), replacing the recovery key (the old one stops working), the same answer for a wrong key and an unknown email, the recovery lockout (separate from sign-in's), and a stable fake for unknown emails.
 - **Logins:** every route needs a token, a login is stored as exactly one blob with no readable field (even if the client also sends plaintext), listing shows only your own, updating and deleting other people's logins is refused, size and format limits, and deleting all.
 - **Drops:** the rule is one view count or one of the timers, only encrypted blobs are stored, the list never shows a blob, the last view deletes the drop, 6 simultaneous opens of a 2-view drop give exactly 2 successes, a timer drop is refused after its end, only the sender can revoke, every kind of "gone" answers the same, a link never outlives its login (even one made at the moment its login is deleted), deleting an account deletes its drops, and the history of ended links (how each ended, how often it was opened, kept 30 days, gone with its login).
 - **The server:** malformed and oversized bodies, no framework header, and that nothing reads an encryption key any more.

@@ -27,6 +27,26 @@ describe('the server', () => {
     });
 });
 
+describe('the token secret at start-up', () => {
+    // A child process, because server.js reads JWT_SECRET once when it is first required. An empty value (not a deleted
+    // one) also keeps dotenv from filling it in from a developer's backend/.env.
+    const load = (secret) => require('node:child_process').spawnSync(process.execPath, ['-e', "require('./server')"], {
+        cwd: require('node:path').join(__dirname, '..'), env: { ...process.env, JWT_SECRET: secret }, encoding: 'utf8'
+    });
+
+    test('a missing secret stops the start', () => {
+        const res = load('');
+        assert.notEqual(res.status, 0);
+        assert.match(res.stderr, /JWT_SECRET is not set/);
+    });
+
+    test('a short secret only warns', () => {
+        const res = load('short');
+        assert.equal(res.status, 0, res.stderr);
+        assert.match(res.stderr, /shorter than 32 characters/);
+    });
+});
+
 describe('the server holds no vault key', () => {
     // (a developer's backend/.env may still define ENCRYPTION_KEY from before; what matters is that nothing reads it)
     test('no code reads ENCRYPTION_KEY and the server-side encryption module is gone', () => {

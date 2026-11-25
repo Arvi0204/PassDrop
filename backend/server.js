@@ -3,7 +3,10 @@ dotenv.config();
 
 // The server holds no key that can read a vault: logins are encrypted in the browser. The only secret left is the one
 // that signs sign-in tokens.
-if ((process.env.JWT_SECRET || '').length < 32) {
+// With no secret every sign-in fails with a 500 and sign-up half-saves an account, so stop here. A short one only warns:
+// the value in production cannot be checked from here, and refusing it could take the live site down.
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not set; add a long random value to the environment');
+if (process.env.JWT_SECRET.length < 32) {
     console.warn('JWT_SECRET is shorter than 32 characters; use a long random value');
 }
 const express = require('express');
