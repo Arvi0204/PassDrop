@@ -8,7 +8,7 @@ import { decryptItem, encryptItem } from "../lib/vaultCrypto";
 // What goes inside an encrypted login; the server only ever sees the encrypted blob
 const FIELDS = ['title', 'url', 'username', 'password', 'notes', 'isFavorite'];
 const plainOf = (item) => Object.fromEntries(FIELDS.filter((f) => item[f] !== undefined).map((f) => [f, item[f]]));
-const NO_KEY = 'Your vault is locked';
+const NO_KEY = 'Your vault is locked. Unlock it and try again.';
 
 // A login from the server: decrypted, or { _id, unreadable } when its blob cannot be opened (so one bad item never hides the rest)
 async function openItem(vaultKey, userId, record) {
@@ -66,7 +66,10 @@ const PasswordState = (props) => {
 
         try {
             const vaultKey = await getVaultKey();
-            if (!vaultKey) return { success: false, error: NO_KEY };
+            if (!vaultKey) {
+                toast.error(NO_KEY);
+                return { success: false, error: NO_KEY };
+            }
             const item = { title: '', url: '', username: '', password: '', notes: '', isFavorite: false, ...plainOf(payload) };
             const response = await authFetch(`${host}/api/passwords`, {
                 method: 'POST',
@@ -106,7 +109,10 @@ const PasswordState = (props) => {
         try {
             const vaultKey = await getVaultKey();
             const existing = passwordArray.find(pass => pass._id === id);
-            if (!vaultKey || !existing || existing.unreadable) return { success: false, error: NO_KEY };
+            if (!vaultKey || !existing || existing.unreadable) {
+                toast.error(NO_KEY);
+                return { success: false, error: NO_KEY };
+            }
             // the whole login is encrypted again, so a partial update (like the favorite star) is merged into what is saved
             const merged = plainOf({ ...existing, ...plainOf(payload) });
             const response = await authFetch(`${host}/api/passwords/${id}`, {

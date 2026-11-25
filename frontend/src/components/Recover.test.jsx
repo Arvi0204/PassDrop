@@ -74,6 +74,13 @@ describe('Recover', () => {
         expect(stored).toBeNull();
     });
 
+    it('does not submit a new master password shorter than 12 characters', async () => {
+        const user = userEvent.setup();
+        await fill(user, { password: 'short-pw-11' });
+        expect(await screen.findByText('Use at least 12 characters')).toBeTruthy();
+        await waitFor(() => expect(fetch).not.toHaveBeenCalled());
+    });
+
     it('does not submit when the two new passwords differ', async () => {
         const user = userEvent.setup();
         await fill(user, { password: 'fresh start pass 9!', confirm: 'something else' });

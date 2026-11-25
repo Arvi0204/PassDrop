@@ -61,4 +61,22 @@ describe('Signup', () => {
         expect(getPendingRecoveryKey()).toBeNull();
         expect(screen.queryByText('THE VAULT')).toBeNull();
     });
+
+    it('refuses a master password shorter than 12 characters without asking the server', async () => {
+        signUp.mockClear();
+        const user = userEvent.setup();
+        render(
+            <MemoryRouter initialEntries={['/signup']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <Routes><Route path="/signup" element={<Signup />} /></Routes>
+            </MemoryRouter>
+        );
+        await user.type(screen.getByLabelText('Full Name / Username'), 'Jane');
+        await user.type(screen.getByLabelText('Email address'), 'jane@example.com');
+        await user.type(screen.getByLabelText('Master Password'), 'short-pw-11');
+        await user.type(screen.getByLabelText('Confirm Master Password'), 'short-pw-11');
+        await user.click(screen.getByRole('button', { name: /Create Free Vault/ }));
+        expect(await screen.findByText('Use at least 12 characters')).toBeTruthy();
+        expect(signUp).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Show passwords' })).toBeTruthy();
+    });
 });

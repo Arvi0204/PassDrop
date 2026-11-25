@@ -7,6 +7,8 @@ import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion } from 'framer-motion';
 import { useTide } from '../context/useTide';
+import { MIN_PASSWORD_LENGTH, TOO_SHORT_MESSAGE } from '../lib/passwordStrength';
+import PasswordStrength from './Vault/PasswordStrength';
 import { signUp } from '../lib/accountApi';
 import { saveSignIn, saveVaultKey, setPendingRecoveryKey } from '../lib/session';
 
@@ -41,6 +43,11 @@ export default function Signup() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (form.password.length < MIN_PASSWORD_LENGTH) {
+            setPasswordError(TOO_SHORT_MESSAGE);
+            document.getElementById('password')?.focus();
+            return;
+        }
         if (form.password !== form.confirmPassword) {
             setPasswordError("Passwords do not match");
             shake();
@@ -215,6 +222,7 @@ export default function Signup() {
                                         id="password"
                                         name="password"
                                         type={showPassword ? "text" : "password"}
+                                        autoComplete="new-password"
                                         required
                                         value={form.password}
                                         onChange={onChange}
@@ -223,11 +231,15 @@ export default function Signup() {
                                     />
                                     <button
                                         type="button"
+                                        aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#5c7788] hover:text-[#0c1820] transition-colors cursor-pointer"
                                         onClick={() => setShowPassword((prev) => !prev)}
                                     >
                                         <IconSwap swapped={showPassword} from={Eye} to={EyeOff} className="h-4 w-4" />
                                     </button>
+                                </div>
+                                <div className="mt-2">
+                                    <PasswordStrength password={form.password} mode="typing" />
                                 </div>
                             </div>
 
@@ -244,6 +256,7 @@ export default function Signup() {
                                         ref={confirmRef}
                                         name="confirmPassword"
                                         type={showPassword ? "text" : "password"}
+                                        autoComplete="new-password"
                                         required
                                         value={form.confirmPassword}
                                         onChange={onChange}

@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import toast from 'react-hot-toast';
 import PasswordState from './PasswordState';
 import passwordContext from './passwordContext';
 import { lock, saveSignIn, saveVaultKey } from '../lib/session';
@@ -113,6 +114,23 @@ describe('PasswordState', () => {
         let result;
         await act(async () => { result = await ctx.addPass(github); });
         expect(result.success).toBe(false);
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('saving with the vault key missing says so, sends nothing and reports failure for both add and edit', async () => {
+        server.records = [{ _id: 'a', blob: await blobOf(github) }];
+        mount();
+        await act(() => ctx.getPasswords());
+        fetch.mockClear();
+        toast.error.mockClear();
+        lock();
+        let added, edited;
+        await act(async () => { added = await ctx.addPass(github); });
+        await act(async () => { edited = await ctx.editPass('a', { title: 'x' }); });
+        expect(added.success).toBe(false);
+        expect(edited.success).toBe(false);
+        expect(toast.error).toHaveBeenCalledTimes(2);
+        expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/locked/));
         expect(fetch).not.toHaveBeenCalled();
     });
 

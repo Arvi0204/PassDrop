@@ -224,6 +224,13 @@ describe('changing the master password from the Account page', () => {
         expect(localStorage.getItem('passdrop.token')).toBe('tok-123');
     });
 
+    it('refuses a new master password shorter than 12 characters and sends nothing', async () => {
+        const user = userEvent.setup();
+        await change(user, MASTER, 'short-pw-11');
+        expect(await screen.findByText('Use at least 12 characters')).toBeTruthy();
+        expect(calls('POST')).toHaveLength(0);
+    });
+
     it("shows the server's message when the current password is refused, and keeps the token", async () => {
         answers.POST = { success: false, error: 'Current master password is incorrect' };
         const user = userEvent.setup();

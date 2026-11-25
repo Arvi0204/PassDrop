@@ -56,7 +56,7 @@ export default function Login() {
         } catch (error) {
             console.error("Login fetch error:", error);
             drained = failTide();
-            toast.error("Cannot connect to backend server. Make sure it is running on port 3000.");
+            toast.error("Cannot connect to the server. Please try again.");
         } finally {
             // keep the button locked until the water has receded after a failed attempt
             drained.then(() => setIsLoading(false));

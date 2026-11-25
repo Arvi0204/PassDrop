@@ -9,6 +9,7 @@ import PasswordStrength from './Vault/PasswordStrength';
 import IconSwap from './common/IconSwap';
 import { ErrorLine, useShake } from './common/FormError';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MIN_PASSWORD_LENGTH, TOO_SHORT_MESSAGE } from '../lib/passwordStrength';
 import { changePassword, reauthKey, regenerateRecoveryKey, unlock } from '../lib/accountApi';
 import RecoveryKey from './RecoveryKey';
 import { clearPendingRecoveryKey, getPendingRecoveryKey, getToken, getUserId, getVaultKey, saveSignIn, setPendingRecoveryKey as holdRecoveryKey, signOut } from '../lib/session';
@@ -69,6 +70,10 @@ export default function UserDetails() {
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
+        if (updatedPassword.newPassword.length < MIN_PASSWORD_LENGTH) {
+            setPasswordError(TOO_SHORT_MESSAGE);
+            return;
+        }
         if (updatedPassword.newPassword !== updatedPassword.confirmNewPassword) {
             setPasswordError("Passwords do not match");
             shake();
@@ -352,6 +357,7 @@ export default function UserDetails() {
                                         />
                                         <button
                                             type="button"
+                                            aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
                                             className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#5c7788] hover:text-[#0c1820] cursor-pointer"
                                             onClick={() => setShowPassword(prev => !prev)}
                                         >

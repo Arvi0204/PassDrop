@@ -209,12 +209,14 @@ export default function Manager() {
                     toast(`${links.length} ${links.length === 1 ? 'drop still shows' : 'drops still show'} the old details. Revoke ${links.length === 1 ? 'it' : 'them'} under Drops if that matters.`, { duration: 8000 });
                 }
             }
+            return !!res.success;
         } else {
             const res = await addPass(formData);
             if (res.success && res.item) {
                 toast.success('Account saved to vault!');
                 setSelectedId(res.item._id);
             }
+            return !!(res.success && res.item);
         }
     };
 

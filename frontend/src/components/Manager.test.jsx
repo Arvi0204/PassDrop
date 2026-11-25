@@ -210,6 +210,26 @@ describe('shared links', () => {
         });
     });
 
+    it('keeps the edit dialog and what was typed when the save fails, and closes it when the save works', async () => {
+        const user = userEvent.setup();
+        await saveVaultKey(vaultKey);
+        show();
+        await screen.findByText('Drops (2)');
+        const working = fetch.getMockImplementation();
+        fetch.mockImplementation((url, options) => (options?.method === 'PUT' ? Promise.reject(new Error('offline')) : working(url, options)));
+        await user.click(screen.getByRole('button', { name: 'Edit' }));
+        const field = screen.getByPlaceholderText('Enter account password');
+        await user.clear(field);
+        await user.type(field, 'typed-and-not-lost');
+        await user.click(screen.getByRole('button', { name: 'Update Account' }));
+        await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to connect to server'));
+        expect(screen.getByPlaceholderText('Enter account password').value).toBe('typed-and-not-lost');
+
+        fetch.mockImplementation(working);
+        await user.click(screen.getByRole('button', { name: 'Update Account' }));
+        await waitFor(() => expect(screen.queryByPlaceholderText('Enter account password')).toBeNull());
+    });
+
     it('deleting a login says its links stop working, leaves ending them to the server, and the counts follow', async () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);

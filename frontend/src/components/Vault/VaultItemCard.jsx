@@ -30,8 +30,17 @@ export default function VaultItemCard({
     return (
         <div
             data-entrance
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${displayTitle}`}
             onClick={() => onSelect(item)}
-            className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left ${
+            onKeyDown={(e) => {
+                // only the card itself: Enter or Space on the copy buttons inside must keep copying
+                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                e.preventDefault();
+                onSelect(item);
+            }}
+            className={`group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0284c7] p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 text-left ${
                 isSelected
                     ? 'bg-gradient-to-r from-[#e0f2fe]/95 to-[#f8fafc]/90 border-[#0284c7]/40 shadow-xs ring-1 ring-[#0284c7]/25'
                     : 'bg-[#e1eef5]/65 hover:bg-[#e1eef5]/90 border-white/70 hover:border-white shadow-xs backdrop-blur-md'
@@ -72,7 +81,7 @@ export default function VaultItemCard({
             </div>
 
             {/* Quick hover copy actions */}
-            <div className={`flex items-center gap-1 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0 ${copied ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`flex items-center gap-1 group-hover:opacity-100 group-focus-visible:opacity-100 focus-within:opacity-100 transition-opacity shrink-0 ${copied ? 'opacity-100' : 'opacity-0'}`}>
                 {item.username && (
                     <button
                         type="button"

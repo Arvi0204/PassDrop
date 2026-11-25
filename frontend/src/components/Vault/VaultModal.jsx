@@ -123,11 +123,12 @@ export default function VaultModal({
 
         setIsSubmitting(true);
         try {
-            await onSave({
+            const saved = await onSave({
                 ...form,
                 _id: initialData?._id
             });
-            onClose();
+            // a failed save keeps the form, so nothing typed is lost
+            if (saved) onClose();
         } finally {
             setIsSubmitting(false);
         }

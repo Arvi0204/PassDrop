@@ -1,6 +1,10 @@
 // How strong a password is, as a score from 0 to 4 and a word for it. Plain logic with no styling,
 // so the web app and the browser extension always agree on what "strong" means.
 
+// The shortest master password the app accepts. The server never sees the password, so only the browser can enforce this.
+export const MIN_PASSWORD_LENGTH = 12;
+export const TOO_SHORT_MESSAGE = `Use at least ${MIN_PASSWORD_LENGTH} characters`;
+
 export function strengthOf(password) {
     if (!password) return { score: 0, label: 'Empty' };
 

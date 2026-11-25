@@ -4,6 +4,7 @@ import { Eye, EyeOff, LifeBuoy, ArrowRight } from 'lucide-react';
 import IconSwap from './common/IconSwap';
 import { ErrorLine } from './common/FormError';
 import PasswordStrength from './Vault/PasswordStrength';
+import { MIN_PASSWORD_LENGTH, TOO_SHORT_MESSAGE } from '../lib/passwordStrength';
 import { recover } from '../lib/accountApi';
 import { saveSignIn, saveVaultKey } from '../lib/session';
 
@@ -27,6 +28,10 @@ export default function Recover() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (form.newPassword.length < MIN_PASSWORD_LENGTH) {
+            setError(TOO_SHORT_MESSAGE);
+            return;
+        }
         if (form.newPassword !== form.confirmPassword) {
             setError('Passwords do not match');
             return;
