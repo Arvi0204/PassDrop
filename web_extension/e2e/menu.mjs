@@ -353,11 +353,14 @@ check('clickjacking: a normal keyboard pick still fills', filled(await values())
 
 await open('plain');
 await realClick(field('username'), 0);
-await sleep(60);
-const early = await menuOpen();
+let early = false;
+for (const start = Date.now(); !early && Date.now() - start < 2000; ) { // the menu must open, or this test fails
+  early = await menuOpen();
+  if (!early) await sleep(10);
+}
 if (early) await realClick(row(), 100);
 v = await values();
-check('clickjacking (too soon): a click right after the menu appears is ignored', !early || (v.username === '' && !(await sent()).includes('credentials')), JSON.stringify([early, v]));
+check('clickjacking (too soon): a click right after the menu appears is ignored', early && v.username === '' && !(await sent()).includes('credentials'), JSON.stringify([early, v]));
 
 await open('plain');
 await realClick(field('username'));
