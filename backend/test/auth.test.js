@@ -168,6 +168,18 @@ describe('lockout', () => {
 });
 
 describe('the signed-in user', () => {
+    test('a database failure while checking the token is not a 401', async () => {
+        const user = await signedInUser();
+        const db = await require('../db')();
+        const original = db.collection;
+        db.collection = () => { throw new Error('db down'); };
+        try {
+            assert.equal((await request().get('/api/auth/me').set('auth-token', user.token)).status, 500);
+        } finally {
+            db.collection = original;
+        }
+    });
+
     test('GET /me needs a token', async () => {
         assert.equal((await request().get('/api/auth/me')).status, 401);
         assert.equal((await request().get('/api/auth/me').set('auth-token', 'not-a-token')).status, 401);

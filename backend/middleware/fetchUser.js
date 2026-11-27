@@ -10,9 +10,15 @@ const fetchUser = async (req, res, next) => {
     if(!token)
         return res.status(401).send({success: false, error: "Please authenticate using a valid token"})
 
+    let data;
     try {
-        const data = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
+        data = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] })
+        new ObjectId(data.user.id); // a token without a usable id is no token
+    } catch (error) {
+        return res.status(401).send({success: false, error: "Please authenticate using a valid token"})
+    }
 
+    try {
         // A token dies when its account is deleted or its password changes (tokenVersion moves on)
         const db = await connectToDb();
         const user = await db.collection('users').findOne(
@@ -25,7 +31,9 @@ const fetchUser = async (req, res, next) => {
         req.user = data.user;
         next();
     } catch (error) {
-        res.status(401).send({success: false, error: "Please authenticate using a valid token"})
+        // A database failure is not a bad token: 401 would sign the user out
+        console.error('Token check error:', error.message);
+        res.status(500).send({success: false, error: 'Internal Server Error'})
     }
 }
 
