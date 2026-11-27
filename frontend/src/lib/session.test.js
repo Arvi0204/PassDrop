@@ -73,6 +73,19 @@ describe('session', () => {
         expect(hasVaultKey()).toBe(false);
     });
 
+    it('locks this tab when another tab changes or removes the sign-in, and ignores other keys', async () => {
+        saveSignIn({ token: 't', userId: 'u' });
+        await saveVaultKey(await newVaultKey());
+        setPendingRecoveryKey('x');
+        const listener = vi.fn();
+        const stop = subscribe(listener);
+        window.dispatchEvent(new StorageEvent('storage', { key: 'something.else' }));
+        expect([hasVaultKey(), listener.mock.calls.length]).toEqual([true, 0]);
+        window.dispatchEvent(new StorageEvent('storage', { key: 'passdrop.token', newValue: null }));
+        expect([hasVaultKey(), sessionStorage.getItem('passdrop.pendingRecoveryKey'), listener.mock.calls.length]).toEqual([false, null, 1]);
+        stop();
+    });
+
     it('tells subscribers when the sign-in or lock state changes', async () => {
         const listener = vi.fn();
         const stop = subscribe(listener);

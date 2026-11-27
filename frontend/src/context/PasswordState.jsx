@@ -34,10 +34,11 @@ const PasswordState = (props) => {
 
     const headers = () => ({ 'Content-Type': 'application/json', 'auth-token': getToken() });
 
-    // Fetch all credentials from backend and decrypt them
+    // Fetch all credentials from backend and decrypt them. Resolves true only when the list was loaded and shown.
     const getPasswords = async () => {
         const vaultKey = await getVaultKey();
-        if (!getToken() || !vaultKey) return;
+        if (!getToken() || !vaultKey) return false;
+        const userId = getUserId();
 
         setIsLoading(true);
         try {
@@ -48,11 +49,14 @@ const PasswordState = (props) => {
             }
 
             const json = await response.json();
-            const userId = getUserId();
-            setPasswordArray(Array.isArray(json) ? await Promise.all(json.map((record) => openItem(vaultKey, userId, record))) : []);
+            const items = Array.isArray(json) ? await Promise.all(json.map((record) => openItem(vaultKey, userId, record))) : [];
+            if (!hasVaultKey() || getUserId() !== userId) return false; // locked or signed out while it loaded: do not bring the logins back
+            setPasswordArray(items);
+            return true;
         } catch (error) {
             console.error("Fetch passwords error:", error.message);
             toast.error(error.message);
+            return false;
         } finally {
             setIsLoading(false);
         }

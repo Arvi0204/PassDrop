@@ -16,6 +16,17 @@ export const subscribe = (listener) => {
     return () => listeners.delete(listener);
 };
 
+// another tab signed out or in as someone else: this tab's key (it is per tab) must not outlive that sign-in
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (e.key !== null && e.key !== TOKEN && e.key !== USER_ID) return; // null = localStorage.clear()
+        sessionStorage.removeItem(VAULT_KEY);
+        sessionStorage.removeItem(PENDING_RECOVERY_KEY);
+        sessionStorage.removeItem(PENDING_RECOVERY_USER);
+        changed();
+    });
+}
+
 export const getToken = () => localStorage.getItem(TOKEN);
 export const getUserId = () => localStorage.getItem(USER_ID);
 export const hasVaultKey = () => sessionStorage.getItem(VAULT_KEY) !== null;

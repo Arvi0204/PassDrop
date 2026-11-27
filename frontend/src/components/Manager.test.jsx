@@ -93,6 +93,22 @@ describe('the vault page', () => {
         expect(screen.queryByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeNull();
     });
 
+    it('says the vault could not be loaded, not that it is empty, when the fetch fails, and Try again reloads', async () => {
+        await saveVaultKey(vaultKey);
+        const working = fetch.getMockImplementation();
+        let down = true;
+        fetch.mockImplementation(async (url, options) => (down && url.endsWith('/api/passwords')
+            ? { ok: false, status: 500, json: async () => ({}) }
+            : working(url, options)));
+        show();
+        expect((await screen.findByRole('alert')).textContent).toMatch(/could not be loaded/);
+        expect(screen.queryByText('Your vault is empty')).toBeNull();
+        down = false;
+        await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        expect((await screen.findAllByText('GitHub')).length).toBeGreaterThan(0);
+        expect(screen.queryByRole('alert')).toBeNull();
+    });
+
     it('announces a copy that worked', async () => {
         const user = userEvent.setup();
         await saveVaultKey(vaultKey);

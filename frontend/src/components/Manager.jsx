@@ -55,6 +55,7 @@ export default function Manager() {
     const tide = useTide();
     const rootRef = useRef(null);
     const [fetched, setFetched] = useState(false);
+    const [loadFailed, setLoadFailed] = useState(false); // the list could not be fetched: not the same as an empty vault
 
     // the live drops (links that share a login), grouped by the login they were made from
     const { drops, history, reload: reloadDrops } = useDrops(fetched);
@@ -91,6 +92,7 @@ export default function Manager() {
     }, [frozen]);
     useEffect(() => {
         if (locked) {
+            setLoadFailed(false);
             setFetched(false); // a vault that is locked again fetches and surfaces afresh
             setShareItem(null); // the Drop dialog holds a decrypted login: it goes with the vault's own list
         }
@@ -113,13 +115,22 @@ export default function Manager() {
     }, [fetched, covered, tide]);
 
     // Authentication check & initial data fetch (a locked vault fetches nothing until it is unlocked)
+    const [attempt, setAttempt] = useState(0); // bumped by Try again
     useEffect(() => {
         if (!getToken()) {
             navigate('/login');
-        } else if (!locked) {
-            getPasswords().then(() => setFetched(true));
+            return undefined;
         }
-    }, [locked]);
+        if (locked) return undefined;
+        let live = true; // a lock (or a retry) while it loads makes this answer stale
+        setLoadFailed(false);
+        getPasswords().then((ok) => {
+            if (!live) return;
+            if (ok) setFetched(true);
+            else setLoadFailed(true);
+        });
+        return () => { live = false; };
+    }, [locked, attempt]);
 
     // Filter and search credentials
     const filteredItems = useMemo(() => {
@@ -383,7 +394,19 @@ export default function Manager() {
                             <span className="text-[#3a5566]">{fetched ? `${filteredItems.length} items` : ''}</span>
                         </div>
 
-                        {frozen ? <FrozenRows /> : filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
+                        {frozen ? <FrozenRows /> : loadFailed && !fetched ? (
+                            <div role="alert" className="p-8 text-center bg-[#e1eef5]/70 rounded-2xl border border-white/80 text-slate-500 space-y-3">
+                                <p className="text-sm font-bold text-[#0c1820]">Your vault could not be loaded</p>
+                                <p className="text-xs text-[#3a5566]">Check your connection and try again. Your logins are safe.</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAttempt((n) => n + 1)}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] rounded-xl transition-colors cursor-pointer shadow-md shadow-[#0284c7]/25"
+                                >
+                                    Try again
+                                </button>
+                            </div>
+                        ) : filteredItems.length === 0 && !fetched ? null : filteredItems.length === 0 ? (
                             <motion.div
                                 key={searchQuery ? 'no-match' : `empty-${activeFilter}`}
                                 data-entrance

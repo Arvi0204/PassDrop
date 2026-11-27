@@ -63,6 +63,28 @@ describe('PasswordState', () => {
         expect(screen.getAllByText('unreadable')).toHaveLength(2);
     });
 
+    it('getPasswords says whether the list loaded, and a failed fetch is false', async () => {
+        server.records = [{ _id: 'a', blob: await blobOf(github) }];
+        mount();
+        let ok;
+        await act(async () => { ok = await ctx.getPasswords(); });
+        expect(ok).toBe(true);
+        fetch.mockImplementationOnce(async () => ({ ok: false, status: 500, json: async () => ({}) }));
+        await act(async () => { ok = await ctx.getPasswords(); });
+        expect(ok).toBe(false);
+        expect(ctx.passwordArray).toHaveLength(1); // a failed refresh keeps what was shown
+    });
+
+    it('getPasswords does not bring the logins back when the vault is locked while it loads', async () => {
+        server.records = [{ _id: 'a', blob: await blobOf(github) }];
+        mount();
+        let ok;
+        fetch.mockImplementationOnce(async () => { lock(); return { ok: true, status: 200, json: async () => server.records }; });
+        await act(async () => { ok = await ctx.getPasswords(); });
+        expect(ok).toBe(false);
+        expect(ctx.passwordArray).toEqual([]);
+    });
+
     it('a blob made for another user is unreadable (the user id is part of what is signed)', async () => {
         server.records = [{ _id: 'a', blob: await encryptItem(vaultKey, github, 'someone-else') }];
         mount();
