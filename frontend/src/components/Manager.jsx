@@ -170,9 +170,17 @@ export default function Manager() {
     const [announcement, setAnnouncement] = useState({ id: 0, text: '' });
     const announce = (text) => setAnnouncement((prev) => ({ id: prev.id + 1, text }));
 
-    const handleCopy = (text, label) => {
-        navigator.clipboard.writeText(text);
+    // Resolves to false when the browser refused, so the caller does not show a confirmation
+    const handleCopy = async (text, label) => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch {
+            announce(`Could not copy the ${label.toLowerCase()}`);
+            toast.error(`Could not copy the ${label.toLowerCase()}. Select it and copy it by hand.`);
+            return false;
+        }
         announce(`${label} copied to clipboard`);
+        return true;
     };
 
     // Toggle favorite state

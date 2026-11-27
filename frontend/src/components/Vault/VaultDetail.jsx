@@ -76,9 +76,9 @@ export default function VaultDetail({
         );
     }
 
-    const handleCopyField = (text, fieldName) => {
+    const handleCopyField = async (text, fieldName) => {
         if (!text) return;
-        onCopy(text, fieldName);
+        if (await onCopy(text, fieldName) === false) return; // the browser refused: no check
         setCopiedField(fieldName);
         setTimeout(() => setCopiedField(null), 2000);
     };

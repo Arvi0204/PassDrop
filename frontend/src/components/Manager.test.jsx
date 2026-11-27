@@ -93,6 +93,27 @@ describe('the vault page', () => {
         expect(screen.queryByText('Your passwords are encrypted. Enter your master password to unlock them.')).toBeNull();
     });
 
+    it('announces a copy that worked', async () => {
+        const user = userEvent.setup();
+        await saveVaultKey(vaultKey);
+        show();
+        await screen.findAllByText('GitHub');
+        await user.click(screen.getAllByTitle('Copy Password')[0]);
+        await waitFor(() => expect(document.querySelector('[role="status"]').textContent).toBe('Password copied to clipboard'));
+        expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    it('says so, and announces no copy, when the browser will not copy', async () => {
+        const user = userEvent.setup();
+        await saveVaultKey(vaultKey);
+        show();
+        await screen.findAllByText('GitHub');
+        vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'));
+        await user.click(screen.getAllByTitle('Copy Password')[0]);
+        await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Could not copy the password')));
+        expect(document.querySelector('[role="status"]').textContent).not.toMatch(/copied/);
+    });
+
     it('shows an item that cannot be decrypted as a plain row, and still lists the others', async () => {
         await saveVaultKey(vaultKey);
         show();

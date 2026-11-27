@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VaultItemCard from './VaultItemCard';
 
 const item = { _id: 'a', title: 'GitHub', url: 'github.com', username: 'me', password: 'pw-1' };
 const show = (props = {}) => {
     const handlers = { onSelect: vi.fn(), onCopyUsername: vi.fn(), onCopyPassword: vi.fn() };
-    render(<VaultItemCard item={item} {...handlers} {...props} />);
-    return handlers;
+    const { container } = render(<VaultItemCard item={item} {...handlers} {...props} />);
+    return { ...handlers, container };
 };
 
 describe('VaultItemCard from the keyboard', () => {
@@ -33,5 +33,24 @@ describe('VaultItemCard from the keyboard', () => {
         await user.keyboard('{Enter}');
         expect(onCopyPassword).toHaveBeenCalledWith('pw-1');
         expect(onSelect).not.toHaveBeenCalled();
+    });
+});
+
+describe('VaultItemCard copy confirmation', () => {
+    it('shows the check once the copy has worked', async () => {
+        const user = userEvent.setup();
+        const { container } = show({ onCopyPassword: vi.fn().mockResolvedValue(true) });
+        await user.click(screen.getByTitle('Copy Password'));
+        await waitFor(() => expect(container.querySelector('.lucide-check')).not.toBeNull());
+    });
+
+    it('shows no check when the browser would not copy', async () => {
+        const user = userEvent.setup();
+        const onCopyPassword = vi.fn().mockResolvedValue(false);
+        const { container } = show({ onCopyPassword });
+        await user.click(screen.getByTitle('Copy Password'));
+        await waitFor(() => expect(onCopyPassword).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 600)); // longer than the icon swap, so a wrong check would be on screen by now
+        expect(container.querySelector('.lucide-check')).toBeNull();
     });
 });

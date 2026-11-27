@@ -97,8 +97,13 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
     setGeneratedPassword(buildPassword(cfg));
   };
 
-  const copyText = (text) => {
-    navigator.clipboard.writeText(text);
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      toast.error('Could not copy. Select the password and copy it by hand.'); // the dialog stays open so it can be selected
+      return;
+    }
     setCopied(true);
     toast.success("Copied to clipboard!");
     setTimeout(() => {

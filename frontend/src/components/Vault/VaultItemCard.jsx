@@ -20,8 +20,8 @@ export default function VaultItemCard({
     const [copied, setCopied] = useState(null); // 'username' | 'password' | null
     const timer = useRef(null);
     useEffect(() => () => clearTimeout(timer.current), []);
-    const copyWithFeedback = (kind, copy, value) => {
-        copy(value);
+    const copyWithFeedback = async (kind, copy, value) => {
+        if (await copy(value) === false) return; // the browser refused: no check
         setCopied(kind);
         clearTimeout(timer.current);
         timer.current = setTimeout(() => setCopied(null), 1500);
