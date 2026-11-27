@@ -198,6 +198,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
               <button
                 type="button"
                 onClick={() => setIsGeneratorModalOpen(false)}
+                aria-label="Close"
                 className="p-1 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -215,6 +216,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                   onClick={() => copyText(generatedPassword)}
                   className="p-2 rounded-lg bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] text-white transition-all shrink-0 shadow-xs cursor-pointer"
                   title="Copy password"
+                  aria-label="Copy password"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </button>

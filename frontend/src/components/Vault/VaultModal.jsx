@@ -32,6 +32,7 @@ export default function VaultModal({
     useEscapeKey(isOpen, onClose);
     const dialogRef = useRef(null);
     const titleId = useId();
+    const fieldId = useId(); // prefix for the form fields' ids, so each label points at its input
     useDialogFocus(isOpen, dialogRef);
 
     const isEditing = Boolean(initialData?._id);
@@ -180,6 +181,7 @@ export default function VaultModal({
                             <button
                                 type="button"
                                 onClick={onClose}
+                                aria-label="Close"
                                 className="p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
@@ -194,7 +196,7 @@ export default function VaultModal({
                                 {/* Title & Favorite */}
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                        <label htmlFor={`${fieldId}-title`} className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
                                             Title <span className="text-[#3a5566] font-normal">(Friendly name)</span>
                                         </label>
                                         <span className="text-[11px] text-[#3a5566]">
@@ -204,6 +206,7 @@ export default function VaultModal({
                                     <div className="flex gap-2.5 items-center">
                                         <input
                                             type="text"
+                                            id={`${fieldId}-title`}
                                             name="title"
                                             value={form.title}
                                             onChange={handleChange}
@@ -214,6 +217,8 @@ export default function VaultModal({
                                         <button
                                             type="button"
                                             title={form.isFavorite ? 'Favorited (Click to unpin)' : 'Mark as favorite'}
+                                            aria-label="Favorite"
+                                            aria-pressed={form.isFavorite}
                                             onClick={() => setForm((prev) => ({ ...prev, isFavorite: !prev.isFavorite }))}
                                             className={`h-10 w-10 shrink-0 flex items-center justify-center rounded-xl border transition-all cursor-pointer ${
                                                 form.isFavorite
@@ -228,11 +233,12 @@ export default function VaultModal({
 
                                 {/* Website URL */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <label htmlFor={`${fieldId}-url`} className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
                                         <Globe className="w-3.5 h-3.5 text-[#3a5566]" /> Website URL
                                     </label>
                                     <input
                                         type="text"
+                                        id={`${fieldId}-url`}
                                         name="url"
                                         value={form.url}
                                         onChange={handleChange}
@@ -243,11 +249,12 @@ export default function VaultModal({
 
                                 {/* Username */}
                                 <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <label htmlFor={`${fieldId}-username`} className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
                                         <User className="w-3.5 h-3.5 text-[#3a5566]" /> Username or Email
                                     </label>
                                     <input
                                         type="text"
+                                        id={`${fieldId}-username`}
                                         name="username"
                                         value={form.username}
                                         onChange={handleChange}
@@ -259,10 +266,11 @@ export default function VaultModal({
 
                                 {/* Notes */}
                                 <div className="space-y-1 order-2">
-                                    <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                    <label htmlFor={`${fieldId}-notes`} className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
                                         <FileText className="w-3.5 h-3.5 text-[#3a5566]" /> Secure Notes (Optional)
                                     </label>
                                     <textarea
+                                        id={`${fieldId}-notes`}
                                         name="notes"
                                         rows={3}
                                         value={form.notes}
@@ -276,7 +284,7 @@ export default function VaultModal({
                                 {/* Password & Integrated Generator */}
                                 <div className="space-y-1.5 order-1">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
+                                        <label htmlFor={`${fieldId}-password`} className="text-xs font-semibold text-[#0c1820] flex items-center gap-1.5">
                                             <KeyRound className="w-3.5 h-3.5 text-[#3a5566]" /> Password *
                                         </label>
                                         <div className="flex items-center gap-1.5">
@@ -308,6 +316,7 @@ export default function VaultModal({
                                         <input
                                             ref={passwordRef}
                                             type={showPassword ? 'text' : 'password'}
+                                            id={`${fieldId}-password`}
                                             name="password"
                                             value={form.password}
                                             onChange={handleChange}
@@ -326,6 +335,7 @@ export default function VaultModal({
                                             type="button"
                                             onClick={() => setShowPassword((prev) => !prev)}
                                             title={showPassword ? 'Hide password' : 'Show password'}
+                                            aria-label={showPassword ? 'Hide password' : 'Show password'}
                                             className="absolute z-[4] right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#5c7788] hover:text-[#0c1820] hover:bg-white/60 transition-colors cursor-pointer"
                                         >
                                             <IconSwap swapped={showPassword} from={Eye} to={EyeOff} />
