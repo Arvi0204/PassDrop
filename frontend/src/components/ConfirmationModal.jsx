@@ -1,6 +1,8 @@
+import { useId, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import useEscapeKey from '../lib/useEscapeKey';
+import useDialogFocus from '../lib/useDialogFocus';
 
 export default function ConfirmationModal({
     isOpen,
@@ -12,6 +14,9 @@ export default function ConfirmationModal({
     confirmText = 'Confirm'
 }) {
     useEscapeKey(isOpen, onClose);
+    const dialogRef = useRef(null);
+    const titleId = useId();
+    useDialogFocus(isOpen, dialogRef);
 
     // Inferred intent based on text
     const lowerMsg = (message || '').toLowerCase();
@@ -41,7 +46,12 @@ export default function ConfirmationModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-2xl p-6 overflow-hidden z-10"
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={titleId}
+                        tabIndex={-1}
+                        className="relative w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-2xl p-6 overflow-hidden z-10 focus:outline-none"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Close button */}
@@ -75,7 +85,7 @@ export default function ConfirmationModal({
                             </div>
 
                             {/* Title & Message */}
-                            <h3 className="text-lg font-bold text-[#0c1820]">
+                            <h3 id={titleId} className="text-lg font-bold text-[#0c1820]">
                                 {displayTitle}
                             </h3>
                             <p className="mt-2 text-sm text-[#3a5566] leading-relaxed max-w-sm">
@@ -87,6 +97,7 @@ export default function ConfirmationModal({
                             <div className="mt-6 flex items-center gap-3 w-full">
                                 <button
                                     type="button"
+                                    data-autofocus
                                     onClick={onClose}
                                     className="flex-1 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border border-white/80 bg-white/70 hover:bg-white text-[#3a5566] hover:text-[#0c1820] transition-all cursor-pointer shadow-xs"
                                 >

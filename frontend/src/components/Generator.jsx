@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, Sparkles, X, RefreshCw } from "lucide-react";
@@ -8,6 +8,7 @@ import { flyDropInto, dropIsInstant } from "../lib/dropIn";
 import { generatePassword as buildPassword, DEFAULT_OPTIONS } from "../lib/passwordGen";
 import "../styles/water.css";
 import useEscapeKey from "../lib/useEscapeKey";
+import useDialogFocus from "../lib/useDialogFocus";
 
 // Visual only: characters shown while a new password "rolls in". The real password is chosen
 // separately with crypto.getRandomValues and is what gets copied.
@@ -83,6 +84,9 @@ const RollingPassword = ({ value, rollId, flash }) => {
 
 const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
   useEscapeKey(isOpen, () => setIsGeneratorModalOpen(false));
+  const dialogRef = useRef(null);
+  const titleId = useId();
+  useDialogFocus(isOpen, dialogRef);
 
   const [settings, setSettings] = useState(DEFAULT_OPTIONS);
 
@@ -173,7 +177,12 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 p-6 z-10"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            className="relative w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 p-6 z-10 focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -182,7 +191,7 @@ const Generator = ({ isOpen, setIsGeneratorModalOpen }) => {
                 <div className="w-8 h-8 rounded-xl bg-[#d0e4ee] border border-[#b8d6e5] text-[#112838] flex items-center justify-center shadow-xs">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <h3 className="text-lg font-bold text-[#0c1820]">
+                <h3 id={titleId} className="text-lg font-bold text-[#0c1820]">
                   Password Generator
                 </h3>
               </div>

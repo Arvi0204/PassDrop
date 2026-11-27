@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Copy, Droplet, X } from 'lucide-react';
 import useEscapeKey from '../lib/useEscapeKey';
+import useDialogFocus from '../lib/useDialogFocus';
 import { ErrorLine } from './common/FormError';
 import Arrive from './common/Arrive';
 import MorphHeight from './common/MorphHeight';
@@ -50,6 +51,8 @@ export default function ShareDropModal({ item, onClose, onMade }) {
     // backdrop): a live link is kept in its login's Drops, where it can be copied again, so closing loses nothing.
     const requestClose = () => onClose();
     useEscapeKey(true, requestClose);
+    const dialogRef = useRef(null);
+    useDialogFocus(true, dialogRef);
     useEffect(() => {
         if (closeIn === null) return undefined;
         if (closeIn === 0) { closeRef.current(); return undefined; }
@@ -132,6 +135,8 @@ export default function ShareDropModal({ item, onClose, onMade }) {
                 </motion.div>
             )}
             <motion.div
+                ref={dialogRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="share-drop-title"

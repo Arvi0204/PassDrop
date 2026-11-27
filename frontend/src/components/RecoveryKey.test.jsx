@@ -48,3 +48,16 @@ describe('RecoveryKey', () => {
         expect(await blob.text()).toContain(KEY);
     });
 });
+
+describe('RecoveryKey and the keyboard', () => {
+    it('takes focus when it opens and keeps Tab inside it', async () => {
+        const user = userEvent.setup();
+        render(<><button type="button">Behind the dialog</button><RecoveryKey recoveryKey={KEY} onContinue={() => {}} /></>);
+        const dialog = screen.getByRole('dialog', { name: 'Save your recovery key' });
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        for (let i = 0; i < 10; i++) {
+            await user.tab();
+            expect(dialog.contains(document.activeElement), `Tab ${i + 1}`).toBe(true);
+        }
+    });
+});

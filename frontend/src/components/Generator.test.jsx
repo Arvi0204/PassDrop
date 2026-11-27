@@ -30,3 +30,22 @@ describe('copying the generated password', () => {
         expect(close).not.toHaveBeenCalled();
     });
 });
+
+describe('the generator dialog for a screen reader and the keyboard', () => {
+    it('announces itself as a dialog named by its title, and takes focus', () => {
+        render(<><button type="button">Behind the dialog</button><Generator isOpen setIsGeneratorModalOpen={() => {}} /></>);
+        const dialog = screen.getByRole('dialog', { name: 'Password Generator' });
+        expect(dialog.getAttribute('aria-modal')).toBe('true');
+        expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    it('keeps Tab inside the dialog', async () => {
+        const user = userEvent.setup();
+        render(<><button type="button">Behind the dialog</button><Generator isOpen setIsGeneratorModalOpen={() => {}} /></>);
+        const dialog = screen.getByRole('dialog');
+        for (let i = 0; i < 20; i++) {
+            await user.tab();
+            expect(dialog.contains(document.activeElement), `Tab ${i + 1}`).toBe(true);
+        }
+    });
+});

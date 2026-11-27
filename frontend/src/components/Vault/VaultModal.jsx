@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -21,6 +21,7 @@ import WaterMask from './WaterMask';
 import { flyDropInto, dropIsInstant } from '../../lib/dropIn';
 import { generatePassword, DEFAULT_OPTIONS } from '../../lib/passwordGen';
 import useEscapeKey from '../../lib/useEscapeKey';
+import useDialogFocus from '../../lib/useDialogFocus';
 
 export default function VaultModal({
     isOpen,
@@ -29,6 +30,9 @@ export default function VaultModal({
     onSave
 }) {
     useEscapeKey(isOpen, onClose);
+    const dialogRef = useRef(null);
+    const titleId = useId();
+    useDialogFocus(isOpen, dialogRef);
 
     const isEditing = Boolean(initialData?._id);
 
@@ -153,13 +157,18 @@ export default function VaultModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="relative w-full max-w-lg lg:max-w-4xl bg-[#e1eef5]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 overflow-hidden flex flex-col max-h-[90vh] z-10"
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={titleId}
+                        tabIndex={-1}
+                        className="relative w-full max-w-lg lg:max-w-4xl bg-[#e1eef5]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 overflow-hidden flex flex-col max-h-[90vh] z-10 focus:outline-none"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
                         <div className="px-6 py-4 border-b border-white/60 flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-bold text-[#0c1820]">
+                                <h3 id={titleId} className="text-lg font-bold text-[#0c1820]">
                                     {isEditing ? 'Edit Account' : 'New Vault Item'}
                                 </h3>
                                 <p className="text-xs text-[#3a5566]">

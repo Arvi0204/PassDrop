@@ -171,3 +171,16 @@ describe('ShareDropModal', () => {
         expect(await screen.findByText('You have 25 live drops. Revoke one to make another.')).toBeTruthy();
     });
 });
+
+describe('ShareDropModal and the keyboard', () => {
+    it('takes focus when it opens and keeps Tab inside it', async () => {
+        const user = userEvent.setup();
+        render(<><button type="button">Behind the dialog</button><ShareDropModal item={item} onClose={() => {}} /></>);
+        const dialog = screen.getByRole('dialog');
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        for (let i = 0; i < 15; i++) {
+            await user.tab();
+            expect(dialog.contains(document.activeElement), `Tab ${i + 1}`).toBe(true);
+        }
+    });
+});

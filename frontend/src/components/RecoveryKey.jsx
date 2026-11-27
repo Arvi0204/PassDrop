@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import useDialogFocus from '../lib/useDialogFocus';
 import { motion } from 'framer-motion';
 import { Copy, Check, Download, ArrowRight, ShieldAlert } from 'lucide-react';
 
@@ -8,6 +9,8 @@ import { Copy, Check, Download, ArrowRight, ShieldAlert } from 'lucide-react';
 export default function RecoveryKey({ recoveryKey, onContinue }) {
     const [copied, setCopied] = useState(false);
     const [saved, setSaved] = useState(false);
+    const dialogRef = useRef(null);
+    useDialogFocus(true, dialogRef);
 
     const copy = async () => {
         try {
@@ -30,7 +33,7 @@ export default function RecoveryKey({ recoveryKey, onContinue }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="recovery-key-title">
+        <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center p-4 focus:outline-none" role="dialog" aria-modal="true" aria-labelledby="recovery-key-title">
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
