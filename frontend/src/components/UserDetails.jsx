@@ -56,8 +56,8 @@ export default function UserDetails() {
                     'auth-token': token
                 }
             });
-            const data = await response.json();
-            setUser(data);
+            if (!response.ok) throw new Error('Failed to fetch user details');
+            setUser(await response.json());
         } catch {
             toast.error("Failed to fetch user details");
         }

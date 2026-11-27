@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import useEscapeKey from '../lib/useEscapeKey';
@@ -16,6 +16,18 @@ export default function ConfirmationModal({
     useEscapeKey(isOpen, onClose);
     const dialogRef = useRef(null);
     const titleId = useId();
+    const [busy, setBusy] = useState(false);
+    const confirm = async () => { // one run at a time: a second click or Enter while an async confirm runs does nothing
+        if (busy) return;
+        setBusy(true);
+        try {
+            await onConfirm();
+        } catch (error) {
+            console.error('Confirm error:', error.message); // the caller reports its own failures; the button just frees up
+        } finally {
+            setBusy(false);
+        }
+    };
     useDialogFocus(isOpen, dialogRef);
 
     // Inferred intent based on text
@@ -53,6 +65,9 @@ export default function ConfirmationModal({
                         tabIndex={-1}
                         className="relative w-full max-w-md bg-[#e1eef5]/95 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-2xl p-6 overflow-hidden z-10 focus:outline-none"
                         onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => { // Enter submits when the dialog asks for a password
+                            if (e.key === 'Enter' && e.target.type === 'password') { e.preventDefault(); confirm(); }
+                        }}
                     >
                         {/* Close button */}
                         <button
@@ -105,10 +120,9 @@ export default function ConfirmationModal({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        onConfirm();
-                                    }}
-                                    className={`flex-1 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl text-white transition-all shadow-md cursor-pointer ${
+                                    disabled={busy}
+                                    onClick={confirm}
+                                    className={`flex-1 disabled:opacity-60 disabled:cursor-not-allowed px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl text-white transition-all shadow-md cursor-pointer ${
                                         isDelete
                                             ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
                                             : 'bg-gradient-to-r from-[#0284c7] to-[#0077b6] hover:from-[#0369a1] hover:to-[#005f92] shadow-[#0284c7]/25'

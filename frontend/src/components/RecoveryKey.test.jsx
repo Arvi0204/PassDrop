@@ -35,6 +35,15 @@ describe('RecoveryKey', () => {
         await waitFor(() => expect(screen.getByText('Copied')).toBeTruthy());
     });
 
+    it('says so, and does not claim a copy, when the browser will not copy', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'));
+        render(<RecoveryKey recoveryKey={KEY} onContinue={() => {}} />);
+        await user.click(screen.getByRole('button', { name: /Copy/ }));
+        expect((await screen.findByRole('status')).textContent).toMatch(/copy it by hand, or use Download/);
+        expect(screen.queryByText('Copied')).toBeNull();
+    });
+
     it('offers the key as a .txt download', async () => {
         const user = userEvent.setup();
         let blob;

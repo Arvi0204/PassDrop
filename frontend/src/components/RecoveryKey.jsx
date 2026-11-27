@@ -9,16 +9,18 @@ import { Copy, Check, Download, ArrowRight, ShieldAlert } from 'lucide-react';
 export default function RecoveryKey({ recoveryKey, onContinue }) {
     const [copied, setCopied] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [failed, setFailed] = useState(false);
     const dialogRef = useRef(null);
     useDialogFocus(true, dialogRef);
 
     const copy = async () => {
         try {
             await navigator.clipboard.writeText(recoveryKey);
+            setFailed(false);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            // no clipboard access: the key is on screen and can be downloaded instead
+            setFailed(true); // no clipboard access: the key is on screen and can be downloaded instead
         }
     };
 
@@ -79,6 +81,10 @@ export default function RecoveryKey({ recoveryKey, onContinue }) {
                         <span>Download (.txt)</span>
                     </button>
                 </div>
+
+                <p role="status" className={failed ? 'mt-2 text-xs text-rose-700' : 'sr-only'}>
+                    {failed ? 'Your browser would not copy it. Select the key and copy it by hand, or use Download.' : ''}
+                </p>
 
                 <label className="mt-5 flex items-center gap-2.5 text-sm font-semibold text-[#0c1820] cursor-pointer">
                     <input
