@@ -1,0 +1,19 @@
+meta {
+  name: Look at a Drop (public)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/drops/:id
+  body: none
+  auth: none
+}
+
+params:path {
+  id: {{dropId}}
+}
+
+vars:pre-request {
+  dropId: AAAAAAAAAAAAAAAAAAAAAA
+}

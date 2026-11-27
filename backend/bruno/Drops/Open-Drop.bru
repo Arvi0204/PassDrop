@@ -1,0 +1,19 @@
+meta {
+  name: Open a Drop (public, takes a view)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/drops/:id/open
+  body: none
+  auth: none
+}
+
+params:path {
+  id: {{dropId}}
+}
+
+vars:pre-request {
+  dropId: AAAAAAAAAAAAAAAAAAAAAA
+}

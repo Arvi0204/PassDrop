@@ -1,0 +1,15 @@
+meta {
+  name: List My Live Drops
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/drops
+  body: none
+  auth: none
+}
+
+headers {
+  auth-token: {{authToken}}
+}

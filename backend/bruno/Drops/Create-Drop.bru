@@ -1,0 +1,33 @@
+meta {
+  name: Create Drop
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/drops
+  body: json
+  auth: none
+}
+
+headers {
+  auth-token: {{authToken}}
+}
+
+body:json {
+  {
+    "login": "{{createdPasswordId}}",
+    "blob": "v1.AAECAwQFBgcICQoL.QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5P",
+    "label": "v1.AAECAwQFBgcICQoL.QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5P",
+    "mode": "views",
+    "views": 3
+  }
+}
+
+vars:post-response {
+  dropId: res.body.id
+}
+
+vars:pre-request {
+  createdPasswordId: 6ad5cd09682d3fe111b39fd0
+}

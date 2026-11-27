@@ -1,0 +1,25 @@
+meta {
+  name: Recovery Reset
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/auth/recovery/reset
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "tester@example.com",
+    "recoveryAuthKey": "Hx4dHBsaGRgXFhUUExIREA8ODQwLCgkIBwYFBAMCAQA=",
+    "newAuthKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+    "newKdf": { "name": "PBKDF2-SHA256", "iterations": 600000, "salt": "AAECAwQFBgcICQoLDA0ODw==" },
+    "newWrappedVaultKey": "v1.AAECAwQFBgcICQoL.QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3"
+  }
+}
+
+vars:post-response {
+  authToken: res.body.authToken
+}

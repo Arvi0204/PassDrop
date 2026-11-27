@@ -1,0 +1,15 @@
+meta {
+  name: Get Drop History
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/drops/history
+  body: none
+  auth: none
+}
+
+headers {
+  auth-token: {{authToken}}
+}
