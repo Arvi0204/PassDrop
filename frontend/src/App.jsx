@@ -10,7 +10,7 @@ import Login from './components/Login'
 import Signup from './components/Signup'
 import Recover from './components/Recover'
 import Manager from './components/Manager'
-import { Toaster } from 'react-hot-toast';
+import WaterToaster from './components/common/WaterToaster'
 import Home from './components/Home'
 import UserDetails from './components/UserDetails'
 import ExtensionInstructions from './components/ExtensionInstructions'
@@ -21,28 +21,7 @@ function App() {
     <PasswordState>
       <TideProvider>
       <Router>
-        <Toaster
-          position="bottom-right"
-          gutter={10}
-          toastOptions={{
-            duration: 4000,
-            className: '!bg-[#f5fafc]/95 !text-[#0c1820] !border !border-white/90 !shadow-xl !backdrop-blur-md !rounded-xl !text-xs sm:!text-sm !font-semibold !py-2.5 !px-3.5',
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: '#112838',
-                secondary: '#ffffff',
-              },
-            },
-            error: {
-              duration: 4500,
-              iconTheme: {
-                primary: '#e11d48',
-                secondary: '#ffffff',
-              },
-            },
-          }}
-        />
+        <WaterToaster />
         {/* Transparent container letting fixed body gradients show through */}
         <div className="flex flex-col min-h-screen bg-transparent">
           <Navbar />
