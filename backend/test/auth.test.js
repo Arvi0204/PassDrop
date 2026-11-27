@@ -66,6 +66,11 @@ describe('register', () => {
         assert.equal((await all('users')).length, 1);
     });
 
+    test('rejects a username that is not a string or is too long', async () => {
+        assert.equal((await register(registrationBody({ username: ['Ada', 'Bob'] }))).status, 400);
+        assert.equal((await register(registrationBody({ username: 'a'.repeat(65) }))).status, 400);
+    });
+
     test('ignores spaces around the email and the username, and checks the username length without them', async () => {
         const res = await register(registrationBody({ username: '  Ada  ', email: '  Ada@Example.com  ' }));
         assert.equal(res.status, 201);

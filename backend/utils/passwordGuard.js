@@ -34,7 +34,7 @@ const checkPassword = async (db, user, secret, hashField = 'authHash') => {
         { $inc: { [attempts]: 1 } },
         { returnDocument: 'after', projection: { [attempts]: 1 } }
     );
-    if (updated[attempts] >= MAX_FAILED_ATTEMPTS) {
+    if (updated?.[attempts] >= MAX_FAILED_ATTEMPTS) {
         await users.updateOne(
             { _id: user._id },
             { $set: { [attempts]: 0, [lock]: new Date(Date.now() + LOCK_MS) } }

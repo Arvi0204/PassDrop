@@ -84,7 +84,9 @@ router.put('/:id', fetchUser, blobValidation, async (req, res) => {
             { $set: { blob: req.body.blob, updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
-        return res.json(toClient(updated?.value || updated));
+        const doc = updated?.value || updated;
+        if (!doc) return res.status(404).json({ success: false, error: 'Password entry not found' });
+        return res.json(toClient(doc));
     } catch (error) {
         console.error('Error updating password:', error.message);
         return res.status(500).json({ success: false, error: 'Internal Server Error' });

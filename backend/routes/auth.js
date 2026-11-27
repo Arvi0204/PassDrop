@@ -72,7 +72,7 @@ router.get('/prelogin', [query('email', 'Enter a valid email').trim().isEmail()]
 // ROUTE 1: Register User (POST /api/auth/register)
 // ========================================================
 router.post('/register', [
-    body('username', 'Username must contain at least 3 characters').trim().isLength({ min: 3 }),
+    body('username', 'Username must contain 3 to 64 characters').isString().bail().trim().isLength({ min: 3, max: 64 }),
     emailField,
     authKeyField('authKey'),
     kdfField('kdf'),
@@ -317,6 +317,7 @@ router.post('/recovery/reset', [
             { $set: { authHash: await bcrypt.hash(newAuthKey, BCRYPT_COST), kdf, wrappedVaultKey: newWrappedVaultKey, updatedAt: new Date(), lastLogin: new Date(), failedAttempts: 0 }, $unset: { lockUntil: '' }, $inc: { tokenVersion: 1 } },
             { returnDocument: 'after' }
         );
+        if (!updated) return res.status(404).json({ success: false, error: 'Account not found' });
         return res.json(signInPayload(updated, signToken(updated._id, updated.tokenVersion)));
     } catch (err) {
         console.error('Recovery reset error:', err.message);
