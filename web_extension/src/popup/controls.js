@@ -12,17 +12,22 @@ export function copyButton({ label, text, name = 'copy', className = 'icon-btn' 
       await navigator.clipboard.writeText(typeof text === 'function' ? text() : text);
     } catch {
       announce('Could not copy');
+      flash('failed', icon('x', 'w-4 h-4 pop'));
       return;
     }
     announce(`${label}: done`);
+    flash('done', icon('check', 'w-4 h-4 pop'));
+  });
+  function flash(state, mark) {
     clearTimeout(timer);
-    button.classList.add('done');
-    button.replaceChildren(icon('check', 'w-4 h-4 pop'));
+    button.classList.remove('done', 'failed');
+    button.classList.add(state);
+    button.replaceChildren(mark);
     timer = setTimeout(() => {
-      button.classList.remove('done');
+      button.classList.remove(state);
       button.replaceChildren(icon(name));
     }, 1300);
-  });
+  }
   return button;
 }
 

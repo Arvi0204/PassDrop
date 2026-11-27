@@ -1,6 +1,6 @@
 // The password generator: a sheet that slides over the popup, like the web app's generator modal.
 // The password itself comes from the web app's generator (shared.js), so both always agree.
-import { h } from './dom.js';
+import { h, announce } from './dom.js';
 import { icon, dropMark } from './icons.js';
 import { copyButton } from './controls.js';
 import { generatePassword, strengthOf, LENGTH_RANGE, DEFAULT_OPTIONS } from './shared.js';
@@ -68,11 +68,14 @@ export function createGenerator() {
       try {
         await navigator.clipboard.writeText(password);
       } catch {
-        // closing still makes sense; the password is not lost until the sheet is reopened
+        copyError.hidden = false;
+        announce('Could not copy');
+        return;
       }
       close();
     }
   }, icon('copy', 'w-4 h-4'), 'Copy & close');
+  const copyError = h('p', { class: 'copy-error', role: 'alert', hidden: true }, 'Could not copy. Copy the password above instead.');
 
   const sheet = h('div', { class: 'sheetmodal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Password generator', hidden: true },
     h('div', { class: 'gh' }, icon('sparkles', 'w-[18px] h-[18px]'), 'Password generator', closeButton),
@@ -83,7 +86,8 @@ export function createGenerator() {
     slider,
     numbers,
     symbols,
-    h('div', { class: 'gfoot' }, regenerateButton, copyCloseButton)
+    h('div', { class: 'gfoot' }, regenerateButton, copyCloseButton),
+    copyError
   );
   const scrim = h('div', { class: 'scrim', hidden: true, onClick: close });
   document.body.append(scrim, sheet);
@@ -182,6 +186,7 @@ export function createGenerator() {
 
   function open() {
     opener = document.activeElement;
+    copyError.hidden = true;
     document.body.classList.add('gen-open');
     scrim.hidden = false;
     sheet.hidden = false;

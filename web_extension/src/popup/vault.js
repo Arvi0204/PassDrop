@@ -57,7 +57,7 @@ export function renderVault({ session, onSignedOut: signedOut, onExpired: expire
   let menuOpen = false;
   const timers = [];
   // leaving this screen also stops its timers, so a screen that is gone never syncs again
-  const leave = (next) => () => { timers.forEach(clearInterval); next(); };
+  const leave = (next) => () => { timers.forEach(clearInterval); generator.close(); next(); };
   const onSignedOut = leave(signedOut);
   const onExpired = leave(expired);
   const onLocked = leave(locked);

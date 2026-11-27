@@ -22,7 +22,7 @@ const STYLE = `
   .brand { display: flex; align-items: center; gap: 8px; padding: 6px 10px 10px; font-weight: 800; font-size: 14px; letter-spacing: -.01em; }
   .brand svg { width: 22px; height: 22px; }
   .brand b { color: #0284c7; }
-  .rows { display: grid; gap: 4px; }
+  .rows { display: grid; gap: 4px; max-height: min(240px, 60vh); overflow-y: auto; }
   button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px;
     border-radius: 13px; cursor: pointer; transition: background .15s; }
   button:hover { background: rgba(255, 255, 255, .6); }
@@ -71,10 +71,12 @@ function quiet(field) {
 // the extension fetch it over and over.
 const LOOKUP_TTL_MS = 5000;
 let lookup = null; // { at, reply }
+let pending = null; // the fetch in flight, shared by every caller meanwhile
 async function logins() {
   if (lookup && Date.now() - lookup.at < LOOKUP_TTL_MS) return lookup.reply;
-  const reply = await ask({ type: 'logins' });
-  if (reply) lookup = { at: Date.now(), reply };
+  pending ??= ask({ type: 'logins' }).finally(() => { pending = null; });
+  const reply = await pending;
+  if (reply?.ok) lookup = { at: Date.now(), reply }; // a locked or signed-out answer is never kept: unlocking must show at once
   return reply;
 }
 
@@ -226,7 +228,12 @@ async function choose(id) {
   if (!anchor) return;
   const mine = ++ticket;
   const reply = await ask({ type: 'credentials', id });
-  if (mine !== ticket || !reply?.ok) return;
+  if (mine !== ticket) return;
+  if (!reply?.ok) {
+    lookup = null; // the vault may have locked since the list was fetched
+    closeMenu();
+    return;
+  }
   closeMenu();
   // fill the form of the field the user clicked in, not whichever login form the page has by now
   const found = anchor.isConnected ? findLoginFields(document, { around: anchor }) : { status: 'none' };
