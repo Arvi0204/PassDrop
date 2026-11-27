@@ -31,7 +31,7 @@ before(async () => {
 after(async () => {
     const db = await connectToDb();
     await db.client.close(); // otherwise the open connection keeps the test process alive
-    await mongod.stop();
+    await mongod?.stop();
 });
 
 const collection = async (name) => (await connectToDb()).collection(name);

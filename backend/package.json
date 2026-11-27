@@ -4,7 +4,7 @@
   "description": "backend for PassDrop",
   "main": "server.js",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test --test-concurrency=1 test/",
     "start": "node --watch ./server.js",
     "dev": "nodemon ./server.js"
   },
