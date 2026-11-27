@@ -227,7 +227,7 @@ export default function Drop() {
                 <Arrive from={impact}>
                     <h1 className="text-2xl font-bold text-[#0c1820] break-words">{state.item.title || state.item.url || 'Dropped login'}</h1>
                     {state.item.url && (
-                        <a href={/^https?:\/\//.test(state.item.url) ? state.item.url : `https://${state.item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 font-medium break-all">
+                        <a href={/^https?:\/\//i.test(state.item.url) ? state.item.url : `https://${state.item.url}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#0284c7] hover:underline mt-1 font-medium break-all">
                             {state.item.url} <ExternalLink className="w-3 h-3 shrink-0" />
                         </a>
                     )}

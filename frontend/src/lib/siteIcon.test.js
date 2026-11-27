@@ -8,7 +8,7 @@ describe('the site icon address', () => {
     });
 
     it('never sends localhost, intranet names, IP addresses or nothing', () => {
-        for (const host of ['localhost', 'jira', 'my-nas', '192.168.1.10', '127.0.0.1', '[::1]', '', undefined, null]) {
+        for (const host of ['localhost', 'jira', 'my-nas', '192.168.1.10', '127.0.0.1', '[::1]', '::1', 'fe80::1', 'printer.local', 'a.localhost', 'nas.lan', 'x.internal', 'router.home.arpa', 'a.test', 'intra.corp', 'NAS.LOCAL', '', undefined, null]) {
             expect(iconUrlForHost(host), String(host)).toBe('');
         }
     });

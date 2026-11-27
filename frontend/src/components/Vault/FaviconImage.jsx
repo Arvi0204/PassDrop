@@ -7,7 +7,7 @@ const getDomain = (url) => {
     try {
         const fullUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
         const parsed = new URL(fullUrl);
-        return parsed.hostname.replace('www.', '');
+        return parsed.hostname.replace(/^www\./i, '');
     } catch {
         return url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
     }

@@ -84,7 +84,7 @@ export default function VaultDetail({
     };
 
     const formattedUrl = item.url
-        ? item.url.startsWith('http://') || item.url.startsWith('https://')
+        ? /^https?:\/\//i.test(item.url)
             ? item.url
             : `https://${item.url}`
         : '';
