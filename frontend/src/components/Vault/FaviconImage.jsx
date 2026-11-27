@@ -25,15 +25,16 @@ const getInitials = (title, url) => {
 };
 
 const getBgColor = (text) => {
+    // the site's own blues and teals, so a tile never fights the page
     const colors = [
-        'bg-blue-600',
-        'bg-emerald-600',
-        'bg-purple-600',
-        'bg-indigo-600',
-        'bg-pink-600',
-        'bg-amber-600',
+        'bg-sky-600',
         'bg-cyan-600',
-        'bg-rose-600'
+        'bg-teal-600',
+        'bg-blue-600',
+        'bg-slate-600',
+        'bg-[#112838]',
+        'bg-cyan-700',
+        'bg-sky-700'
     ];
     let hash = 0;
     const str = text || 'vault';

@@ -17,6 +17,18 @@ describe('the site icon', () => {
         }
     });
 
+    it('keeps the letter tiles to the site\'s blues and teals, never purple, pink, red or orange', () => {
+        const classes = new Set();
+        for (const title of ['Netflix', 'Linkedin', 'Mail', 'Bank', 'Gym', 'Zoom', 'Steam', 'Notes', 'Router', 'Wifi', 'Kindle', 'Uber', 'Yahoo', 'Xbox', 'Quora', 'Paypal']) {
+            const { container, unmount } = render(<FaviconImage url="" title={title} />);
+            const tile = container.firstChild.className;
+            expect(tile, title).not.toMatch(/bg-(purple|indigo|violet|fuchsia|pink|rose|red|amber|orange|yellow)/);
+            classes.add(tile.match(/bg-\S+/)[0]);
+            unmount();
+        }
+        expect(classes.size).toBeGreaterThan(2); // still varied, so neighbouring logins can be told apart
+    });
+
     it('shows a letter tile when the login has no site', () => {
         const { container } = render(<FaviconImage url="" title="Notes" />);
         expect(screen.queryByRole('img')).toBeNull();
