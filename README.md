@@ -159,7 +159,7 @@ npm run test:e2e                                 # real Chrome, the whole web ap
 
 | Part | Tests | Tool | What they cover |
 |---|---|---|---|
-| Web app (`frontend/`) | 256 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
+| Web app (`frontend/`) | 257 | Vitest and jsdom (a stand-in browser) | The encryption module (key derivation, wrapping, sealing, the recovery key), sign-up with the recovery key screen, sign-in, the lock screen, recovery, the Account page, the password mask, the site icons, the generator and the session-expiry handling |
 | API (`backend/`) | 111 | Node's built-in runner and Supertest, against a real MongoDB started for the tests | Sign-up and sign-in, the 15-minute lockout, re-authentication, sessions dying after a password change, recovery, who can touch whose logins, and that no readable field is ever stored |
 | Extension (`web_extension/`) | 110 | Node's built-in runner and jsdom | Address matching, field detection, signing in and unlocking in the service worker (with real encrypted data), the content script's rules and the popup helpers |
 

@@ -36,6 +36,17 @@ describe('VaultItemCard from the keyboard', () => {
     });
 });
 
+describe('VaultItemCard on a touch screen', () => {
+    // a phone has no hover, so buttons that only appear on hover would still catch a tap near the row's edge and copy
+    // the password when the person meant to open the login; the login's own page has Copy buttons for that
+    it('hides the quick copy buttons where the main input cannot hover', () => {
+        const { container } = show();
+        const buttons = screen.getByTitle('Copy Password').parentElement;
+        expect(buttons.className).toContain('[@media(hover:none)]:hidden');
+        expect(container.querySelectorAll('[title^="Copy"]').length).toBe(2); // still there for a mouse
+    });
+});
+
 describe('VaultItemCard copy confirmation', () => {
     it('shows the check once the copy has worked', async () => {
         const user = userEvent.setup();

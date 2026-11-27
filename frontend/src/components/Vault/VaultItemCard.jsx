@@ -81,7 +81,7 @@ export default function VaultItemCard({
             </div>
 
             {/* Quick hover copy actions */}
-            <div className={`flex items-center gap-1 group-hover:opacity-100 group-focus-visible:opacity-100 focus-within:opacity-100 transition-opacity shrink-0 ${copied ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`flex items-center gap-1 [@media(hover:none)]:hidden group-hover:opacity-100 group-focus-visible:opacity-100 focus-within:opacity-100 transition-opacity shrink-0 ${copied ? 'opacity-100' : 'opacity-0'}`}>
                 {item.username && (
                     <button
                         type="button"
