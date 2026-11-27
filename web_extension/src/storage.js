@@ -22,10 +22,15 @@ export async function saveSession(session) {
   await chrome.storage.local.set({ [SESSION_KEY]: session });
 }
 
+/** Locks: forgets the vault key and the cached vault, but stays signed in. */
+export async function lockVault() {
+  await chrome.storage.session.remove([VAULT_KEY, CACHE_KEY]);
+}
+
 /** Signs out: forgets the token, the vault key and the cached vault. */
 export async function clearSession() {
   await chrome.storage.local.remove(SESSION_KEY);
-  await chrome.storage.session.remove([VAULT_KEY, CACHE_KEY]);
+  await lockVault();
 }
 
 /** The vault key (base64), or null while the vault is locked. */

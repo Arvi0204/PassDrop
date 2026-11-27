@@ -181,7 +181,7 @@ test('the popup is not a page: it gets the vault, not the page requests', async 
 });
 
 test('a web page cannot ask for the vault, the session, a sync, a sign-in or an unlock', async () => {
-  for (const message of [{ type: 'vault' }, { type: 'sync' }, { type: 'session' }, { type: 'logout' },
+  for (const message of [{ type: 'vault' }, { type: 'sync' }, { type: 'session' }, { type: 'logout' }, { type: 'lock' },
     { type: 'login', email: 'a@b.c', password: 'x' }, { type: 'unlock', password: 'x' }]) {
     const reply = await ask(message, github);
     assert.equal(reply.ok, false, message.type);
@@ -346,6 +346,30 @@ test('unlock refuses key settings with too few iterations', async () => {
 test('logout clears the token, the vault key and the cached vault', async () => {
   assert.deepEqual(await ask({ type: 'logout' }, popup), { ok: true });
   nothingStored();
+});
+
+test('lock forgets the vault key and the cached vault but keeps the sign-in', async () => {
+  assert.deepEqual(await ask({ type: 'lock' }, popup), { ok: true });
+  assert.equal(globalThis.localData.session.token, 'tok');
+  assert.equal(globalThis.sessionData.vaultKey, undefined);
+  assert.equal(globalThis.sessionData.vault, undefined);
+  assert.equal((await ask({ type: 'session' }, popup)).locked, true);
+  assert.equal((await ask({ type: 'logins' }, github)).code, 'locked');
+  assert.equal((await ask({ type: 'credentials', id: 'gh' }, github)).code, 'locked');
+});
+
+test('a sync that finishes after locking leaves no decrypted copy behind', async () => {
+  let release;
+  server.gate = new Promise((resolve) => { release = resolve; });
+  server.blobs = [await blobFor(VAULT[0], 'gh')];
+  delete globalThis.sessionData.vault;
+  const pending = ask({ type: 'sync' }, popup);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await ask({ type: 'lock' }, popup);
+  release();
+  assert.equal((await pending).code, 'locked');
+  assert.equal(globalThis.sessionData.vault, undefined);
+  assert.equal(globalThis.localData.session.token, 'tok'); // still signed in
 });
 
 test('a 401 clears the token, the vault key and the cached vault', async () => {

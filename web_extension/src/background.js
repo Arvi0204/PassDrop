@@ -2,7 +2,7 @@ import { ApiError } from './api.js';
 import { api } from './client.js';
 import { entriesForPage } from './match.js';
 import { titleOf } from './popup/format.js';
-import { getSession, saveSession, clearSession, getVaultKey, saveVaultKey, getCachedVault, setCachedVault } from './storage.js';
+import { getSession, saveSession, clearSession, lockVault, getVaultKey, saveVaultKey, getCachedVault, setCachedVault } from './storage.js';
 import {
   KDF_MIN_ITERATIONS, checkKdf, deriveKeys, unwrapVaultKey, exportVaultKey, importVaultKey, decryptItem
 } from '../../frontend/src/lib/vaultCrypto.js';
@@ -14,6 +14,7 @@ import {
 //   { type: 'session' }                    -> { ok, session: { email, expiresAt } | null, locked }
 //   { type: 'login', email, password }     -> { ok, session }           derives keys, signs in, unlocks
 //   { type: 'unlock', password }           -> { ok }                    signed in but locked (browser restarted)
+//   { type: 'lock' }                       -> { ok }                    forgets the vault key, stays signed in
 //   { type: 'logout' }                     -> { ok }
 //   { type: 'vault' }                      -> { ok, vault, syncedAt }   what we have now
 //   { type: 'sync' }                       -> { ok, vault, syncedAt }   fetch and decrypt the latest
@@ -140,6 +141,12 @@ async function handle(message, sender) {
       const key = await unwrapWith(wrapKey, me.wrappedVaultKey);
       await saveSession({ ...session, userId: session.userId ?? String(me._id) });
       await saveVaultKey(key);
+      return { ok: true };
+    }
+
+    case 'lock': {
+      if (!fromExtensionPage(sender)) break;
+      await lockVault();
       return { ok: true };
     }
 

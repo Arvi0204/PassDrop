@@ -128,6 +128,7 @@ export function renderVault({ session, onSignedOut: signedOut, onExpired: expire
   }, icon('user', 'w-[18px] h-[18px]'));
   const menu = h('div', { class: 'menu', role: 'menu', hidden: true },
     h('div', { class: 'who' }, session.email),
+    h('button', { type: 'button', role: 'menuitem', onClick: lock }, icon('lock', 'w-4 h-4'), 'Lock'),
     h('button', { type: 'button', role: 'menuitem', onClick: signOut }, icon('log-out', 'w-4 h-4'), 'Sign out')
   );
 
@@ -135,6 +136,11 @@ export function renderVault({ session, onSignedOut: signedOut, onExpired: expire
     menuOpen = force ?? !menuOpen;
     menu.hidden = !menuOpen;
     menuButton.setAttribute('aria-expanded', String(menuOpen));
+  }
+
+  async function lock() {
+    await ask({ type: 'lock' }); // forgets the vault key; the popup then asks for the master password
+    onLocked();
   }
 
   async function signOut() {
